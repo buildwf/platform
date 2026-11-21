@@ -3,7 +3,7 @@ export type CreateArgs = {
   initArgs: Array<string>;
 };
 
-// run() spawns through a shell on Windows, so only forward plain flags such as
+// Decision: run() spawns through a shell on Windows, so only forward plain flags such as
 // `--framework react` or `--deploy=none` to `bwf init`.
 const INIT_ARG_PATTERN = /^[\w=-]+$/;
 
@@ -14,11 +14,11 @@ export function validateProjectName(value: string | undefined): string | undefin
   if (value !== undefined && value !== value.toLowerCase()) {
     return 'Project name must be lowercase';
   }
-  // The prompt uses an empty value to select its default project name.
+  // Decision: The prompt uses an empty value to select its default project name.
   if (!value) {
     return undefined;
   }
-  // Keep scaffold names usable as workers.dev DNS labels.
+  // Decision: Keep scaffold names usable as workers.dev DNS labels.
   // https://developers.cloudflare.com/workers/configuration/routing/workers-dev/#limitations
   if (value.length > 63) {
     return 'Project name must be at most 63 characters';

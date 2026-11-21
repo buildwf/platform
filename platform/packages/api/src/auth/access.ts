@@ -94,7 +94,7 @@ export class PlatformAccessVerifier {
         email: payload.email,
       };
     } catch {
-      // Do not expose provider responses, assertions, or untrusted JWT claims in an error.
+      // Decision: Don't expose provider responses, assertions, or untrusted JWT claims in an error.
       throw new PlatformAccessError();
     }
   }

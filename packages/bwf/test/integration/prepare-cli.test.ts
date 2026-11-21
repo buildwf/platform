@@ -87,7 +87,7 @@ describe('bwf prepare (subprocess)', () => {
     expect(JSON.parse(readFileSync(join(root, '.bwf/tsconfig.json'), 'utf8')).files).toContain(
       'bindings.d.ts',
     );
-    // The Cloudflare target is the only one, so remove the binding to drop its types.
+    // Decision: The Cloudflare target is the only one, so remove the binding to drop its types.
     writeFileSync(join(root, 'bwf.json'), JSON.stringify({}));
     const second = runBwf(root, ['prepare']);
     expect(second.status, second.stderr).toBe(0);

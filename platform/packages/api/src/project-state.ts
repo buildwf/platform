@@ -35,8 +35,8 @@ export async function requireNormalizedProject(db: Db, project: Project): Promis
       );
     }
   } else {
-    // Rollback changes the authoritative pointer without rewriting the target's
-    // historical status. An owned retained failed row may therefore be serving.
+    // Decision: Rollback changes the authoritative pointer without rewriting the target's historical status, so an
+    // owned retained failed row may be serving.
     const [active] = await db
       .select({ id: deployments.id })
       .from(deployments)

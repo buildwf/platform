@@ -37,8 +37,8 @@ describe('runtime env resolution', () => {
     expect(value).toEqual({ tag: 'scoped-db' });
   });
 
-  // A package that Vite leaves external loads its own copy of these modules, and a
-  // dependency optimizer reload evaluates them again while a request is in flight.
+  // Decision: A package that Vite leaves external loads its own copy of these modules, and a dependency
+  // optimizer reload evaluates them again while a request is in flight.
   it('shares the request env and scope with another copy of the env module', async () => {
     vi.resetModules();
     const first = await import('../../src/runtime/env.ts');

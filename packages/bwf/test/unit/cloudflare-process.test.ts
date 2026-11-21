@@ -27,7 +27,7 @@ describe('typed Cloudflare process protocol', () => {
       const runner = createCloudflareProcessRunner({ root: process.cwd() });
       const read = { type: 'versions.view', versionId: 'version-id', workerName: 'app' } as const;
       expect(runner({ ...read, includeSource: true }, { capture: true }).status).toBe(0);
-      // Workers allow 64 MiB of source, which grows by a third when base64-encoded.
+      // Decision: Workers allow 64 MiB of source, which grows by a third when base64-encoded.
       const encodedWorkerBytes = Math.ceil((64 * 1024 * 1024 * 4) / 3);
       expect(spawn.mock.calls[0]![2]!.maxBuffer).toBeGreaterThan(encodedWorkerBytes);
 

@@ -155,7 +155,7 @@ describe('domainAdd', () => {
     expect(content).toContain('foo.example.com → foo.example.com.cdn.cloudflare.net');
     expect(content).toContain('TXT (ownership verification)');
     expect(content).toContain('_cf-custom-hostname.foo → own-token');
-    // HTTP-DCV: no user-facing SSL-validation records.
+    // Decision: HTTP DCV: no user-facing SSL-validation records.
     expect(content).not.toContain('TXT (SSL validation)');
     expect(content.indexOf('CNAME (traffic)')).toBeLessThan(
       content.indexOf('TXT (ownership verification)'),
@@ -182,7 +182,6 @@ describe('domainAdd', () => {
     expect(content).toContain('CNAME (traffic)');
     expect(content).not.toContain('TXT (ownership verification)');
     expect(content).not.toContain('TXT (SSL validation)');
-    // Only one record rendered: summary is singular and must not claim "both".
     expect(content).toContain(
       'Add the record above to your DNS, then run `bwf domain status foo.example.com` to check progress.',
     );
@@ -226,7 +225,6 @@ describe('domainStatus rollup', () => {
 
     const statusNote = mockNote.mock.calls[0][0] as string;
     expect(statusNote).toContain('Status:   error — Verification failed: DNS validation timed out');
-    // Only the first error surfaces in the rollup line.
     expect(statusNote).not.toContain('second error');
   });
 });
@@ -398,9 +396,8 @@ describe('domainStatus pending records block', () => {
     const pendingNote = mockNote.mock.calls[1][0] as string;
     expect(pendingNote).toContain('CNAME (traffic)');
     expect(pendingNote).toContain('foo.example.com → cname.void.app');
-    // Ownership already verified — CF dropped the TXT, so it must not appear.
+    // Decision: Ownership is already verified and Cloudflare dropped the TXT record, so it mustn't appear.
     expect(pendingNote).not.toContain('TXT (ownership verification)');
-    // One record only: singular title.
     expect(mockNote.mock.calls[1][1]).toBe('Add this DNS record to your provider');
   });
 
@@ -422,7 +419,6 @@ describe('domainStatus pending records block', () => {
 
     await runDomainCommand(root, { subcommand: 'status', hostname: 'foo.example.com' });
 
-    // Only the Domain Status note — the CNAME is correct by definition when live.
     expect(mockNote).toHaveBeenCalledTimes(1);
     expect(mockNote.mock.calls[0][1]).toBe('Domain Status');
     expect(mockNote.mock.calls[0][0] as string).not.toContain('CNAME (traffic)');
@@ -453,13 +449,11 @@ describe('domainStatus pending records block', () => {
     expect(pendingNote).toContain('foo.example.com → cname.void.app');
     expect(pendingNote).toContain('TXT (ownership verification)');
     expect(pendingNote).toContain('own-name → own-value');
-    // HTTP-DCV: no SSL-validation records ever surface to the user.
     expect(pendingNote).not.toContain('TXT (SSL validation)');
-    // CNAME ordered before ownership, matching `domain add`.
+    // Decision: CNAME comes before ownership, matching `domain add`.
     expect(pendingNote.indexOf('CNAME (traffic)')).toBeLessThan(
       pendingNote.indexOf('TXT (ownership verification)'),
     );
-    // Two records: plural title.
     expect(mockNote.mock.calls[1][1]).toBe('Add these DNS records to your provider');
   });
 });

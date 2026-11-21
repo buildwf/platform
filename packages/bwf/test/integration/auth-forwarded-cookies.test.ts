@@ -18,7 +18,6 @@ const password = 'correct-horse-battery-staple';
 const cdnHeaders = ['cdn-cache-control', 'cloudflare-cdn-cache-control', 'surrogate-control'];
 const cookieCache = { session: { cookieCache: { enabled: true, maxAge: 60 } } };
 
-/** A browser cookie store: later cookies replace earlier ones, Max-Age=0 removes one. */
 class CookieJar {
   readonly cookies = new Map<string, string>();
 
@@ -66,14 +65,13 @@ function cookieName(cookie: string): string {
   return cookie.slice(0, cookie.indexOf('=')).trim();
 }
 
-/** Better Auth cookies with this name suffix (it adds `__Secure-` on https). */
+// Decision: Better Auth cookies with this name suffix (it adds `__Secure-` on https).
 function authCookies(response: Response, suffix: string): Array<string> {
   return response.headers
     .getSetCookie()
     .filter((cookie) => cookieName(cookie).endsWith(`better-auth.${suffix}`));
 }
 
-/** The user inside a session cache cookie. */
 function cachedUser(cookie: string): { name: string; image?: string | null } {
   const value = decodeURIComponent(cookie.slice(cookie.indexOf('=') + 1).split(';')[0]!);
   const cache = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as {
@@ -95,7 +93,6 @@ function expectNoDuplicateCookies(response: Response): void {
   expect(names).toEqual([...new Set(names)]);
 }
 
-/** `beforeRoutes` registers user middleware after auth and before every route. */
 function fixture(userConfig: BwfAuthConfig = cookieCache, beforeRoutes?: (app: Hono) => void) {
   const database = memoryAdapter({ user: [], session: [], account: [], verification: [] });
   const runtime = createBwfAuthRuntime('sqlite', async () => {});
@@ -119,7 +116,6 @@ function fixture(userConfig: BwfAuthConfig = cookieCache, beforeRoutes?: (app: H
   return { app, runtime, options, database };
 }
 
-/** A GET, or a same-origin JSON POST when there is a body. */
 async function send(
   app: Hono,
   path: string,
@@ -149,7 +145,6 @@ async function me(
   return response.json();
 }
 
-/** Signs up, then signs in through the auth router and returns the browser's cookies. */
 async function signIn(app: Hono, name = 'Old name', address = email): Promise<CookieJar> {
   const signUp = await send(app, '/api/auth/sign-up/email', {
     body: { name, email: address, password },
@@ -191,8 +186,6 @@ describe('cookies set by auth.api calls during a request', () => {
       user: 'New name',
       session: 'New name',
     });
-    // Without the forwarded cookie the browser keeps the cached old name,
-    // although the stored user has changed.
     await expect(me(app, stale)).resolves.toEqual({ user: 'Old name', session: 'Old name' });
     const uncached = await send(app, '/api/auth/get-session?disableCookieCache=true', {
       jar: stale,
@@ -224,7 +217,6 @@ describe('cookies set by auth.api calls during a request', () => {
     jar.apply(response);
     expect([...jar.cookies.keys()].filter((name) => name.includes('better-auth.'))).toEqual([]);
     await expect(me(app, jar)).resolves.toEqual({ user: null, session: null });
-    // The old cache cookie would still look signed in until it expires.
     await expect(me(app, stale)).resolves.toEqual({ user: 'Old name', session: 'Old name' });
   });
 
@@ -244,7 +236,6 @@ describe('cookies set by auth.api calls during a request', () => {
     expectNoDuplicateCookies(signIn);
     expect(signIn.headers.get('cache-control')).toBe('no-store');
 
-    // Sign-out sends the same cookies as Better Auth's own handler.
     const jar = new CookieJar().apply(signIn);
     const signOut = await send(app, '/api/auth/sign-out', { jar, body: {} });
     expect(signOut.status).toBe(200);
@@ -379,13 +370,10 @@ describe('cookies set by auth.api calls during a request', () => {
       await getAuth(c).api.updateUser({ body: { name: 'Latest' }, headers: c.req.raw.headers });
       return c.json({ ok: true });
     });
-    // Without the cache cookie, the session lookup sets a new one.
     const jar = (await signIn(app)).without('session_data');
     const lookup = await send(app, '/me', { jar });
     expect(authCookies(lookup, 'session_data')).toHaveLength(1);
 
-    // The lookup, updateUser's own session check and its result each set the
-    // cache cookie. The browser only needs the last one.
     const profile = await send(app, '/profile', { jar, body: {} });
     expect(authCookies(profile, 'session_data').map(cachedName)).toEqual(['Latest']);
     expectNoDuplicateCookies(profile);
@@ -394,7 +382,6 @@ describe('cookies set by auth.api calls during a request', () => {
       session: 'Latest',
     });
 
-    // The lookup refreshes the cache cookie and signOut then clears it.
     const logout = await send(app, '/logout', { jar, body: {} });
     const data = authCookies(logout, 'session_data');
     const token = authCookies(logout, 'session_token');
@@ -423,7 +410,6 @@ describe('cookies set by auth.api calls during a request', () => {
         }
         return c.json({ ok: true });
       });
-      // An expired cache cookie makes the session lookup set a new one first.
       const jar = (await signIn(app)).without('session_data');
 
       const response = await send(app, '/profile', { jar, body: {} });
@@ -532,8 +518,6 @@ describe('cookies set by auth.api calls during a request', () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: 'INVALID_PASSWORD' });
-    // changePassword reads the session without its cache, so Better Auth
-    // refreshes the cache cookie before the password check fails.
     expect(authCookies(response, 'session_token')).toEqual([]);
     expect(authCookies(response, 'session_data').map(cachedName)).toEqual(['Old name']);
     expectNoDuplicateCookies(response);
@@ -585,7 +569,6 @@ describe('cookies set by auth.api calls during a request', () => {
       user: 'From middleware',
     });
 
-    // Both calls set the cache cookie. The route's later one has both changes.
     const response = await send(app, '/settings/avatar', { jar, body: {} });
     const data = authCookies(response, 'session_data');
     expect(data.map(cachedUser)).toMatchObject([
@@ -674,7 +657,6 @@ describe('merging session lookup cookies with auth.api cookies', () => {
       getAuth(c).api.signOut({ headers: c.req.raw.headers, asResponse: true }),
     );
     const jar = await signIn(app);
-    // With updateAge 0 the session lookup sends a refreshed token every time.
     const refresh = await send(app, '/me', { jar });
     expect(authCookies(refresh, 'session_token')).toHaveLength(1);
     expect(isCleared(authCookies(refresh, 'session_token')[0]!)).toBe(false);
@@ -700,7 +682,6 @@ describe('merging session lookup cookies with auth.api cookies', () => {
     const signedIn = await signIn(app);
     const dataName = authCookieName(signedIn, 'session_data');
     cleared = `${dataName}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax`;
-    // Without the cache cookie, the session lookup sets a new one.
     const jar = signedIn.without('session_data');
 
     const response = await send(app, '/forget-cache', { jar, body: {} });
@@ -767,8 +748,6 @@ describe('merging session lookup cookies with auth.api cookies', () => {
 });
 
 describe('auth router responses after auth.api calls in middleware', () => {
-  // A user middleware reads the session again. Without the cache cookie, that
-  // call sets a new one for the signed-in user.
   const readSession = (app: Hono) =>
     app.use(async (c, next) => {
       await getAuth(c).api.getSession({ headers: c.req.raw.headers });

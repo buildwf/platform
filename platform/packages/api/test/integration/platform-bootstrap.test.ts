@@ -353,8 +353,8 @@ describe('provider-independent first administrator setup', () => {
       user_id: otherUser.id,
       expires_at: new Date(Date.now() + 600_000).toISOString(),
     });
-    // Imported legacy installations permit sessionless JWTs until the first
-    // managed authentication mutation activates authoritative session records.
+    // Decision: Imported legacy installations allow sessionless JWTs until the first managed authentication
+    // change turns on authoritative session records.
     await env.db.update(platformAuthSettings).set({ sessions_required: false });
     const legacyApiToken = await signJwt(
       { sub: administrator.id, login: administrator.login, aud: 'api' },
@@ -672,8 +672,8 @@ describe('provider-independent first administrator setup', () => {
       let suppressSetupOrigin = false;
       try {
         const page = await browser.newPage();
-        // Fulfill every browser request locally, retaining real browser form,
-        // cookie, referrer-policy, and Origin behavior without external traffic.
+        // Decision: Fulfill each browser request locally, keeping real browser form, cookie, referrer-policy and
+        // Origin behavior without external traffic.
         await page.route('**/*', async (route) => {
           const request = route.request();
           const url = new URL(request.url());
@@ -706,9 +706,8 @@ describe('provider-independent first administrator setup', () => {
               status: response.status,
             });
           }
-          // Playwright does not route subsequent requests in a redirect chain.
-          // Keep the real API response evidence, then serve a local handoff page
-          // so the browser never resolves an external provider or fixture origin.
+          // Decision: Playwright doesn't route later requests in a redirect chain. Keep the real API response, then
+          // serve a local handoff page so the browser doesn't resolve an external provider or fixture origin.
           if (request.method() === 'POST' && response.status === 302) {
             if (url.pathname === '/auth/bootstrap') {
               authorization = new URL(response.headers.get('Location')!);
@@ -737,8 +736,8 @@ describe('provider-independent first administrator setup', () => {
             body: Buffer.from(await response.arrayBuffer()),
           });
         });
-        // A no-referrer setup page makes the browser send `Origin: null`, which the
-        // real Origin guard rejects.
+        // Decision: A no-referrer setup page makes the browser send `Origin: null`, which the real Origin guard
+        // rejects.
         suppressSetupOrigin = true;
         await page.goto(`${origin}/setup`);
         await page.getByLabel('Setup code').fill(code);
@@ -789,7 +788,7 @@ describe('provider-independent first administrator setup', () => {
         await browser.close();
       }
     },
-    // Launching Chromium alone can take longer than the default under a full parallel run.
+    // Decision: Launching Chromium alone can take longer than the default timeout under a full parallel run.
     30_000,
   );
 
@@ -934,7 +933,6 @@ describe('provider-independent first administrator setup', () => {
       requestHash: null,
     });
     await initialize();
-    // The CLI computes the same hash the platform records for these settings.
     expect(await readPlatformAdministratorSetupConnection(connection)).toEqual({
       pending: true,
       usersExist: false,

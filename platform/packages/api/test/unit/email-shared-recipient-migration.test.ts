@@ -97,8 +97,6 @@ it('declares only the exact canonical 0.22.0 predecessor and fences legacy delet
       ).rejects.toMatchObject({ code: '23503' });
       await expect(db.exec("DELETE FROM users WHERE id='owner'")).rejects.toThrow();
     }
-    // Status updates and unrelated project teardown continue to work on an old
-    // Worker; only unsafe ownership release is fenced.
     await db.exec(
       "UPDATE projects SET status='deleting', slug=slug WHERE id='guarded'; DELETE FROM projects WHERE id='unrelated';",
     );

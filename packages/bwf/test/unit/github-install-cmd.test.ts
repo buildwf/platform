@@ -3,7 +3,6 @@ import { PlatformApiError, type PlatformClient } from '../../src/cli/client.ts';
 import { runInstall } from '../../src/cli/github-cmd.ts';
 import { throwOnProcessExit } from '../helpers/github-cli.ts';
 
-// Keep openBrowser from launching a real browser.
 const mockExecFile = vi.fn();
 vi.mock('node:child_process', () => ({
   execFile: (...args: Array<unknown>) => mockExecFile(...args),
@@ -43,7 +42,6 @@ describe('runInstall', () => {
     expect(linkIdentity).toHaveBeenCalledTimes(1);
     expect(linkIdentity).toHaveBeenCalledWith(client);
     expect(getGithubInstallUrl).toHaveBeenCalledTimes(2);
-    // The install URL was opened in the browser on the success retry.
     expect(mockExecFile).toHaveBeenCalledTimes(1);
     expect(exitSpy).not.toHaveBeenCalled();
   });

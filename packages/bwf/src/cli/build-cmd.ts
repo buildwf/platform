@@ -14,7 +14,7 @@ function isBuildLogComplete(page: BuildLogsResponse): boolean {
   if (!page.terminal) {
     return false;
   }
-  // `null` means the server cannot prove completion.
+  // Decision: `null` means the server can't prove completion.
   if (page.logsComplete === null) {
     throw new Error(
       'This platform cannot confirm that the final build logs were captured. Ask its administrator to upgrade the platform runtime, or read the retained logs without --follow.',
@@ -78,7 +78,6 @@ export async function followBuildLogs(opts: {
         throw err;
       }
       opts.onRetry?.(err);
-      // Retry from the same cursor after the next sleep; do not advance or write.
       continue;
     }
     for (const l of pageResult.lines) {
@@ -123,7 +122,6 @@ async function runBuildLogsCommand(
 
   const client = new PlatformClient(token, { root });
 
-  // Resolve project: --project/positional slug -> BWF_PROJECT -> linked config.
   let projectId: string;
   const requestedSlug = getRequestedProjectSlug({ projectSlug: args.projectName });
   if (requestedSlug) {
@@ -145,7 +143,6 @@ async function runBuildLogsCommand(
     projectId = linked.projectId;
   }
 
-  // Resolve build: explicit id or the newest build.
   let buildId = args.buildId;
   if (!buildId) {
     const builds = await client.listBuilds(projectId, 1);
@@ -156,22 +153,18 @@ async function runBuildLogsCommand(
     buildId = builds[0]!.id;
   }
 
-  // Writer: append to a file, or print to stdout.
   const write = args.output
     ? (line: string): void => appendFileSync(args.output!, `${line}\n`)
     : (line: string): void => console.log(line);
 
-  // `isFatalFollowError` decides fatal vs transient (see its doc). The SAME
-  // policy governs both the first-page fetch below and the follow loop.
   const onRetry = (err: unknown): void =>
     log.warn(
       `build: transient error while following (${err instanceof Error ? err.message : String(err)}); retrying…`,
     );
 
-  // First page (since=0). A transient failure on the FIRST poll must not kill
-  // `--follow` either: on a fatal error we exit with a friendly message, on a
-  // non-fatal error we exit immediately ONLY for the one-shot (non-follow)
-  // command; under --follow we onRetry + sleep and re-request since=0.
+  // Decision: A transient failure on the first poll mustn't kill `--follow` either. On a fatal error we exit
+  // with a friendly message. On a non-fatal error we exit at once only for the one-shot command;
+  // under --follow we call onRetry, sleep and request since=0 again.
   let first: BuildLogsResponse;
   for (;;) {
     try {
@@ -195,16 +188,15 @@ async function runBuildLogsCommand(
     }
   }
 
-  // github_actions builds keep their logs on GitHub.
+  // Decision: github_actions builds keep their logs on GitHub.
   if (first.external) {
     log.message(`This build ran on GitHub Actions. View logs:\n${pc.blue(first.external)}`);
     return;
   }
 
-  // Truncate/create the output file ONCE before the first line. The `write`
-  // writer appends (so follow-mode appends work), but the initial dump must not
-  // concatenate onto a stale file from a previous run. Placed after the external
-  // early-return so an external build never creates an empty file.
+  // Decision: Truncate or create the output file once before the first line. The `write` writer appends, so
+  // follow mode works, but the first dump mustn't add onto a stale file from a previous run. It's
+  // after the external early return so an external build doesn't create an empty file.
   if (args.output) {
     writeFileSync(args.output, '');
   }

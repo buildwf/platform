@@ -43,7 +43,6 @@ describe('buildBwfManifest migration-binding consistency', () => {
       migrations: sampleMigrations,
     });
 
-    // Migrations imply a database is needed — d1 binding must be present
     expect(manifest.bindings.d1).toEqual(['DB']);
     expect(manifest.migrations).toEqual(expect.objectContaining({ dialect: 'sqlite', pending: 1 }));
   });
@@ -124,7 +123,6 @@ describe('buildBwfManifest postgresql migration-binding consistency', () => {
       dialect: 'postgresql',
     });
 
-    // Migrations with postgresql dialect imply hyperdrive is needed
     expect(manifest.bindings.hyperdrive).toEqual(['HYPERDRIVE']);
     expect(manifest.bindings.d1).toBeUndefined();
     expect(manifest.migrations).toEqual({ dialect: 'postgresql', pending: 1 });

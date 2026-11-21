@@ -29,14 +29,13 @@ function createTempProject(opts?: { withEnvTs?: boolean }): string {
   const root = mkdtempSync(join(tmpdir(), 'platform-selfhost-env-'));
   roots.push(root);
   if (opts?.withEnvTs !== false) {
-    // Empty module body is enough — schema is pre-registered via defineEnv.
     writeFileSync(join(root, 'env.ts'), 'export default {};\n');
   }
   return root;
 }
 
 beforeEach(() => {
-  // The schema registry is process-wide; reset it between tests.
+  // Decision: The schema registry is process-wide; reset it between tests.
   defineEnv({});
 });
 
@@ -114,7 +113,6 @@ describe('deriveSelfHostSchemaFacts — env-insensitive schema facts', () => {
     const facts = await deriveSelfHostSchemaFacts(root);
 
     expect(facts.hasSchema).toBe(true);
-    // STRIPE_KEY + API_URL reject `undefined` → required; GREETING has a default → not required.
     expect([...facts.requiredKeys].sort()).toEqual(['API_URL', 'STRIPE_KEY']);
     expect(facts.requiredKeys).not.toContain('GREETING');
     expect([...facts.serverKeys].sort()).toEqual(['API_URL', 'GREETING', 'STRIPE_KEY']);
@@ -130,7 +128,6 @@ describe('deriveSelfHostSchemaFacts — env-insensitive schema facts', () => {
 
   const SENTINEL = 'SENTINEL-schema-sk_live_leak-QQZ';
 
-  /** Everything an observer could read off the thrown schema error. */
   function serializeSchemaError(error: unknown): string {
     const e = error as SelfHostSchemaError & Record<string, unknown>;
     return JSON.stringify({
@@ -177,7 +174,7 @@ describe('deriveSelfHostSchemaFacts — env-insensitive schema facts', () => {
 
   it('an env.ts that THROWS at evaluation becomes a values-free SelfHostSchemaError', async () => {
     const root = createTempProject({ withEnvTs: false });
-    // loadUserEnvFile folds the thrown message into its own error; the boundary must drop it.
+    // Decision: loadUserEnvFile folds the thrown message into its own error; the boundary has to drop it.
     writeFileSync(join(root, 'env.ts'), `throw new Error('env boom ${SENTINEL}');\n`);
 
     vi.stubEnv('BWF_ENV_UNMASK', '1');
@@ -230,7 +227,6 @@ describe('computeInvalidEmittedKeys — schema-invalid emitted values', () => {
 
   it('flags an OPTIONAL validator key SHIPPED as "" or null (rejected but bucketed "missing")', async () => {
     const root = createTempProject();
-    // Like `z.url().optional()`: accepts undefined, rejects "" and null.
     const optionalRejectingEmpty: StandardSchemaV1<unknown, unknown> = {
       '~standard': {
         version: 1,
@@ -369,7 +365,7 @@ describe('dischargeSelfHostEnvContext — ground-truth secret gate', () => {
 
   it('a folded INVALID key (an optional value the validator rejected) fails CLOSED with no wrangler spawn', async () => {
     const root = createTempProject({ withEnvTs: false });
-    // A remote secret cannot fix a shipped invalid value, even with the same name.
+    // Decision: A remote secret can't fix a shipped invalid value, even with the same name.
     const ctx = deriveSelfHostEnvContextFromVars(
       {},
       { hasSchema: true, serverKeys: [], requiredKeys: [] },
@@ -414,7 +410,7 @@ describe('dischargeSelfHostEnvContext — ground-truth secret gate', () => {
     it('hard-errors (naming both accounts) and NEVER spawns wrangler on a config-vs-option mismatch', async () => {
       const root = createTempProject({ withEnvTs: false });
       const configPath = writeConfig(root, { name: 'app', account_id: 'account-X' });
-      // An absent required key would list secrets; the mismatch must stop it first.
+      // Decision: An absent required key would list secrets; the mismatch has to stop it first.
       const ctx = deriveSelfHostEnvContextFromVars({}, requiredStripe);
       const { run, calls } = stubRunner(okList(['STRIPE_KEY']));
 
@@ -638,7 +634,6 @@ describe('dischargeSelfHostEnvContext — ground-truth secret gate', () => {
   describe('wrangler diagnostics are values-free even under BWF_ENV_UNMASK', () => {
     const SENTINEL = 'SENTINEL-sk_live_51H8xLeak-abcXYZ';
 
-    /** Everything an observer could read off the thrown error. */
     function fullySerialize(error: unknown): string {
       const e = error as SelfHostSecretListError;
       return JSON.stringify({

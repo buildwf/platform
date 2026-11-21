@@ -39,8 +39,8 @@ async function getGitHubRowsForUser(db: Db, userId: string) {
 
 describe('linkGitHubIdentity', () => {
   it('links a new identity', async () => {
-    // Use a non-github login provider so the user has no pre-existing github
-    // oauth row (createTestUser seeds an oauth_accounts row for its provider).
+    // Decision: Use a non-github login provider so the user has no github oauth row yet (createTestUser seeds
+    // an oauth_accounts row for its provider).
     const user = await createTestUser(env.db, 'alice', 'google', 'google-alice');
 
     const result = await linkGitHubIdentity(env.db, user.id, '12345');
@@ -78,15 +78,13 @@ describe('linkGitHubIdentity', () => {
       GitHubIdentityConflictError,
     );
 
-    // Ownership is unchanged — the identity still belongs to user A.
     const rows = await getGitHubRows(env.db, '12345');
     expect(rows).toHaveLength(1);
     expect(rows[0]!.user_id).toBe(userA.id);
   });
 
   it('throws GitHubIdentityAlreadyLinkedError when the same user links a different identity', async () => {
-    // RFC 0074: one GitHub identity per Platform account. A user who already linked
-    // 'A' must not be able to link a second, different id 'B'.
+    // Decision: RFC 0074: one GitHub identity per Platform account.
     const user = await createTestUser(env.db, 'alice', 'google', 'google-alice');
 
     const linkedA = await linkGitHubIdentity(env.db, user.id, 'A');
@@ -96,15 +94,12 @@ describe('linkGitHubIdentity', () => {
       GitHubIdentityAlreadyLinkedError,
     );
 
-    // No second row was created — the user still has exactly one github row ('A').
     const rows = await getGitHubRowsForUser(env.db, user.id);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.provider_id).toBe('A');
 
-    // 'B' was never inserted.
     expect(await getGitHubRows(env.db, 'B')).toHaveLength(0);
 
-    // Re-linking the SAME id 'A' is still the idempotent no-op.
     const reLinkA = await linkGitHubIdentity(env.db, user.id, 'A');
     expect(reLinkA).toBe('already_linked');
     expect(await getGitHubRowsForUser(env.db, user.id)).toHaveLength(1);

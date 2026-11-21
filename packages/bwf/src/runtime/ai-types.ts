@@ -1,5 +1,3 @@
-// Provider-native AI Gateway helpers.
-
 export type AiProviderName =
   | 'openai'
   | 'anthropic'

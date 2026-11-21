@@ -6,11 +6,11 @@ import {
 } from '@builtbyfriends/deploy-cloudflare';
 import { formatUrl } from './output.ts';
 
-// Cloudflare refuses a Worker with an Analytics Engine binding (code 10089)
+// Decision: Cloudflare refuses a Worker with an Analytics Engine binding (code 10089)
 // until Analytics Engine is enabled for the account, including on Workers Free.
 const ANALYTICS_ENGINE_NOT_ENABLED = 10089;
 
-// Without a terminal, the Cloudflare CLI stops an upload when it must ask
+// Decision: Without a terminal, the Cloudflare CLI stops an upload when it must ask
 // about a conflict. Its advice to remove `--strict` does not apply: the CLI
 // sets that mode itself.
 const UPLOAD_CONFLICT = 'Aborting the upload operation because of conflicts';
@@ -22,7 +22,7 @@ function uploadConflictMessage(result: CloudflareCommandResult, operation: strin
     return null;
   }
   const lines = output.split(/\r?\n/).map((line) => line.replace(/^[\s▲│]+/, '').trim());
-  // The Worker was last changed in the dashboard or with the Workers API. Keep
+  // Decision: The Worker was last changed in the dashboard or with the Workers API. Keep
   // the first line only: a dashboard diff shows values.
   const outsideChange = lines.find(
     (line) =>
@@ -32,7 +32,7 @@ function uploadConflictMessage(result: CloudflareCommandResult, operation: strin
   if (outsideChange) {
     return `platform: The Cloudflare CLI did not ${operation}: ${outsideChange.replace(/:$/, '.')} This Worker was changed outside bwf. Run the same command in a terminal. bwf then lists the changes and asks you before it replaces them.`;
   }
-  // A config variable or binding has the name of a secret on the Worker. Keep
+  // Decision: A config variable or binding has the name of a secret on the Worker. Keep
   // only the names: the CLI stopped, so its sentence about the replacement of
   // the secrets is not true.
   const secret = lines.find((line) => / with (?:an )?existing remote secrets?\./.test(line));
@@ -45,7 +45,7 @@ function uploadConflictMessage(result: CloudflareCommandResult, operation: strin
   if (secretNames.length > 1) {
     return `platform: The Cloudflare CLI did not ${operation}: the Worker has secrets with the same names as values that bwf sets: ${new Intl.ListFormat('en').format(secretNames)}. Delete those secrets from the Worker in the Cloudflare dashboard, then run the command again.`;
   }
-  // Another Worker owns a workflow that this Worker binds. Keep the workflow
+  // Decision: Another Worker owns a workflow that this Worker binds. Keep the workflow
   // and Worker names, and not the advice about a config file.
   const workflow = lines.findIndex((line) =>
     line.includes('already exist and belong to different workers'),

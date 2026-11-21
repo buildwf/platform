@@ -4,8 +4,7 @@ import {
 } from '@platform-service/api/proxy-token';
 import { hmacSign } from './hmac.ts';
 
-// In-memory cache: resource mappings are stable (only change on deploy).
-// Persists across requests within the same CF worker isolate.
+// Decision: Resource mappings only change on deploy, so they're cached for the life of the isolate.
 const cache = new Map<string, string>();
 
 /** @internal Exposed for testing only. */

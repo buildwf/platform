@@ -278,7 +278,6 @@ describe('parseProjectArgs', () => {
   });
 
   describe('unknown-flag rejection', () => {
-    // status/link/rollback/cancel previously captured a leading flag as the positional id.
     it('rejects an unknown flag for status instead of capturing it as the name', () => {
       expect(() => parseProjectArgs(['status', '--foo'])).toThrow("project: Unknown flag '--foo'.");
     });
@@ -316,7 +315,7 @@ describe('parseProjectArgs', () => {
       expect(rollback?.flags).toEqual([
         expect.objectContaining({ name: '--platform', arg: 'cloudflare' }),
       ]);
-      // The prompt passes the id and each flag value as separate argv items.
+      // Decision: The prompt passes the id and each flag value as separate argv items.
       expect(parseProjectArgs(['rollback', 'abc123', '--platform', 'cloudflare'])).toEqual({
         subcommand: 'rollback',
         deployId: 'abc123',

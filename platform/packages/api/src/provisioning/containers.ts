@@ -188,7 +188,8 @@ export async function tryCreateContainerApplication(
   }
 }
 
-// Intentionally does not match the bare word 'conflict' — it appears in unrelated CF validation errors (e.g. "configuration conflicts with durable object namespace") and would cause a false-positive race fallback.
+// Decision: Don't match the bare word 'conflict': it shows up in unrelated CF validation errors (such as
+// "configuration conflicts with durable object namespace") and would cause a false race fallback.
 function isAlreadyExistsError(message: string): boolean {
   const lower = message.toLowerCase();
   return lower.includes('already exists') || lower.includes('duplicate');

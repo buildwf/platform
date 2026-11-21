@@ -12,9 +12,8 @@ afterEach(() => {
   clearDevBuffer();
 });
 
-// Stand-in for workerd's `EmailMessage`, so the own-account `SEND_EMAIL`
-// transport can run in the plain-node runner and its result be compared
-// with a captured one.
+// Decision: Stand-in for workerd's `EmailMessage`, so the own-account `SEND_EMAIL` transport can run in
+// the plain-node runner and its result be compared with a captured one.
 const fake = vi.hoisted(() => {
   class FakeEmailMessage {
     constructor(
@@ -28,11 +27,6 @@ const fake = vi.hoisted(() => {
 
 vi.mock('cloudflare:email', () => ({ EmailMessage: fake.FakeEmailMessage }));
 
-/**
- * Build a fake `__PLATFORM_PROXY` service binding that responds to
- * `/email/send` with a canned response. Captures every request body for
- * assertion.
- */
 function fakeProxy(handler: (body: unknown) => { status: number; body: unknown }): {
   proxy: { fetch(req: Request | string, init?: RequestInit): Promise<Response> };
   calls: Array<{ url: string; body: unknown }>;
@@ -52,9 +46,7 @@ function fakeProxy(handler: (body: unknown) => { status: number; body: unknown }
         let parsed: unknown = null;
         try {
           parsed = JSON.parse(bodyText);
-        } catch {
-          /* ignore */
-        }
+        } catch {}
         calls.push({ url, body: parsed });
         const result = handler(parsed);
         return new Response(JSON.stringify(result.body), {
@@ -71,7 +63,6 @@ const PROXY_ENV_KEYS = {
   __PROJECT_ID: 'p_test',
 };
 
-/** Sends through `__PLATFORM_PROXY` when no harness sink is active. */
 function send(
   proxy: ReturnType<typeof fakeProxy>['proxy'],
   to: string | Array<string> = 'b@y.dev',
@@ -146,8 +137,8 @@ describe('sendEmail (test harness)', () => {
     }
   });
 
-  // `ids` reports what production sends (one lowercased entry per unique
-  // address); the captured message keeps the fields as given.
+  // Decision: `ids` reports what production sends (one lowercased entry per unique address); the captured
+  // message keeps the fields as given.
   it('reports one id per unique address, the way the production transports do', async () => {
     const opts = {
       from: 'a@x.dev',
@@ -179,8 +170,6 @@ describe('sendEmail (test harness)', () => {
     ]);
     expect(captured.ids[0].messageId).toMatch(/^dev_/);
 
-    // The same call through the own-account binding: the recipients the
-    // capture reported are exactly the envelopes production sends.
     const sent: Array<string> = [];
     const binding = {
       async send(msg: unknown) {
@@ -335,7 +324,6 @@ describe('sendEmail (error mapping)', () => {
   });
 
   it('returns INVALID_TO for an oversize recipient list before any transport is tried', async () => {
-    // Pre-flight: a top-level `error` from the harness, as from a deployed worker.
     const harness = createEmailTestHarness();
     try {
       const result = await sendEmail({
@@ -357,10 +345,9 @@ describe('sendEmail (error mapping)', () => {
 });
 
 describe('sendEmail (from defaulting)', () => {
-  // The platform mail domain is injected per environment (`mail.buildwf.dev`
-  // in production, its own zone in staging), so these tests deliberately use
-  // a non-production value: a passing assertion then proves the address was
-  // built from the binding rather than from a baked-in constant.
+  // Decision: The platform mail domain is injected per environment (`mail.buildwf.dev` in production, its
+  // own zone in staging), so these tests use a non-production value: a passing assertion then
+  // shows the address was built from the binding, not a baked-in constant.
   const MAIL_DOMAIN = 'mail.staging.void.cloud';
 
   it('defaults from to <slug>+noreply@<__PLATFORM_EMAIL_DOMAIN> when omitted and both bindings are injected', async () => {
@@ -445,8 +432,8 @@ describe('sendEmail (from defaulting)', () => {
   });
 
   it('respects explicit from when neither binding is present', async () => {
-    // The bindings only feed the default. A caller who supplies `from`
-    // must keep working outside a deployed worker.
+    // Decision: The bindings only feed the default. A caller who supplies `from` has to keep working outside
+    // a deployed worker.
     const harness = createEmailTestHarness();
     try {
       const result = await withRuntimeEnv({}, () =>
@@ -510,7 +497,7 @@ describe('sendEmail (from defaulting)', () => {
   it('refuses to substitute a malformed __PLATFORM_PROJECT_SLUG', async () => {
     const harness = createEmailTestHarness();
     try {
-      // Slug containing `@` would corrupt the resulting envelope address.
+      // Decision: A slug containing `@` would corrupt the resulting envelope address.
       const result = await withRuntimeEnv(
         { __PLATFORM_PROJECT_SLUG: 'evil@x.com', __PLATFORM_EMAIL_DOMAIN: MAIL_DOMAIN },
         () => sendEmail({ to: 'b@y.dev', subject: 's', text: 't' }),
@@ -744,10 +731,9 @@ describe('sendEmail (proxy round trip)', () => {
     }
   });
 
-  // The proxy's middleware (capability gate, auth, platform lifecycle)
-  // refuses ahead of the email handler with a flat `{ error, message? }`
-  // and a non-2xx status — a well-formed refusal whose text must reach the
-  // caller, not a "malformed response".
+  // Decision: The proxy's middleware (capability gate, auth, platform lifecycle) refuses ahead of the email
+  // handler with a flat `{ error, message? }` and a non-2xx status: a well-formed refusal whose
+  // text has to reach the caller, not a "malformed response".
   it.each([
     [
       'a 501 from the platform capability gate',
@@ -823,7 +809,6 @@ describe('sendEmail (proxy round trip)', () => {
   });
 });
 
-// ok:true must account for every requested recipient.
 describe('sendEmail (proxy delivery list)', () => {
   it.each([
     [
@@ -914,9 +899,9 @@ describe('sendEmail (proxy delivery list)', () => {
     ]);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      // Order-insensitive: the proxy's order is kept, not re-sorted. The
-      // empty messageId is the proxy's "CF returned none" convention and
-      // still falls back to the locally generated Message-ID.
+      // Decision: Order-insensitive: the proxy's order is kept, not re-sorted. The empty messageId is the
+      // proxy's "Cloudflare returned none" convention and still falls back to the locally generated
+      // Message-ID.
       expect(result.ids.map((d) => d.recipient)).toEqual(['c@y.dev', 'b@y.dev']);
       expect(result.ids[0].messageId).toBe('cf-c');
       expect(result.ids[1].messageId).toMatch(/^<.+@x\.dev>$/);
@@ -924,7 +909,7 @@ describe('sendEmail (proxy delivery list)', () => {
   });
 });
 
-// A mid-batch list must state one outcome per requested recipient, or it is refused whole.
+// Decision: A mid-batch list has to state one outcome per requested recipient, or it's refused whole.
 describe('sendEmail (proxy mid-batch delivery list)', () => {
   const failed = (recipient: string) => ({
     recipient,
@@ -1090,11 +1075,10 @@ describe('sendEmail (proxy mid-batch delivery list)', () => {
   );
 
   it('passes a complete list through in the order the proxy sent it', async () => {
-    // The proxy lists allowlist rejections before the sends it attempted,
-    // so the order differs from the request's; it is kept, not re-sorted.
-    // An unknown error code is coerced; the empty messageId is the proxy's
-    // "CF returned none" convention and falls back to the locally generated
-    // Message-ID, as on the success path.
+    // Decision: The proxy lists allowlist rejections before the sends it attempted, so the order differs
+    // from the request's; it's kept, not re-sorted. An unknown error code is coerced; the empty
+    // messageId is the proxy's "Cloudflare returned none" convention and falls back to the locally
+    // generated Message-ID, as on the success path.
     const { calls, proxy } = fakeProxy(() => ({
       status: 200,
       body: {
@@ -1136,9 +1120,9 @@ describe('sendEmail (proxy mid-batch delivery list)', () => {
   });
 
   it('does not refuse a mid-batch list in which every entry succeeded', async () => {
-    // Contradicts `anyFailed`, but every recipient has a trustworthy
-    // accepted outcome. Refusing it would make the caller treat the whole
-    // call as unknown despite the complete provider evidence.
+    // Decision: This contradicts `anyFailed`, but each recipient has a trustworthy accepted outcome. Refusing
+    // it would make the caller treat the whole call as unknown despite the complete provider
+    // evidence.
     const { proxy } = fakeProxy(() => ({
       status: 200,
       body: {
@@ -1180,8 +1164,8 @@ describe('sendEmail (deprecated sendInDev)', () => {
     }
   });
 
-  // `bwf dev` binds neither `__PLATFORM_PROXY` nor `SEND_EMAIL`, so there
-  // `sendInDev: true` reaches no transport.
+  // Decision: `bwf dev` binds neither `__PLATFORM_PROXY` nor `SEND_EMAIL`, so there `sendInDev: true`
+  // reaches no transport.
   it('returns BINDING_MISSING under a real `bwf dev` env (no transport to fall through to)', async () => {
     const assets = {
       calls: 0,
@@ -1199,8 +1183,6 @@ describe('sendEmail (deprecated sendInDev)', () => {
         sendInDev: true,
       }),
     );
-    // The inbox was bypassed: nothing was posted to the dev server, and
-    // nothing was buffered.
     expect(assets.calls).toBe(0);
     expect(listDevMessages()).toHaveLength(0);
     expect(result.ok).toBe(false);

@@ -9,7 +9,7 @@ import { afterEach, expect, vi } from 'vite-plus/test';
 import { prepareCfBuildOutput } from '../../src/cli/cf-build-output.ts';
 import { createCfCommand } from '../../src/cli/cf-version-runner.ts';
 
-// Vitest's per-file module isolation gives each suite its own roots and hooks.
+// Decision: Vitest's per-file module isolation gives each suite its own roots and hooks.
 const roots: Array<string> = [];
 const cleanups: Array<() => unknown> = [];
 const pinnedCfVersion = JSON.parse(
@@ -18,7 +18,7 @@ const pinnedCfVersion = JSON.parse(
 const bwfVersion = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
   .version as string;
 const cfUserAgent: string = `cf-cli/${pinnedCfVersion} bwf/${bwfVersion}`;
-// Each real cf subprocess loads cf's bundle before it does any work. That takes about half a
+// Decision: Each real cf subprocess loads cf's bundle before it does any work. That takes about half a
 // second when idle and several seconds on a busy machine, which can pass Vitest's 5s default.
 const REAL_CF_TIMEOUT_MS: number = process.platform === 'win32' ? 20_000 : 15_000;
 const REAL_CF_ACTIVATION_TIMEOUT_MS: number = process.platform === 'win32' ? 60_000 : 30_000;
@@ -34,7 +34,6 @@ afterEach(async () => {
   }
 });
 
-/** Serve a fake Cloudflare API until the test ends and return its base URL. */
 async function listen(server: Server): Promise<string> {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   cleanups.push(
@@ -47,12 +46,11 @@ async function listen(server: Server): Promise<string> {
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}/client/v4`;
 }
 
-/** Compare JSON with its key order, which a deep equality check ignores. */
+// Decision: Compare JSON with its key order, which a deep equality check ignores.
 function expectSameJson(actual: unknown, expected: unknown): void {
   expect(JSON.stringify(actual, null, 2)).toBe(JSON.stringify(expected, null, 2));
 }
 
-/** The real pinned cf, whose child sees only a synthetic token and the fake API. */
 function pinnedCf(
   apiBaseUrl: string,
   accountId = 'account-id',

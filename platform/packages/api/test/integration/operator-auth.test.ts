@@ -95,16 +95,14 @@ describe('operator authentication', () => {
       hostedWorkerOperations: unknown;
     };
 
-    // The expiry round-trips through Postgres as a timestamp without time zone,
-    // and the string-mode column mapping reformats it as SQL text; the handler
-    // must serialize it back to the ISO UTC text the admin app pins. Assert the
-    // real conversion result, not a fixture.
+    // Decision: The expiry goes through Postgres as a timestamp without time zone, and the string-mode column
+    // mapping reformats it as SQL text. The handler has to serialize it back to the ISO UTC text the
+    // admin app expects. Assert the real conversion result, not a fixture.
     const isoUtc = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
     expect(createdBody.expiresAt).toMatch(isoUtc);
     expect(confirmedBody.expiresAt).toBe(createdBody.expiresAt);
     expect(Date.parse(confirmedBody.expiresAt)).toBe(Date.parse(createdBody.expiresAt));
 
-    // The remaining shape the admin app validates before accepting a session.
     expect(confirmedBody.apiVersion).toBe(1);
     expect(confirmedBody.user).toEqual({ id: admin.id, login: admin.login, role: 'admin' });
     for (const name of [

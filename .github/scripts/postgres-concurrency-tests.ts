@@ -37,7 +37,6 @@ function usesPostgresEnvironment(node: unknown): boolean {
   return Object.values(node).some(usesPostgresEnvironment);
 }
 
-/** Select real PostgreSQL cases without repeating the whole in-memory API suite. */
 function postgresConcurrencyTestFiles(root: string): Array<string> {
   const files = compatibilityTestFiles(root).filter((file) => {
     const parsed = parseSync(file, readFileSync(join(root, file), 'utf8'));
@@ -53,7 +52,6 @@ function postgresConcurrencyTestFiles(root: string): Array<string> {
 }
 
 const files = postgresConcurrencyTestFiles(process.cwd());
-// Reuse the bounded runner's independent database clones and cleanup for every file.
 const result = spawnSync(
   process.execPath,
   [fileURLToPath(new URL('./schema-compat-tests.ts', import.meta.url)), ...files],

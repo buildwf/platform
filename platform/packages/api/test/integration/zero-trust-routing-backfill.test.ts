@@ -277,8 +277,8 @@ describe('legacy routing owner backfill', () => {
         protectNewProjects: true,
         existingProjects: 'public',
       });
-      // Configuration republishes authoritative ownership. Seed legacy
-      // entries explicitly so this scheduled run exercises the backfill.
+      // Decision: Configuration republishes authoritative ownership. Seed legacy entries explicitly, so this
+      // scheduled run exercises the backfill.
       for (const key of [project.slug, domainKey]) {
         const legacy = JSON.parse((await env.ROUTING.get(key))!);
         delete legacy.userId;
@@ -366,7 +366,6 @@ describe('legacy routing owner backfill', () => {
         const batch = await getBatch(...args);
         if (!changed && batch.some((item) => item.projects.some((p) => p.id === project.id))) {
           changed = true;
-          // The scheduled job has its old ownership snapshot, but no project lock yet.
           await env.db
             .update(projects)
             .set(change === 'transfer' ? { user_id: newOwner.id } : { status: 'deleting' })

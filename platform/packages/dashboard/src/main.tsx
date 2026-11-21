@@ -10,8 +10,6 @@ import AccountPage from './pages/Account.tsx';
 import HomePage from './pages/Home.tsx';
 import LoginPage from './pages/Login.tsx';
 
-// The dashboard has three pages; links between them are ordinary page loads. Each page reads its
-// data from an internal endpoint under /api/page/ (TODO(eeao): replace with eeao procedures).
 type Page =
   | { id: 'home'; props: HomeProps }
   | { id: 'login'; props: LoginProps }

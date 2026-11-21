@@ -51,7 +51,6 @@ let user: Awaited<ReturnType<typeof createTestUser>>;
 let project: Awaited<ReturnType<typeof createTestProject>>;
 let provider: MockCfApiHandle;
 let failPublication = false;
-// Take the body of a custom Durable Object upload, then never answer it.
 let stallPublication = false;
 let stalled = false;
 const runtimeFetch = globalThis.fetch;
@@ -125,7 +124,7 @@ beforeEach(async () => {
         }
       }
       writes.push({ name, metadata, modules });
-      // Simulate a write committed by Cloudflare whose acknowledgement is lost.
+      // Decision: Simulate a write that Cloudflare committed but whose acknowledgement is lost.
       if (
         failPublication &&
         name.startsWith('void-do-') &&
@@ -402,7 +401,6 @@ describe('managed native Durable Objects', () => {
     try {
       const second = await deploy('two');
       expect(second.id).toBeDefined();
-      // The first release was saved with Workers Logs on.
       expect((await rollback(first.id!)).status).toBe(200);
       expect(currentRelease(worker)).toBe(first.id);
       expect(
@@ -427,7 +425,6 @@ describe('managed native Durable Objects', () => {
       delete env.PLATFORM_RUNTIME_LOGS;
     }
     await deploy('three');
-    // The second release was saved with Workers Logs off.
     expect((await rollback(minimal.id!)).status).toBe(200);
     expect(currentRelease(worker)).toBe(minimal.id);
     expect(writes.filter((write) => write.name === worker).at(-1)!.metadata.observability).toEqual({
@@ -467,15 +464,13 @@ describe('managed native Durable Objects', () => {
         deadline,
       );
 
-    // Too little of the run is left: nothing is sent.
     const sent = writes.length;
     await expect(replay(Date.now() + 30_000)).rejects.toThrow(WORKER_UPLOAD_OUT_OF_TIME);
     expect(writes).toHaveLength(sent);
     expect(currentRelease(worker)).toBe(second.id);
 
-    // Cloudflare takes the body and never answers. The upload may use half of
-    // what is left of the run, keeping the rest to undo it, so it is cut at
-    // 100 seconds, before the response limit would.
+    // Decision: Cloudflare takes the body and doesn't answer. The upload can use half of what's left of the run
+    // and keeps the rest to undo it, so it's cut at 100 seconds, before the response limit.
     stallPublication = true;
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     try {
@@ -492,7 +487,6 @@ describe('managed native Durable Objects', () => {
       });
       await settled;
     } finally {
-      // Let any upload still waiting reach its own limits.
       await vi.advanceTimersByTimeAsync(WORKER_UPLOAD_BUDGET_MS);
       vi.useRealTimers();
     }
@@ -507,9 +501,8 @@ describe('managed native Durable Objects', () => {
       [binding, counter].map((value) => durableObjectWorkerName(project.id, value.className)),
     );
     const deadline = Date.now() + 300_000;
-    // The first host takes 100 seconds to move. Moving the second may then use
-    // only half of what is left once 100 seconds to move the first back are
-    // kept: 50 seconds, less than one attempt.
+    // Decision: Moving the first host takes 100 seconds. Moving the second can then use only half of what's
+    // left after keeping 100 seconds to move the first back: 50 seconds, less than one attempt.
     const now = Date.now.bind(Date);
     vi.spyOn(Date, 'now').mockImplementation(
       () => now() + (workers.some((worker) => currentRelease(worker) === first.id) ? 100_000 : 0),

@@ -98,14 +98,14 @@ export async function resolveEnvSchemaFactsViaSubprocess(
   env: NodeJS.ProcessEnv,
   spawn: EnvSchemaProbeSpawn = defaultSpawn,
 ): Promise<EnvSchemaProbeResult> {
-  // File discovery executes no project code. An absent schema has no validators
-  // to isolate; use the same resolver as the child, including sourceDir/extensions.
+  // Decision: File discovery runs no project code. An absent schema has no validators to isolate; use the same
+  // resolver as the child, including sourceDir and extensions.
   if (findEnvFile(input.root) === null) {
     return { kind: 'ok', facts: { hasSchema: false, serverKeys: [], requiredKeys: [] } };
   }
   const result = await spawnEnvSchemaProbe('facts', input, env, spawn);
   if (result.kind === 'invalid-keys') {
-    // The `facts` operation never emits invalid-keys; treat it as an infra fault.
+    // Decision: The `facts` operation doesn't emit invalid-keys, so treat it as an infra fault.
     throw new Error('the env-schema probe returned an unexpected result for the facts operation.');
   }
   return result;
@@ -119,7 +119,7 @@ export async function validateEmittedVarsViaSubprocess(
 ): Promise<EnvSchemaValidateResult> {
   const result = await spawnEnvSchemaProbe('validate-emitted', input, env, spawn);
   if (result.kind === 'ok') {
-    // The `validate-emitted` operation never emits ok; treat it as infra.
+    // Decision: The `validate-emitted` operation doesn't emit ok, so treat it as infra.
     throw new Error(
       'the env-schema probe returned an unexpected result for the validate-emitted operation.',
     );
@@ -228,7 +228,7 @@ async function runEnvSchemaProbeChild(rawInput: string): Promise<void> {
   await runFactsChild(input.root);
 }
 
-// Child entry. Any unexpected failure exits nonzero; the parent fails closed on that.
+// Decision: Child entry. Any unexpected failure exits nonzero; the parent fails closed on that.
 if (process.argv[2] === PROBE_MARKER) {
   runEnvSchemaProbeChild(process.argv[3] ?? 'null').then(
     () => process.exit(0),

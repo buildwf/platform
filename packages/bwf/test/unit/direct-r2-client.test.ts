@@ -76,9 +76,9 @@ describe('PlatformClient.requestUploadUrls', () => {
     const headers = init.headers as Record<string, string>;
     expect(headers['Content-Type']).toBe('application/json');
     expect(headers.Authorization).toBe(`Bearer ${token}`);
-    // Version header so the platform's cliVersionGate middleware can refuse
-    // stale CLIs cleanly (HTTP 426 + cli_outdated). Format must look like a
-    // semver triplet — exact value is package.json-driven.
+    // Decision: The version header lets the platform's cliVersionGate middleware refuse stale CLIs cleanly
+    // (HTTP 426 + cli_outdated). It has to look like a semver triplet; the exact value comes from
+    // package.json.
     expect(headers['X-Platform-CLI-Version']).toMatch(/^\d+\.\d+\.\d+/);
 
     const body = JSON.parse(init.body as string);
@@ -386,8 +386,9 @@ describe('PlatformClient.finalizeDeploy', () => {
       .mockResolvedValueOnce(eventPage([{ seq: 1, event: done }]));
     const payload = makePayload();
     payload.workerFiles = { 'index.mjs': Buffer.from('export default {};').toString('base64') };
-    for await (const _ of makeClient().finalizeDeploy(projectId, payload)) {
-      // drain
+    const events = [];
+    for await (const event of makeClient().finalizeDeploy(projectId, payload)) {
+      events.push(event);
     }
     const body = JSON.parse(finalizeCalls()[0]![1].body as string).body;
     expect(body.workerFiles).toEqual({
@@ -512,9 +513,9 @@ describe('PlatformClient.finalizeDeploy', () => {
   });
 });
 
-// The deploy command keeps the CF Access service-token pair out of untrusted
-// build children (via `buildEnv()` on the spawn env). That is only safe because
-// the client captures the Access headers at construction and reuses them.
+// Decision: The deploy command keeps the CF Access service-token pair out of untrusted build children
+// (through `buildEnv()` on the spawn env). That's only safe because the client captures the
+// Access headers at construction and reuses them.
 describe('PlatformClient CF Access header capture (survives a later env scrub)', () => {
   it('keeps sending CF-Access headers after CF_ACCESS_* are deleted from process.env', async () => {
     vi.stubEnv('PLATFORM_ACCESS_ORIGIN', 'https://api.staging.void.cloud');

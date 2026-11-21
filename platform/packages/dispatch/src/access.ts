@@ -8,7 +8,7 @@ function matchesHostname(pattern: string, hostname: string): boolean {
   if (wildcard === -1) {
     return expected === actual;
   }
-  // Managed destinations use one wildcard at the end of the first label.
+  // Decision: Managed destinations use one wildcard at the end of the first label.
   const prefix = expected.slice(0, wildcard);
   const suffix = expected.slice(wildcard + 1);
   if (prefix.includes('.') || !suffix.startsWith('.') || suffix.includes('*')) {

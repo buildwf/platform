@@ -42,7 +42,6 @@ function describeUntrusted(value: unknown, maxLen: number): string {
     case 'object':
       return value === null ? 'null' : sanitize(Object.prototype.toString.call(value), 64);
     default:
-      // bigint, function, symbol
       return `[${typeof value}]`;
   }
 }
@@ -57,7 +56,6 @@ export interface AuthoritativeEmailRoute {
   slug: string;
   /** The shared-domain name the recipient used: the slug or the project's email alias. */
   mailbox?: string;
-  /** The project's email alias on the shared domain, when it has one. */
   alias?: string;
   addressing: 'shared' | 'custom';
   domain: string;
@@ -126,10 +124,8 @@ const MAX_ACTION_ADDRESS_LENGTH = 320;
 const MAX_FORWARD_HEADERS = 32;
 const MAX_FORWARD_HEADER_LENGTH = 1024;
 
-/** Limit one reply MIME payload. */
 const MAX_REPLY_BYTES = 5 * 1024 * 1024;
 
-/** Limit total reply MIME bytes in one delivery. */
 const MAX_REPLY_BYTES_TOTAL = 8 * 1024 * 1024;
 const INBOUND_STREAM_DEADLINE_MS = 15_000;
 
@@ -175,7 +171,7 @@ function forwardHeadersWithinBounds(headers: unknown): headers is Record<string,
     console.error('[email-router] action list dropped: forward headers is not a plain object');
     return false;
   }
-  // Check the count before reading values or constructing Headers.
+  // Decision: The count is checked before reading values or constructing Headers.
   const names = Object.keys(headers);
   if (names.length > MAX_FORWARD_HEADERS) {
     console.error(
@@ -185,14 +181,14 @@ function forwardHeadersWithinBounds(headers: unknown): headers is Record<string,
   }
   for (const name of names) {
     const value = (headers as Record<string, unknown>)[name];
-    // Headers accepts long names, so cap them explicitly.
+    // Decision: Headers accepts long names, so they're capped explicitly.
     if (name.length > MAX_FORWARD_HEADER_LENGTH) {
       console.error(
         `[email-router] action list dropped: forward header name exceeds ${MAX_FORWARD_HEADER_LENGTH} characters`,
       );
       return false;
     }
-    // Reject values that Headers would coerce to strings.
+    // Decision: Rejects values that Headers would coerce to strings.
     if (typeof value !== 'string') {
       console.error(
         `[email-router] action list dropped: forward header "${sanitize(name, 64)}" value is not a string`,
@@ -249,19 +245,18 @@ export async function routeInbound(
   ctx: ExecutionContext,
   authoritative: AuthoritativeEmailRoute,
 ): Promise<void> {
-  // The sender domain labels bounces, but is not needed to route inbound mail.
+  // Decision: The sender domain labels bounces, but inbound routing doesn't need it.
   const label = readSenderDomain(env) ?? 'bwf email';
 
   const to = String(message.to ?? '').toLowerCase();
   const local = to.split('@')[0] ?? '';
-  // <name>+<tag>, where <name> is the slug or the project's email alias. Split
-  // on the first '+'. If there's no '+', the whole local-part is the name and
-  // the user worker sees the tag-less address.
+  // Decision: The local-part is <name>+<tag>, where <name> is the slug or the email alias, split on the first
+  // `+`. With no `+`, the whole local-part is the name and the user worker sees the tag-less address.
   const plus = local.indexOf('+');
   const slug = plus === -1 ? local : local.slice(0, plus);
   const mailbox = (authoritative.mailbox ?? authoritative.slug).toLowerCase();
-  // Domain CF pinned when it accepted this message. It is the expected
-  // domain for any `reply` sender — see `ReplySenderPin`.
+  // Decision: The domain Cloudflare pinned when it accepted this message. It's the expected domain for any
+  // `reply` sender (see ReplySenderPin).
   const atIdx = to.indexOf('@');
   const receivedDomain = atIdx === -1 ? '' : to.slice(atIdx + 1);
 
@@ -270,7 +265,7 @@ export async function routeInbound(
     return;
   }
 
-  // Shared platform addresses remain reserved even when a route exists.
+  // Decision: Shared platform addresses stay reserved even when a route exists.
   if (authoritative.addressing !== 'custom' && isReservedEmailSlug(slug)) {
     message.setReject(`${label}: "${sanitize(slug, 64)}" is a reserved platform address`);
     return;
@@ -291,10 +286,9 @@ export async function routeInbound(
 
   let stub: Fetcher;
   try {
-    // Pass the project's dispatch limits, exactly as the HTTP router does in
-    // `packages/dispatch`. Without them, anyone who can send mail to a
-    // project's address runs that tenant's worker at the namespace default
-    // instead of the CPU/sub-request ceiling the project is configured for.
+    // Decision: Passes the project's dispatch limits, as the HTTP router in packages/dispatch does. Without
+    // them, anyone who can mail the project runs its worker at the namespace default, not the
+    // CPU and sub-request ceiling the project is set to.
     stub = (
       authoritative.limits
         ? env.DISPATCH.get(workerName, {}, { limits: authoritative.limits })
@@ -305,16 +299,14 @@ export async function routeInbound(
     throw new Error('email worker temporarily unavailable');
   }
 
-  // Early size guard — `rawSize` is set by CF before the body streams.
-  // Reject before buffering so a flood of oversized messages can't OOM the
-  // isolate. We still enforce the cap during streaming below in case
-  // `rawSize` ever lies.
+  // Decision: Cloudflare sets `rawSize` before the body streams, so oversized messages are rejected before
+  // buffering and a flood can't exhaust isolate memory. The cap is checked again while streaming in
+  // case `rawSize` is wrong.
   if (typeof message.rawSize === 'number' && message.rawSize > MAX_INBOUND_BYTES) {
     message.setReject(`${label}: message too large (max ${MAX_INBOUND_BYTES} bytes)`);
     return;
   }
 
-  // Buffer the body and headers into the bounded tenant envelope.
   let envelope: EmailEnvelope;
   try {
     envelope = await buildEnvelope(message);
@@ -387,13 +379,11 @@ export async function routeInbound(
     return;
   }
 
-  // Async log to the metering pipeline. Best-effort. Logged after every
-  // dispatch — including reject-only outcomes — so operators have a
-  // complete audit trail.
+  // Decision: Logged after each dispatch, including reject-only outcomes, so operators get a complete audit
+  // trail.
   ctx.waitUntil(logRecv(env, projectId, message, actions));
 }
 
-/** The gateway response to a relayed inbound message. */
 export interface RelayRouteOutcome {
   reject: boolean;
   temporary?: boolean;
@@ -424,10 +414,9 @@ export async function routeRelayed(
   }
   const workerName = authoritative.workerName;
 
-  // Built before dispatch so the dispatch-failure paths can log the
-  // delivery against it, exactly as `routeInbound` logs against the real
-  // message. The domain + authenticated project id key its REST send path
-  // (the customer account's send_raw with the domain's leased credential).
+  // Decision: Built before dispatch so the dispatch-failure paths can log the delivery against it, as
+  // routeInbound does. The domain and authenticated project id key its REST send path (the customer
+  // account's send_raw with the domain's leased credential).
   const relayed = createRelayedMessage(envelope);
 
   const gate: OutboundGate = {
@@ -473,7 +462,6 @@ export async function routeRelayed(
     return { reject: false };
   }
 
-  // Same audit trail as the platform lane — including reject-only outcomes.
   ctx.waitUntil(logRecv(env, projectId, relayed.message, actions));
   return { reject: relayed.rejectedReason() !== null };
 }
@@ -504,8 +492,8 @@ function createRelayedMessage(envelope: EmailEnvelope): {
   };
 }
 
-// Finish all local work before attempt_started: a missing lease or invalid
-// MIME means no provider submission occurred and the reservation can be cancelled.
+// Decision: All local work finishes before attempt_started: a missing lease or invalid MIME means no
+// provider submission happened, so the reservation can be cancelled.
 async function prepareRelayedReply(
   env: Env,
   projectId: string,
@@ -591,8 +579,7 @@ async function logRecv(
     );
     return;
   }
-  // Guard the raw list the same way `validateActions` does because a tenant
-  // response can contain arbitrary values.
+  // Decision: Guards the raw list like validateActions does, because a tenant response can hold any values.
   const status = actions.some((a) => a && typeof a === 'object' && a.type === 'reject')
     ? 'rejected'
     : actions.length === 0
@@ -611,9 +598,8 @@ async function logRecv(
 }
 
 async function buildEnvelope(message: ForwardableEmailMessage): Promise<EmailEnvelope> {
-  // Header COUNT first, before the body is buffered and before any property
-  // is defined: the bag is walked once, stops at the cap, and the collected
-  // pairs feed `fromEntries` below. See `MAX_INBOUND_HEADERS`.
+  // Decision: The header count is checked first, before the body is buffered or any property is defined.
+  // The bag is walked once and stops at the cap (see MAX_INBOUND_HEADERS).
   const entries: Array<[string, string]> = [];
   let headerBytes = 0;
   const encoder = new TextEncoder();
@@ -628,8 +614,8 @@ async function buildEnvelope(message: ForwardableEmailMessage): Promise<EmailEnv
     entries.push(entry);
   }
   const raw = await readStreamToBytes(message.raw);
-  // Plain objects serialize through tenant dispatch; fromEntries also keeps
-  // a `__proto__` header as an own data property.
+  // Decision: Plain objects serialize through tenant dispatch, and fromEntries keeps a `__proto__` header as
+  // an own data property.
   const headers: Record<string, string> = Object.fromEntries(entries);
   return {
     from: String(message.from ?? ''),
@@ -675,15 +661,14 @@ async function readStreamToBytes(stream: ReadableStream<Uint8Array>): Promise<Ui
       chunks.push(value);
     }
   } catch (error) {
-    // Do not let an uncooperative source extend the read deadline while its
-    // cancellation algorithm runs.
+    // Decision: An uncooperative source mustn't extend the read deadline while its cancel algorithm runs.
     void reader.cancel().catch(() => {});
     throw error;
   } finally {
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
   const out = new Uint8Array(total);
@@ -732,7 +717,6 @@ async function validateActions(
   actions: Array<EmailAction>,
   replySender: ReplySenderPin,
 ): Promise<Array<SanitizedAction> | null> {
-  // Bound validation work before walking tenant actions.
   if (actions.length > MAX_ACTIONS) {
     console.error(
       `[email-router] action list dropped: ${actions.length} actions returned (max ${MAX_ACTIONS})`,
@@ -740,25 +724,23 @@ async function validateActions(
     return null;
   }
   const out: Array<SanitizedAction> = [];
-  // Bytes of the replies accepted so far, against `MAX_REPLY_BYTES_TOTAL`.
   let replyBytesUsed = 0;
   for (const action of actions) {
     if (!action || typeof action !== 'object') {
-      // Never `String(action)` here: a string is bounded by `sanitize`, but a
-      // BigInt's decimal conversion is not — see `describeUntrusted`.
+      // Decision: Not `String(action)`: a string is bounded by `sanitize`, but a BigInt's decimal conversion isn't
+      // (see describeUntrusted).
       console.error(`[email-router] dropping non-object action: ${describeUntrusted(action, 320)}`);
       return null;
     }
     if (action.type === 'reject') {
-      // CRLF / control chars in the reason would inject into the SMTP DSN
-      // we hand back to the remote MTA. `sanitize` truncates, then strips,
-      // so a multi-megabyte control-heavy reason never gets a full pass.
+      // Decision: CRLF or control chars in the reason would inject into the SMTP DSN sent to the remote MTA.
+      // `sanitize` truncates before stripping, so a huge control-heavy reason never gets a full pass.
       const raw = typeof action.reason === 'string' ? action.reason : '';
       const reason =
         raw.length > 0 ? sanitize(raw, MAX_REJECT_REASON_LENGTH) : 'rejected by handler';
       out.push({ type: 'reject', reason });
-      // Reject is terminal — stop validating subsequent actions so they
-      // don't appear in tail logs as if they could have fired.
+      // Decision: Reject is terminal, so later actions aren't validated and don't show in tail logs as if they
+      // could have fired.
       return out;
     }
     if (action.type === 'forward') {
@@ -776,7 +758,6 @@ async function validateActions(
         try {
           headers = new Headers(action.headers);
         } catch (e) {
-          // Reject the list before any action can have side effects.
           console.error(
             `[email-router] action list dropped: forward headers invalid:`,
             e instanceof Error ? sanitize(e.message, 320) : sanitize(String(e), 320),
@@ -792,29 +773,23 @@ async function validateActions(
         );
         return null;
       }
-      // Check who the reply claims to be before asking the API to admit it.
       if (!isPermittedReplySender(action.from, replySender)) {
         console.error(
           `[email-router] reply dropped: sender not owned by project "${sanitize(replySender.names[0] ?? '', 64)}" (from=${logAddress(action.from)})`,
         );
         return null;
       }
-      // The envelope is pinned; now pin what the recipient will SEE. The
-      // bytes are the tenant's, and `new EmailMessage(from, to, raw)` never
-      // compares them with `from`, so a `From:` header naming a sibling
-      // project would pass the sender pin above. Same check, same reason,
-      // as `/email/send` in `email.ts`; `replyEmail()` always renders the
-      // header from the address it records, so only a hand-built reply
-      // can fail here.
+      // Decision: The envelope is pinned; this pins what the recipient sees. `new EmailMessage(from, to, raw)`
+      // doesn't compare the tenant's bytes with `from`, so a `From:` naming a sibling project would pass
+      // the sender pin. Same check as /email/send in email.ts.
       if (!(action.raw instanceof Uint8Array)) {
         console.error(
           `[email-router] reply dropped: raw is not a Uint8Array (from=${logAddress(action.from)})`,
         );
         return null;
       }
-      // Size before the scan below, which is linear in `raw`. Both bounds
-      // mirror the framework's `reply()`; see the constants for why the
-      // proxy re-checks them. An overrun rejects the entire action batch.
+      // Decision: Size is checked before the scan below, which is linear in `raw`. Both bounds mirror the
+      // framework's reply(); an overrun rejects the whole action batch.
       const replyBytes = action.raw.byteLength;
       if (replyBytes > MAX_REPLY_BYTES) {
         console.error(
@@ -838,10 +813,8 @@ async function validateActions(
       replyBytesUsed += replyBytes;
       out.push({ type: 'reply', from: action.from, to: action.to, raw: action.raw });
     } else {
-      // Unknown action type — log so handler authors notice rather than
-      // silently doing nothing. The `type` is whatever the tenant put there;
-      // `describeUntrusted` renders a string within 320 chars and a typed
-      // array, Array, or BigInt by kind, never by contents.
+      // Decision: Unknown action types are logged so handler authors notice. The type is tenant data, so
+      // describeUntrusted renders it by kind, not by contents, beyond a short string.
       console.warn(
         `[email-router] dropping unknown action type: ${describeUntrusted((action as { type?: unknown }).type, 320)}`,
       );
@@ -861,7 +834,6 @@ async function enactActions(
 ): Promise<void> {
   const sanitized = await validateActions(actions, replySender);
   if (sanitized === null) {
-    // The handler ran, but none of its invalid actions was enacted.
     await recordEmailReceipt(env, gate.receiptId, gate.projectId, 'actions_rejected').catch(() => {
       console.error('[email-router] could not record rejected actions');
     });
@@ -1009,7 +981,7 @@ async function enactSanitized(
           },
         );
       } catch {
-        /* attempt_started remains visible for operator reconciliation */
+        // Decision: attempt_started stays visible for operator reconciliation.
       }
       console.error(
         definitive

@@ -13,9 +13,9 @@
 
 import { cfFetch, CF_API_BASE, CloudflareApiError } from './cloudflare-api.ts';
 
-// CF Email Routing returns "destination address X already exists" or
-// similar wording when re-registering an account-level address. Keep a text
-// fallback for provider variants that omit the documented numeric code.
+// Decision: CF Email Routing returns "destination address X already exists" or similar when an account-level
+// address is registered again. Keep a text fallback for provider variants that omit the documented
+// numeric code.
 const ALREADY_EXISTS_PATTERN = /already exists|destination already/i;
 
 export interface CfDestinationAddress {
@@ -77,8 +77,8 @@ export async function listDestinations(
       return out;
     }
   }
-  // Hit the safety cap — surface so the operator notices instead of
-  // silently truncating recovery/refresh against a huge account.
+  // Decision: Hit the safety cap: throw so the operator notices, instead of silently truncating recovery or
+  // refresh against a huge account.
   throw new Error(`listDestinations exceeded ${LIST_PAGE_CAP} pages — increase cap or paginate`);
 }
 

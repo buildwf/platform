@@ -31,7 +31,6 @@ export function convertReturnValue(value: unknown): Response {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
   } else {
-    // object, array, number, boolean → JSON
     response = Response.json(value);
   }
   convertedResponses.add(response);

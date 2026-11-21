@@ -1,5 +1,3 @@
-/** Unit coverage for confirmation tokens and verification-email delivery. */
-
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { signConfirmToken, verifyConfirmToken } from '../../src/auth/confirm-token.ts';
 import { sendPlatformVerificationEmail } from '../../src/email/send-verification.ts';
@@ -7,11 +5,8 @@ import type { ApiEnv } from '../../src/env.ts';
 
 const SECRET = 'test-platform-secret';
 
-/**
- * The platform mail zone is a per-environment var, never a baked-in literal.
- * Staging's value here on purpose: a test pinned to production's domain would
- * pass against code that ignored the var entirely.
- */
+// Decision: The mail zone is a per-environment var. The staging value is used on purpose: a test pinned to
+// production's domain would pass against code that ignored the var.
 const MAIL_DOMAIN = 'mail.staging.buildwf.dev';
 const GATEWAY_ORIGIN = 'https://platform-email-gateway-staging.voidzer0.workers.dev';
 
@@ -30,10 +25,6 @@ function payload(overrides: Partial<Parameters<typeof signConfirmToken>[0]> = {}
   };
 }
 
-// ---------------------------------------------------------------------------
-// confirm-token
-// ---------------------------------------------------------------------------
-
 describe('signConfirmToken / verifyConfirmToken', () => {
   it('round-trips a well-formed payload', async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -49,8 +40,6 @@ describe('signConfirmToken / verifyConfirmToken', () => {
   });
 
   it('rejects a tampered payload', async () => {
-    // Re-encode the payload with a different destination id but keep the
-    // original signature — the classic "confirm someone else's row" attempt.
     const now = Math.floor(Date.now() / 1000);
     const token = await signConfirmToken(payload(), SECRET);
     const [body, sig] = token.split('.');
@@ -81,8 +70,8 @@ describe('signConfirmToken / verifyConfirmToken', () => {
 
   it('rejects a payload with the wrong schema version', async () => {
     const now = Math.floor(Date.now() / 1000);
-    // A future v2 token must not be accepted by a v1 verifier — the whole
-    // point of the version field is that a shape change invalidates old links.
+    // Decision: A v1 verifier has to reject a v2 token: the version field exists so a shape change invalidates
+    // old links.
     const token = await signConfirmToken(
       { ...payload(), v: 2 } as unknown as Parameters<typeof signConfirmToken>[0],
       SECRET,
@@ -95,11 +84,9 @@ describe('signConfirmToken / verifyConfirmToken', () => {
     const expired = await signConfirmToken(payload({ iat: now - DAY, exp: now - 1 }), SECRET);
     expect(await verifyConfirmToken(expired, SECRET, now)).toBeNull();
 
-    // `exp <= now` — the boundary second is already dead.
     const atBoundary = await signConfirmToken(payload({ iat: now - DAY, exp: now }), SECRET);
     expect(await verifyConfirmToken(atBoundary, SECRET, now)).toBeNull();
 
-    // One second of life left.
     const alive = await signConfirmToken(payload({ iat: now - DAY, exp: now + 1 }), SECRET);
     expect(await verifyConfirmToken(alive, SECRET, now)).not.toBeNull();
   });
@@ -114,8 +101,8 @@ describe('signConfirmToken / verifyConfirmToken', () => {
 
   it('rejects an iat past the 60s skew tolerance', async () => {
     const now = Math.floor(Date.now() / 1000);
-    // 61s: the boundary. Anything beyond it is a forged token or an issuing
-    // worker whose clock is wrong enough that its tokens should not be honored.
+    // Decision: 61s is past the allowed clock skew. Beyond it, the token is forged or the issuing worker's clock
+    // is too wrong to trust.
     const atBoundary = await signConfirmToken(payload({ iat: now + 61, exp: now + DAY }), SECRET);
     expect(await verifyConfirmToken(atBoundary, SECRET, now)).toBeNull();
 
@@ -123,10 +110,6 @@ describe('signConfirmToken / verifyConfirmToken', () => {
     expect(await verifyConfirmToken(wayOut, SECRET, now)).toBeNull();
   });
 });
-
-// ---------------------------------------------------------------------------
-// verification-email delivery
-// ---------------------------------------------------------------------------
 
 type SentMessage = {
   from: string;

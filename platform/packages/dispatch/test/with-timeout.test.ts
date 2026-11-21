@@ -35,7 +35,7 @@ describe('withTimeout', () => {
   it('rejects with DispatchTimeoutError carrying the label when the timer wins', async () => {
     const neverSettles = new Promise<never>(() => {});
     const p = withTimeout(neverSettles, 1000, 'slow-op');
-    // Attach the handler up front so the eventual rejection is never "unhandled".
+    // Decision: The handler is attached up front so the later rejection is never unhandled.
     const caught = p.catch((e: unknown) => e);
 
     await vi.advanceTimersByTimeAsync(1000);

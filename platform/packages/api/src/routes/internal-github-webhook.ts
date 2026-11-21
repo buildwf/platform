@@ -55,15 +55,14 @@ app.post('/', async (context) => {
     return context.json({ error: 'invalid ingress proof' }, 401);
   }
 
-  // Verify GitHub independently at the API boundary. The ingress also performs
-  // this check before spending a service-binding call, but its assertion is not
-  // substituted for the API's own trust decision.
+  // Decision: Verify the GitHub signature again here. The ingress checks it too before the service-binding
+  // call, but the API makes its own trust decision.
   if (!(await verifyGithubWebhookSignature(raw, signature, webhookSecret))) {
     return context.json({ error: 'invalid signature' }, 401);
   }
 
-  // The processing handler receives the already-verified raw bytes; no body is
-  // parsed or reserialized between GitHub's HMAC check and event dispatch.
+  // Decision: Pass the verified raw bytes on: nothing is parsed or reserialized between the HMAC check and
+  // event dispatch.
   return handleVerifiedGitHubWebhook(context, raw, event);
 });
 

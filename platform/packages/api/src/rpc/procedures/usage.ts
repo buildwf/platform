@@ -44,7 +44,7 @@ export const project = procedure('projects.usage')
   })
   .cli({ command: 'project usage', description: 'Show one project’s usage this billing period' })
   .handler(async ({ env, ctx, input, fail }) => {
-    // Usage is billed to the project's owner, whose cycle may differ from the caller's.
+    // Decision: Usage is billed to the project's owner, whose cycle may differ from the caller's.
     const { owner } = grantedAccess(ctx);
     try {
       return await getProjectUsage(env, input.projectId, owner.billing_cycle_start);

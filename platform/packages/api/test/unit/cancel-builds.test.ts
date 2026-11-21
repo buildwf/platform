@@ -2,11 +2,6 @@ import { describe, expect, it } from 'vite-plus/test';
 import type { ApiEnv } from '../../src/env.ts';
 import { cancelContainerBuildDos } from '../../src/github/cancel-builds.ts';
 
-// A recording BuildManager namespace stand-in: records every (buildId, reason)
-// pair its `cancelBuild` RPC received. `idFromName` round-trips the build id
-// through the stub so the assertion can recover which build was addressed. Each
-// namespace gets its OWN recorder so a routing test can prove WHICH class
-// (base vs large) received the cancel.
 function recordingNamespace(): {
   ns: DurableObjectNamespace;
   cancels: Array<{ id: string; reason: string }>;
@@ -41,9 +36,7 @@ describe('cancelContainerBuildDos', () => {
       'test cancel',
     );
 
-    // The paid build's cancel landed on the LARGE class — and ONLY there.
     expect(large.cancels).toEqual([{ id: 'bld_paid', reason: 'test cancel' }]);
-    // The free/null build's cancel landed on the BASE class — and ONLY there.
     expect(base.cancels).toEqual([{ id: 'bld_free', reason: 'test cancel' }]);
   });
 
@@ -80,8 +73,6 @@ describe('cancelContainerBuildDos', () => {
   });
 
   it('swallows a per-build cancel failure and keeps going (best-effort, never throws)', async () => {
-    // The base namespace throws on cancel; the large one records. A failure for
-    // the first build must NOT abort the loop or propagate.
     const throwingBase = {
       idFromName: (name: string) => ({ toString: () => name }),
       get: () => ({
@@ -103,7 +94,6 @@ describe('cancelContainerBuildDos', () => {
       ]),
     ).resolves.toBeUndefined();
 
-    // The second (large) cancel still ran despite the first throwing.
     expect(large.cancels).toEqual([{ id: 'bld_paid', reason: 'build cancelled' }]);
   });
 });

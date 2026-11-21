@@ -78,15 +78,14 @@ export function bwfPlugin(options?: {
   persistTo?: string;
   auxiliaryWorkers?: Array<AuxiliaryWorkerConfig>;
 }): Array<Plugin> {
-  // Resolve root relative to CWD — this runs at config time
   const root = process.cwd();
   const directCloudflareDestination = readDeploymentPlatform(root) === 'cloudflare';
   if (directCloudflareDestination) {
-    // Here, not in a hook, so every command selects the login before any session opens.
+    // Decision: Here, not in a hook, so every command selects the login before any session opens.
     selectBwfCloudflareLogin();
   }
   warnIfPackageJsonIsNotEsm(root);
-  // Token only matters in serve — the dispatch module that uses it is
+  // Decision: Token only matters in serve — the dispatch module that uses it is
   // DCE'd from production worker bundles. In build/preview we still need
   // *some* string (the wrapper embeds it for completeness), but we skip
   // persisting it so build-only CI workflows don't materialize dev state.
@@ -101,7 +100,7 @@ export function bwfPlugin(options?: {
       ? projectCloudflareConfigPath
       : undefined;
   let previewing = false;
-  // A preview reads the build's Wrangler deploy config, which the build moved aside. Put it back
+  // Decision: A preview reads the build's Wrangler deploy config, which the build moved aside. Put it back
   // until the preview exits.
   const restorePreviewPointer = () => {
     if (
@@ -160,12 +159,12 @@ export function bwfPlugin(options?: {
   const sandboxConfig = bindings.needsSandbox ? resolveSandboxConfig(config, root) : undefined;
   let authEnabled = application.authEnabled;
 
-  // Server-only bwf/* imports (db, kv, ai, etc.) must not pull in
+  // Decision: Server-only bwf/* imports (db, kv, ai, etc.) must not pull in
   // cloudflare:workers or node: builtins when bundled for the browser.
   // Resolve them to empty stubs in any client environment.
   const clientStubsPlugin = createClientStubsPlugin();
 
-  // Generated server entries import the env module by its resolved file path.
+  // Decision: Generated server entries import the env module by its resolved file path.
   // Prebundling a bare `platform` runtime subpath creates another package module
   // graph and therefore another envContext, so request bindings disappear for
   // the prebundled copy.
@@ -173,7 +172,7 @@ export function bwfPlugin(options?: {
     readWranglerCompat(root, config),
   );
   const queues = application.queues;
-  // Deliberately scanned with NO environment: this list is the superset used to
+  // Decision: Deliberately scanned with NO environment: this list is the superset used to
   // RESERVE binding and Durable Object class names below, and reservation must
   // not depend on which command is running. A filtered list would let the live
   // DO resolve to `BWF_LIVE` under `vite dev` and `BWF_LIVE_2` under
@@ -223,10 +222,9 @@ export function bwfPlugin(options?: {
     : existingLiveConfig;
   const shouldEmitLive = () => bindings.needsLive || existingLiveConfig !== undefined;
 
-  // Remote mode — use platform proxy for D1/KV/R2 instead of local miniflare.
   const remoteMode = resolveRemoteMode(config.remote);
 
-  // Core worker config — always set by bwfPlugin (main, triggers, assets).
+  // Decision: Core worker config — always set by bwfPlugin (main, triggers, assets).
   // Bindings are handled separately in the config function below.
   const workerConfig: Record<string, unknown> = {};
   const jobs = application.jobs;
@@ -241,12 +239,11 @@ export function bwfPlugin(options?: {
     workerConfig.vars = { ...config.worker.vars };
   }
 
-  // Tracks whether vite is running in dev or build mode. Set early in
+  // Decision: Tracks whether vite is running in dev or build mode. Set early in
   // envPlugin.config so mergeBindings can gate credential injection on 'serve'.
   let viteCommand: 'serve' | 'build' = 'build';
   let versionMetadataBinding: string | undefined;
 
-  // Merge curated wrangler fields from bwf.config.ts
   const wranglerCompat = readWranglerCompat(root, config);
   workerConfig.compatibility_date = wranglerCompat.compatibilityDate;
   if (wranglerCompat.compatibilityFlags) {
@@ -273,7 +270,7 @@ export function bwfPlugin(options?: {
   const outDir = join(root, '.bwf');
   mkdirSync(outDir, { recursive: true });
 
-  // Config function that merges inferred bindings with the resolved Cloudflare
+  // Decision: Config function that merges inferred bindings with the resolved Cloudflare
   // config. Bindings already declared there (with real IDs) take precedence;
   // placeholders are added only for inferred bindings that are missing.
   function mergeBindings(resolved: WorkerConfig): Partial<WorkerConfig> {
@@ -307,20 +304,19 @@ export function bwfPlugin(options?: {
     envSchemaFacts = facts;
   }
 
-  // Plugin that loads the single local `.env` file into worker bindings for
+  // Decision: Plugin that loads the single local `.env` file into worker bindings for
   // local dev and preview only. Production values come from remote secrets;
   // builds never turn local dotenv entries into deployable Worker vars.
   const envPlugin: Plugin = {
     name: 'platform:env',
     config(userConfig, { command, isPreview }) {
       viteCommand = command;
-      // `dev` is the Vite dev server only. Every build, `bwf deploy`, and
+      // Decision: `dev` is the Vite dev server only. Every build, `bwf deploy`, and
       // `vite preview` (which reports `command: 'serve'`) is `prod`.
       routeEnvironment = command === 'serve' && !isPreview ? 'dev' : 'prod';
       application = getApplicationAnalysis(routeEnvironment);
       bindings = application.bindings;
       authEnabled = application.authEnabled;
-      // Re-resolve for the real environment.
       managedCloudflareBuild =
         command === 'build' && Boolean(process.env.PLATFORM_DEPLOY_PROJECT_ID);
       assetRoutingPublicDir =
@@ -331,12 +327,12 @@ export function bwfPlugin(options?: {
             : join(root, 'public');
       assetRouting = resolveConfiguredAssetRoutingPolicy();
       applyAssetRoutingPolicy(assetRouting);
-      // Exclude the .bwf cache directory from the file watcher so that
+      // Decision: Exclude the .bwf cache directory from the file watcher so that
       // miniflare SQLite writes don't trigger infinite HMR refreshes.
       const ignored = ['**/.bwf/**'];
       if (command === 'serve') {
         const local = loadLocalEnv(root, { onWarn: (message) => bwfWarn(message) });
-        // Keep the dev Worker on the same values that env-schema validation
+        // Decision: Keep the dev Worker on the same values that env-schema validation
         // sees. Shell values override .env, and shell-only values are included
         // only when declared by the schema. Never copy unrelated host secrets.
         // envSchemaPlugin rejects `__PLATFORM_*` names in .env and env.ts, so no
@@ -351,7 +347,7 @@ export function bwfPlugin(options?: {
           ...(workerConfig.vars as Record<string, string> | undefined),
           ...env,
         };
-        // The Cloudflare preview server runs the already-built wrangler
+        // Decision: The Cloudflare preview server runs the already-built wrangler
         // artifact and sources its declared secrets from process.env instead
         // of the in-memory worker config. Populate only missing entries so the
         // shell still wins and `.env` remains a local runtime input.
@@ -362,7 +358,7 @@ export function bwfPlugin(options?: {
         }
       }
 
-      // In dev, keep document requests on the user worker. If this is deleted,
+      // Decision: In dev, keep document requests on the user worker. If this is deleted,
       // the CF router may route a page request to the user worker, the dev
       // override sends that request back through Vite middleware, and Vite's
       // final Cloudflare handler routes it to the CF router again. Workerd
@@ -377,11 +373,9 @@ export function bwfPlugin(options?: {
 
       const watchConfig = { server: { watch: { ignored } } };
 
-      // Minify worker bundles for smaller deploys.
       return { ...watchConfig, environments: { ssr: { build: { minify: true } } } };
     },
     configureServer(server) {
-      // Remote mode status — log which bindings are using the proxy
       if (remoteMode && (bindings.needsD1 || bindings.needsKV || bindings.needsR2)) {
         const credentials = readBwfDevCredentials(root);
         if (credentials.status === 'ok') {
@@ -414,7 +408,6 @@ export function bwfPlugin(options?: {
         }
       }
 
-      // AI onboarding: detect missing credentials early and guide users
       if (bindings.needsAI && !directCloudflareDestination) {
         const credentials = readBwfDevCredentials(root);
         if (credentials.status === 'no-token') {
@@ -425,10 +418,9 @@ export function bwfPlugin(options?: {
             );
           });
         } else if (credentials.status === 'no-project') {
-          // A test run must not stop for questions, and Vitest's watch mode reads keys from
+          // Decision: A test run must not stop for questions, and Vitest's watch mode reads keys from
           // the terminal, so Vitest's server gets the hint below.
           if (process.stdin.isTTY && !isVitestServer(server.config)) {
-            // Fire-and-forget interactive setup
             afterServerReady(server, () => {
               console.log();
               runAiSetupPrompt(root, credentials.token, credentials.apiUrl, server);
@@ -444,8 +436,6 @@ export function bwfPlugin(options?: {
     },
   };
 
-  // Binding watch plugin — detects new binding imports mid-session and
-  // notifies the developer via terminal log + browser toast.
   const autoDetectAuth = !authEnabled;
   const bindingWatchPlugin: Plugin = {
     name: 'platform:binding-watch',
@@ -502,10 +492,10 @@ export function bwfPlugin(options?: {
             });
           }
         } catch {
-          // Ignore transient read errors while files are being written or removed.
+          // Decision: Ignore transient read errors while files are being written or removed.
         }
       };
-      // Attach after the HTTP server is listening so initial plugin file
+      // Decision: Attach after the HTTP server is listening so initial plugin file
       // writes (typegen, entry generation) don't trigger a spurious check.
       const attach = () => {
         server.watcher.on('add', check);
@@ -519,7 +509,7 @@ export function bwfPlugin(options?: {
     },
   };
 
-  // Platform-managed auth uses native node:crypto password hashing.
+  // Decision: Platform-managed auth uses native node:crypto password hashing.
   // PostgreSQL needs nodejs_compat for the `pg` driver (events, net, tls, dns, etc.).
   // Cloudflare's Sandbox SDK also imports Node built-ins.
   // Other apps only need nodejs_als for AsyncLocalStorage (isomorphic fetch context threading).
@@ -557,12 +547,12 @@ export function bwfPlugin(options?: {
       !managedCloudflareBuild &&
       edgeRulesNeedWorker({ ...rules, alwaysUseHttps: config.routing?.alwaysUseHttps });
     if (nativeOwnsEdgeRouting) {
-      // Cloudflare otherwise serves an existing asset before the generated
+      // Decision: Cloudflare otherwise serves an existing asset before the generated
       // Worker can apply redirects or response headers. Native builds own the
       // rule pipeline, so send every path through the Worker first. Managed
       // builds keep their inferred policy because dispatch owns these rules.
       policy.assetConfig.run_worker_first = ['/**'];
-      // A SPA asset binding resolves its shell before the Worker can observe
+      // Decision: A SPA asset binding resolves its shell before the Worker can observe
       // an asset miss. Disable that platform fallback when native fallback
       // rules exist, then restore the SPA shell in serveWithAssets after the
       // ordered user fallbacks have had their chance.
@@ -577,7 +567,7 @@ export function bwfPlugin(options?: {
     return policy;
   }
 
-  // Provisional: `routeEnvironment` is still its `prod` default here, because no
+  // Decision: Provisional: `routeEnvironment` is still its `prod` default here, because no
   // `config` hook has run yet. `envPlugin.config` recomputes this before any
   // consumer reads it — `mergeBindings` runs inside the Cloudflare plugin's own
   // `config` hook, which Vite sorts after `envPlugin`'s. It is assigned here so
@@ -616,7 +606,7 @@ export function bwfPlugin(options?: {
     getVersionMetadataBinding: () => versionMetadataBinding,
     devTriggerToken,
     remoteMode,
-    // Merged with `public/_redirects` and `_headers`; managed builds omit them (dispatch owns them).
+    // Decision: Merged with `public/_redirects` and `_headers`; managed builds omit them (dispatch owns them).
     routing: config.routing,
     bindingNames,
     get hasSandbox() {
@@ -631,7 +621,7 @@ export function bwfPlugin(options?: {
     durableObjects,
     websocketTombstones,
     onDevAssetRoutingPolicyChange: updateDevAssetRoutingPolicy,
-    // Native builds of eligible apps let Cloudflare serve hashed build files directly.
+    // Decision: Native builds of eligible apps let Cloudflare serve hashed build files directly.
     assetWorkerBypass: true,
   });
 
@@ -675,7 +665,7 @@ export function bwfPlugin(options?: {
       viteEnvironment: { name: DEFAULT_WORKER_ENVIRONMENT_NAME },
       config: mergeBindings,
       finalizeAssets(clientDir, environment) {
-        // Vite can create a separate plugin instance for each environment. Use
+        // Decision: Vite can create a separate plugin instance for each environment. Use
         // the client instance that recorded this build's immutable asset files.
         const clientRoutes = environment?.config.plugins.find(
           (plugin) => plugin.name === routes.name,
@@ -687,7 +677,6 @@ export function bwfPlugin(options?: {
   ];
 }
 
-// Re-export runtime types and functions
 export {
   defineHandler,
   defineMiddleware,

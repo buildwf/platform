@@ -62,10 +62,9 @@ export async function executeQueuedDeployment(
     });
     return;
   }
-  // One listing confirms every staged module and its size before execution
-  // touches provider state, and supplies sizes for inputs staged before they
-  // were recorded. Bytes stream from R2 during the Cloudflare upload and are
-  // checked against their digests there.
+  // Decision: One listing confirms each staged module and its size before execution touches provider state, and
+  // supplies sizes for inputs staged before sizes were recorded. Bytes stream from R2 during the
+  // Cloudflare upload and are checked against their digests there.
   const workerFiles: Array<WorkerModule> = [];
   const staged = operation.payload.modules.length
     ? await listR2Objects(env.STATIC_ASSETS_R2, operation.input_prefix)
@@ -113,8 +112,8 @@ export async function executeQueuedDeployment(
     env,
   );
   if (response.status !== 204) {
-    // A rejected admitted input never entered the pipeline. No provider write
-    // occurred, so its placeholder can be finalized without replaying it.
+    // Decision: A rejected admitted input never entered the pipeline and made no provider write, so its
+    // placeholder can be finalized without replaying it.
     await db.transaction(async (tx) => {
       await tx.execute(
         drizzleSql`SELECT id FROM projects WHERE id = ${operation.project_id} FOR UPDATE`,

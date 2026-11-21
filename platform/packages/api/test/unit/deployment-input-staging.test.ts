@@ -4,7 +4,6 @@ import { prepareDeploymentInput } from '../../src/deployment-execution.ts';
 
 type Put = { key: string; release: (error?: Error) => void };
 
-/** Holds every put open until the test releases it. */
 class GatedR2 {
   readonly objects = new Map<string, string>();
   readonly pending: Array<Put> = [];
@@ -50,7 +49,6 @@ class GatedR2 {
     }
   }
 
-  /** Release the oldest pending put once one is waiting. */
   async releaseNext(error?: Error): Promise<string> {
     while (this.pending.length === 0) {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -125,7 +123,6 @@ describe('prepareDeploymentInput', () => {
       modules,
       { appType: 'platform' },
     );
-    // Keep the pool full, and release puts out of start order: newest first.
     for (let released = 0; released < count; released++) {
       await waitFor(() => r2.pending.length === Math.min(R2_CONCURRENCY, count - released));
       expect(r2.started.some((key) => key.includes('/receipt'))).toBe(false);
@@ -145,13 +142,11 @@ describe('prepareDeploymentInput', () => {
       })),
     );
     expect(r2.objects.get(`${prefix}${count - 1}`)).toBe(`export default ${count - 1};`);
-    // Each put sends the decoded Blob itself rather than a buffered copy.
     modules.forEach(({ content }, index) =>
       expect(r2.values.get(`${prefix}${index}`)).toBe(content),
     );
     expect(digest).toMatch(/^[0-9a-f]{64}$/);
 
-    // The identity digest depends only on the content, not on completion order.
     const sequential = new GatedR2();
     const again = prepareDeploymentInput(
       sequential as unknown as R2Bucket,
@@ -186,7 +181,6 @@ describe('prepareDeploymentInput', () => {
     await r2.releaseNext(new Error('R2 put failed'));
     const startedAtFailure = r2.started.length;
     expect(startedAtFailure).toBe(R2_CONCURRENCY + 1);
-    // Settle the puts that were already running when the failure happened.
     while (r2.pending.length > 0) {
       r2.pending.shift()!.release();
       await new Promise((resolve) => setTimeout(resolve, 0));

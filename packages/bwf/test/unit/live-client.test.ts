@@ -455,7 +455,6 @@ describe('connectLiveStream', () => {
       MockEventSource.instances[1]!.emit('error', new Event('error'));
       await flushMicrotasks();
 
-      // The second wait is twice the first.
       await vi.advanceTimersByTimeAsync(100);
       expect(MockEventSource.instances).toHaveLength(2);
       await vi.advanceTimersByTimeAsync(100);
@@ -534,7 +533,7 @@ describe('connectLiveStream', () => {
         JSON.stringify({ subscriptionId: 'post-card', topic: 'post:12', eventId: 'v2', data: {} }),
       );
 
-      // A deploy restarted the server, and the stream still looks open here.
+      // Decision: A deploy restarted the server, and the stream still looks open here.
       known = false;
       const second = live.subscribe({ id: 'comments', topic: 'comment:2323' });
       await flushMicrotasks(10);
@@ -635,7 +634,6 @@ describe('connectLiveStream', () => {
       await vi.advanceTimersByTimeAsync(25);
       expect(MockEventSource.instances).toHaveLength(3);
 
-      // Focus doesn't wait for the timer.
       MockEventSource.instances[2]!.emit('error', new Event('error'));
       wakeTarget.dispatchEvent(new Event('focus'));
       expect(MockEventSource.instances).toHaveLength(4);
@@ -652,7 +650,6 @@ function controlBody(init: RequestInit | undefined): ControlBody {
   return JSON.parse(String(init?.body)) as ControlBody;
 }
 
-/** Answers a control request by accepting every operation in it. */
 function ackAll(init: RequestInit | undefined): Response {
   const body = controlBody(init);
   return Response.json({
@@ -675,7 +672,6 @@ function openLive(fetchMock: unknown, options: ConnectLiveStreamOptions = {}) {
   });
 }
 
-/** Lets the client create its EventSource, then opens it. */
 async function emitOpen(): Promise<MockEventSource> {
   await Promise.resolve();
   const source = MockEventSource.instances[0]!;

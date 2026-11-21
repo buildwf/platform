@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { describe, it, expect, vi } from 'vite-plus/test';
 
-// Deploy-log tests point homedir() at a temp folder; every other caller keeps the real one.
+// Decision: Deploy-log tests point homedir() at a temp folder; other callers keep the real one.
 const logHome = vi.hoisted(() => ({ dir: '' }));
 vi.mock('node:os', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:os')>();
@@ -122,8 +122,8 @@ describe('applyDeployEvent', () => {
     );
 
     expect(result).toEqual({ kind: 'continue' });
-    // Warning must use log.warn (persists above the spinner) so the user sees
-    // it after deploy completes — NOT s.message (gets overwritten).
+    // Decision: The warning uses log.warn, which stays above the spinner, so the user sees it after the
+    // deploy completes. s.message would be overwritten.
     expect(warnSpy).toHaveBeenCalledOnce();
     const msg = String(warnSpy.mock.calls[0][0]);
     expect(msg).toMatch(/emails/);
@@ -201,7 +201,6 @@ describe('applyDeployEvent', () => {
       published: false,
     };
     const result = applyDeployEvent(done, spinner);
-    // Committed-live: still a `done` kind, NOT an error.
     expect(result).toEqual({ kind: 'done', event: done });
     const msg = String(calls.stop[0]);
     expect(msg).toMatch(/routing was not published/i);
@@ -270,8 +269,8 @@ it('explains stalled deployment progress once and reports recovery without claim
 });
 
 describe('streamDeployEvents', () => {
-  // Ctrl-C during a managed deploy exits with 130 without awaiting anything, so the records
-  // must already be on disk. The log goes to a temp home folder.
+  // Decision: Ctrl-C during a managed deploy exits with 130 without awaiting anything, so the records
+  // have to be on disk already.
   it('has every managed deploy record on disk when Ctrl-C exits', async () => {
     logHome.dir = mkdtempSync(join(tmpdir(), 'platform-deploy-log-'));
     const { spinner } = createMockSpinner();
@@ -298,7 +297,7 @@ describe('streamDeployEvents', () => {
       await waiting;
       const onSigint = process.listeners('SIGINT').find((listener) => !before.has(listener));
       expect(onSigint).toBeTypeOf('function');
-      // Call the handler directly: emitting SIGINT would reach the test runner's own handlers.
+      // Decision: Call the handler directly: emitting SIGINT would reach the test runner's own handlers.
       (onSigint as () => void)();
       expect(exit).toHaveBeenCalledWith(130);
 
@@ -366,7 +365,6 @@ describe('streamDeployEvents', () => {
       logger,
     );
 
-    // Resolves as a committed deploy — no throw, returns the done event.
     expect(result).toEqual(done);
     const keys = calls.info.map((c) => c.msg);
     expect(keys).toContain('deploy_degraded');
@@ -412,9 +410,9 @@ describe('warnUnpublishedRouting', () => {
   });
 });
 
-// Class B/C framework deploys pin `not_found_handling: 'none'` and never read
-// `routing.notFound`. The config validator accepts the key in every mode, so
-// without this warning the option looks supported and silently does nothing.
+// Decision: Class B/C framework deploys pin `not_found_handling: 'none'` and don't read
+// `routing.notFound`. The config validator accepts the key in each mode, so without this
+// warning the option looks supported and silently does nothing.
 describe('warnIgnoredNotFoundForFramework', () => {
   it('warns, naming the framework and the pinned value, when routing.notFound is set', async () => {
     const { log } = await import('@voidzero-dev/vite-plus-prompts');
@@ -432,8 +430,8 @@ describe('warnIgnoredNotFoundForFramework', () => {
   });
 
   it('warns for every accepted value, including the pinned one', async () => {
-    // Even `'none'` warns: it happens to match what the path pins, but the key
-    // is still not read, and staying silent there would teach that it works.
+    // Decision: Even `'none'` warns: it happens to match what the path pins, but the key still isn't read,
+    // and staying silent there would suggest that it works.
     const { log } = await import('@voidzero-dev/vite-plus-prompts');
     const warnSpy = log.warn as ReturnType<typeof vi.fn>;
 

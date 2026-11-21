@@ -6,7 +6,7 @@ import { formatEnvReport, validateProdEnv } from '../../src/cli/env-validation.t
 import { number, string } from '../../src/runtime/env-helpers.ts';
 import { defineEnv } from '../../src/runtime/env-public.ts';
 
-// The fixture env.ts only has to exist: tests register the shared schema with defineEnv.
+// Decision: The fixture env.ts only has to exist: tests register the shared schema with defineEnv.
 
 const roots: Array<string> = [];
 
@@ -24,7 +24,7 @@ function writeDotenv(root: string, name: string, contents: string): void {
 }
 
 beforeEach(() => {
-  // defineEnv({}) resets the shared schema registry.
+  // Decision: defineEnv({}) resets the shared schema registry.
   defineEnv({});
 });
 

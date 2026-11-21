@@ -196,11 +196,10 @@ export async function deploymentLogs(
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
     throw new OperatorError(400, 'limit must be between 1 and 500.');
   }
-  // The admin browser requests newest-first pages and treats `since` as an
-  // ingestion-time window: a long-running request that started before the
-  // window can still finish and emit a new error inside it. Operator history is
-  // oldest-first and remains event-time based; operator follow switches to the
-  // ingestion clock explicitly through `after` and keeps its overlap protocol.
+  // Decision: The admin browser asks for newest-first pages and treats `since` as an ingestion-time window: a
+  // long request that started before the window can still emit a new error inside it. Operator history
+  // is oldest-first and event-time based; operator follow switches to the ingestion clock through
+  // `after` and keeps its overlap protocol.
   const clock: 'event' | 'ingestion' =
     options.after !== undefined || options.order === 'newest-first' ? 'ingestion' : 'event';
   let since =
@@ -257,7 +256,7 @@ export async function deploymentLogs(
     clock === 'ingestion'
       ? `timestamp >= toDateTime(${sqlString(sinceStr)}) AND timestamp < toDateTime(${sqlString(untilStr)})`
       : `timestamp >= toDateTime(${sqlString(sinceStr)}) AND timestamp < toDateTime(${sqlString(untilStr)}) AND double1 >= ${since} AND double1 < ${until}`;
-  // A grouped query can order only by its selected aliases.
+  // Decision: A grouped query can order only by its selected aliases.
   const order =
     clock === 'ingestion'
       ? `ingestedAt ${direction}, ts ${direction}`

@@ -30,7 +30,7 @@ import {
 
 let env: TestEnv;
 const token = 'customer-scoped-token';
-// Each fixture domain below is the apex of its own visible test zone.
+// Decision: Each fixture domain below is the apex of its own visible test zone.
 const zones = {
   'example.com': { id: 'zone-example', name: 'example.com', accountId: 'customer-account' },
   'expiry.example.com': {

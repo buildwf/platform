@@ -2,10 +2,6 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { oauthNonces, authCodes } from '../schema.ts';
 import { type Db } from './client.ts';
 
-// ---------------------------------------------------------------------------
-// oauth nonces
-// ---------------------------------------------------------------------------
-
 export async function storeOAuthNonce(db: Db, nonce: string, ttlSeconds: number): Promise<void> {
   await db
     .insert(oauthNonces)
@@ -25,10 +21,6 @@ export async function consumeOAuthNonce(db: Db, nonce: string): Promise<boolean>
 export async function purgeExpiredOAuthNonces(db: Db): Promise<void> {
   await db.delete(oauthNonces).where(sql`expires_at <= now()`);
 }
-
-// ---------------------------------------------------------------------------
-// auth codes (dashboard login code exchange)
-// ---------------------------------------------------------------------------
 
 export async function storeAuthCode(
   db: Db,

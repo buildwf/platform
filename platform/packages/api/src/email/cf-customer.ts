@@ -247,11 +247,9 @@ export function createCfCustomerClient(credential: string): CfCustomerClient {
     },
 
     listSendingSubdomains: async (zoneId) => {
-      // The list paginates (CF v4 default page size 20): an onboarded
-      // domain past the first page must still confirm the read-back. The
-      // envelope's result_info is discarded by cfCustomerFetch, so a short
-      // page is the last page; the page cap is defensive, never hit in
-      // practice.
+      // Decision: The list paginates (CF v4 default page size 20), so an onboarded domain past the first page must
+      // still confirm the read-back. cfCustomerFetch drops the envelope's result_info, so a short page is
+      // the last page; the page cap is defensive.
       const parsed: Array<CfSendingSubdomain> = [];
       for (let page = 1; page <= 20; page++) {
         const rows = await call<unknown>(
@@ -314,8 +312,8 @@ export function createCfCustomerClient(credential: string): CfCustomerClient {
           response.status,
         );
       }
-      // The answer is the worker's source — the customer's code. Only
-      // existence matters; never read it into memory.
+      // Decision: The response is the worker's source, the customer's code. Only existence matters, so don't read it
+      // into memory.
       await response.body?.cancel();
       return true;
     },
@@ -405,7 +403,7 @@ export function createCfCustomerClient(credential: string): CfCustomerClient {
         }
         throw err;
       }
-      // cfCustomerFetch already unwrapped the envelope's `result`.
+      // Decision: cfCustomerFetch already unwrapped the envelope's `result`.
       if (!rule || typeof rule !== 'object') {
         return null;
       }
@@ -481,7 +479,7 @@ export function createCfCustomerClient(credential: string): CfCustomerClient {
         }
       }
     },
-    // PATCH changes only plus-address matching; DNS and other zone settings are preserved.
+    // Decision: PATCH changes only plus-address matching; DNS and other zone settings are kept.
     enableSubaddressing: async (zoneId) => {
       await call(`/zones/${zoneId}/email/routing`, {
         method: 'PATCH',

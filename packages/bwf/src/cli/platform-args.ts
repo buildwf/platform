@@ -409,7 +409,7 @@ export function parsePlatformArgs(args: Array<string>): PlatformArgs {
         };
   }
   if (subcommand === 'uninstall') {
-    // --keep-zone is deprecated and accepted without effect: uninstall always keeps zones.
+    // Decision: --keep-zone is deprecated and accepted without effect: uninstall always keeps zones.
     const parsed = parseSelector(
       rest.filter((arg) => !['--purge-data', '--purge-resources', '--keep-zone'].includes(arg)),
       subcommand,

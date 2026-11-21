@@ -33,18 +33,14 @@ function findFoldHits(program: AstProgram, bindings: ImportBindings): Array<Fold
 }
 
 function pushHit(node: AstMemberExpression, hits: Array<FoldHit>): void {
-  // Static dot access: `env.FOO`
   if (!node.computed && isIdentifier(node.property)) {
     hits.push({ start: node.start!, end: node.end!, property: node.property.name });
     return;
   }
-  // Static bracket access with a string literal: `env["FOO"]`
   if (node.computed && isLiteral(node.property) && typeof node.property.value === 'string') {
     hits.push({ start: node.start!, end: node.end!, property: node.property.value });
     return;
   }
-  // Everything else (identifiers, template literals, etc.) falls through
-  // to the runtime Proxy — not our problem.
 }
 
 /**
@@ -79,10 +75,10 @@ export function envClientFoldPlugin(): Plugin {
   return {
     name: 'platform:env-client-fold',
     apply: 'build',
-    // Run after other transforms so the code arrives as plain JS we can parse and fold.
+    // Decision: Run after other transforms so the code arrives as plain JS we can parse and fold.
     enforce: 'post',
     configResolved(config: ResolvedConfig) {
-      // Vite runs configResolved hooks concurrently. Keep the shared env object
+      // Decision: Vite runs configResolved hooks concurrently. Keep the shared env object
       // so transforms observe the schema plugin's completed removal of local
       // values and insertion of defaults, rather than an early snapshot.
       loadedEnv = (config.env ?? {}) as Record<string, string>;
@@ -116,12 +112,12 @@ export function envClientFoldPlugin(): Plugin {
       let ms: MagicString | null = null;
       for (const hit of hits) {
         if (!isClientEnvKey(hit.property)) {
-          // Server-only key — let the client-guard plugin handle it.
+          // Decision: Server-only key — let the client-guard plugin handle it.
           continue;
         }
         const value = loadedEnv[hit.property];
         if (value === undefined) {
-          // Client-exposed but no known build-time value — Proxy will
+          // Decision: Client-exposed but no known build-time value — Proxy will
           // read it from `import.meta.env` at runtime.
           continue;
         }

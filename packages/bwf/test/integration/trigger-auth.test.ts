@@ -7,12 +7,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { compileRouteTable, compileWorkerEntry } from '../../src/router/compile.ts';
 import type { ScanResult } from '../../src/router/scan.ts';
 
-/**
- * Manual trigger auth for `/__platform/scheduled` and `/__platform/queue` is fixed
- * when the route table is compiled. Both bundles below are built with
- * NODE_ENV=development, so `import.meta.env.DEV` is true in each: only the
- * compile-time `dev` flag may pick the rule.
- */
+// Decision: Manual trigger auth for `/__platform/scheduled` and `/__platform/queue` is fixed
+// when the route table is compiled. Both bundles below are built with
+// NODE_ENV=development, so `import.meta.env.DEV` is true in each: only the
+// compile-time `dev` flag may pick the rule.
 
 const temporary = mkdtempSync(join(tmpdir(), 'platform-trigger-auth-'));
 const DEV_TOKEN = 'dev-trigger-token';

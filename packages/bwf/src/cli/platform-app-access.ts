@@ -138,7 +138,7 @@ export async function prepareInstallationAppAccess(input: {
       input.save({ appAccessSetupJson: refreshed });
       return refreshed;
     }
-    // Recheck an unmanaged public choice on resume: account-wide policy may have changed.
+    // Decision: Recheck an unmanaged public choice on resume: account-wide policy may have changed.
   }
   const file = input.authentication.file?.appAccess;
   let token =
@@ -195,7 +195,7 @@ export async function prepareInstallationAppAccess(input: {
   if (!token && input.checkpoint.appAccessTokenRejected) {
     token = await collectToken();
   }
-  // Public installations need only a read check unless the account enforces Default-Deny.
+  // Decision: Public installations need only a read check unless the account enforces Default-Deny.
   let access = new PlatformAccessClient(
     token
       ? new PlatformCloudflareClient(token, { apiBase: input.client.apiBaseUrl })
@@ -474,9 +474,9 @@ export async function turnOffInstalledProjectZeroTrust(
   try {
     result = (await response.json()) as typeof result;
   } catch {
-    // Older runtimes answer an unknown route without a JSON body.
+    // Decision: Older runtimes answer an unknown route without a JSON body.
   }
-  // An older runtime does not know the route: it answers 404, its traffic gate
+  // Decision: An older runtime does not know the route: it answers 404, its traffic gate
   // answers 503 while the platform is disabled, and its Access check refuses
   // the installer's service token on routes it does not list.
   if (

@@ -25,8 +25,6 @@ vi.mock('@voidzero-dev/vite-plus-prompts', () => ({
 
 function createClient() {
   return {
-    // `promptAndCreateProject` records the platform identity behind the client's
-    // API URL, verified by an explicit connection.
     apiUrl: 'https://platform.buildwithfriends.dev',
     createProject: vi.fn(),
   } as unknown as PlatformClient & {
@@ -61,10 +59,9 @@ describe('promptAndCreateProject', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  // The platform registers the owner's own address as a recipient AFTER it
-  // has answered, so the create response names the address and nothing else.
-  // The CLI must explain the verification email that may follow without
-  // claiming to know whether one was sent.
+  // Decision: The platform registers the owner's own address as a recipient after it answers, so the
+  // create response names the address and nothing else. The CLI explains the verification email
+  // that may follow without claiming to know whether one was sent.
   it('explains the owner recipient registration when the response names one', async () => {
     const { promptAndCreateProject } = await import('../../src/cli/create-project.ts');
     const client = createClient();
@@ -81,8 +78,6 @@ describe('promptAndCreateProject', () => {
     expect(mockInfo).toHaveBeenCalledTimes(1);
     const message = mockInfo.mock.calls[0]?.[0] as string;
     expect(message).toContain('owner@example.com');
-    // True in every outcome: neither "already verified" nor "check your
-    // inbox" is asserted, and the user is pointed at where the state shows.
     expect(message).toContain('unless it is already verified');
     expect(message).toContain('bwf email destinations');
     expect(message).not.toMatch(/is already verified as a sender/);
@@ -102,7 +97,6 @@ describe('promptAndCreateProject', () => {
     expect(JSON.parse(readFileSync(join(root, '.bwf', 'project.json'), 'utf-8'))).toEqual({
       platform: 'platform',
       ...config,
-      // The platform identity behind the client's API URL, recorded on every new link.
       applicationDomain: 'void.app',
       platformUrl: 'https://platform.buildwithfriends.dev',
       proxyUrl: 'https://proxy.void.cloud',
@@ -159,9 +153,9 @@ describe('promptAndCreateProject', () => {
     expect(mockWarn).toHaveBeenNthCalledWith(2, 'Retry [31m before deployment.');
   });
 
-  // The platform caps slugs at 56 characters (the `<slug>+noreply@` sender
-  // has to fit RFC 5321's 64-octet local-part) and answers 400. Like every
-  // other validation 400, that must re-prompt rather than abort the deploy.
+  // Decision: The platform caps slugs at 56 characters (the `<slug>+noreply@` sender has to fit RFC 5321's
+  // 64-octet local part) and answers 400. Like other validation 400s, that re-prompts instead of
+  // aborting the deploy.
   it('re-prompts when the server rejects a slug over 56 characters', async () => {
     const { promptAndCreateProject } = await import('../../src/cli/create-project.ts');
     const { PlatformApiError } = await import('../../src/cli/client.ts');
@@ -183,7 +177,6 @@ describe('promptAndCreateProject', () => {
     expect(client.createProject).toHaveBeenNthCalledWith(1, tooLong);
     expect(client.createProject).toHaveBeenNthCalledWith(2, 'shorter-app');
     expect(mockText).toHaveBeenCalledTimes(2);
-    // Enter must still validate a suggested slug rejected on the previous attempt.
     const secondPrompt = mockText.mock.calls[1]?.[0] as {
       defaultValue: string;
       validate: (value: string) => string | undefined;

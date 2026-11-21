@@ -31,7 +31,7 @@ export class ProxyKVNamespace {
       type,
     });
 
-    // A missing key is JSON `null` for every type; binary values arrive as octet-stream.
+    // Decision: A missing key is JSON `null` for every type; binary values arrive as octet-stream.
     if (
       (type !== 'arrayBuffer' && type !== 'stream') ||
       res.headers.get('content-type')?.includes('application/json')

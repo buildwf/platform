@@ -155,7 +155,7 @@ describe('runMigrations (local SQLite)', () => {
     expect(message).toContain(
       'Local database migration history does not match src/db/migrations/.',
     );
-    // Renaming files back is the fix; rename-migrations cannot help once the files are renamed.
+    // Decision: Renaming files back is the fix; rename-migrations can't help once the files are renamed.
     expect(message).toContain('restore their old names');
     expect(message).not.toContain('rename-migrations');
   });
@@ -198,7 +198,6 @@ describe('runMigrations (local SQLite)', () => {
 
     await expect(runMigrations(migDir, dbPath)).rejects.toThrow();
 
-    // The partial table should NOT exist — the transaction rolled back.
     const db = await openSqliteDatabase(dbPath, { readonly: true });
     try {
       const tempExists = db
@@ -206,7 +205,6 @@ describe('runMigrations (local SQLite)', () => {
         .get();
       expect(tempExists).toBeUndefined();
 
-      // No tracking row
       const trackedTable = db
         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_void_migrations'")
         .get();
@@ -228,7 +226,6 @@ describe('runMigrations (local SQLite)', () => {
 
     await expect(runMigrations(migDir, dbPath)).rejects.toThrow();
 
-    // 001 should have committed; 002 should have rolled back.
     const tracked = await getAppliedMigrations(dbPath);
     expect(tracked.map((t) => t.name)).toEqual(['001_ok.sql']);
 
@@ -265,7 +262,6 @@ describe('runMigrations (local SQLite)', () => {
     const migDir = join(root, 'migrations');
     const dbPath = join(root, 'test.sqlite');
 
-    // Pre-seed a legacy tracking table with one row, no `_void_migrations` table.
     const db = await openSqliteDatabase(dbPath);
     try {
       db.exec(`CREATE TABLE _migrations (
@@ -280,7 +276,6 @@ describe('runMigrations (local SQLite)', () => {
       db.close();
     }
 
-    // Provide both 001 (should be detected as already applied via upgrade) and 002.
     writeMigration(migDir, '001_init.sql', 'CREATE TABLE users (id TEXT PRIMARY KEY)');
     writeMigration(migDir, '002_posts.sql', 'CREATE TABLE posts (id TEXT PRIMARY KEY)');
 
@@ -289,12 +284,10 @@ describe('runMigrations (local SQLite)', () => {
 
     const db2 = await openSqliteDatabase(dbPath, { readonly: true });
     try {
-      // _migrations was dropped
       const legacy = db2
         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_migrations'")
         .get();
       expect(legacy).toBeUndefined();
-      // _void_migrations has the expected rows
       const rows = db2.prepare('SELECT name FROM _void_migrations ORDER BY name').all() as Array<{
         name: string;
       }>;
@@ -314,7 +307,6 @@ describe('runMigrations (local SQLite)', () => {
   it('getAppliedMigrations returns [] when neither tracking table exists', async () => {
     const root = createDir();
     const dbPath = join(root, 'empty.sqlite');
-    // Create an empty DB
     const db = await openSqliteDatabase(dbPath);
     db.close();
 
@@ -373,7 +365,7 @@ describe('runMigrations (local SQLite)', () => {
   });
 
   it('writes the tracking row AFTER the migration SQL, not before (mutation-sensitive ordering)', async () => {
-    // The migration counts its own tracking row: 0 means the row is written after the SQL.
+    // Decision: The migration counts its own tracking row: 0 means the row is written after the SQL.
     const root = createDir();
     const migDir = join(root, 'migrations');
     const dbPath = join(root, 'test.sqlite');

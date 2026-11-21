@@ -109,8 +109,8 @@ tenantRoutes.get('/projects/:id/ai-logging', async (context) => {
   }
   return context.json(status);
 });
-// Writes never go through the Hyperdrive cache, and the publish reads its inputs in a
-// write statement, so this route works whatever the database caching setup.
+// Decision: Writes don't go through the Hyperdrive cache, and the publish reads its inputs in a write
+// statement, so this route works whatever the database caching setup.
 tenantRoutes.post('/projects/:id/ai-logging', async (context) => {
   const body = await readBody(context);
   const mode = body.mode;

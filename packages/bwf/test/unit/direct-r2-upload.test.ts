@@ -46,7 +46,6 @@ describe('uploadAssetsToR2', () => {
     const urls = new Set(fetchMock.mock.calls.map(([u]) => u));
     expect(urls).toEqual(new Set(['https://r2/h1', 'https://r2/h2', 'https://r2/h3']));
 
-    // Per-asset start/end events.
     const startEvents = cliLog.info.mock.calls.filter(([msg]) => msg === 'r2_put_start');
     const endEvents = cliLog.info.mock.calls.filter(([msg]) => msg === 'r2_put_end');
     expect(startEvents).toHaveLength(3);
@@ -133,7 +132,6 @@ describe('uploadAssetsToR2', () => {
       } finally {
         vi.useRealTimers();
       }
-      // 1 initial attempt + 3 retries = 4 calls.
       expect(fetchMock).toHaveBeenCalledTimes(4);
     },
   );
@@ -152,7 +150,7 @@ describe('uploadAssetsToR2', () => {
     const fetchMock = vi.fn().mockImplementation(async () => {
       inFlight++;
       maxInFlight = Math.max(maxInFlight, inFlight);
-      // Yield once so concurrent requests stack up.
+      // Decision: Yield once so concurrent requests stack up.
       await new Promise((resolve) => setTimeout(resolve, 5));
       inFlight--;
       return new Response(null, { status: 200 });
@@ -199,13 +197,11 @@ describe('uploadAssetsToR2', () => {
     const seen: Array<string> = [];
 
     await uploadAssetsToR2(items, cliLog, fetchMock, (item) => {
-      // body must already be cleared by the time the callback runs so the
-      // caller does not have to inspect it.
+      // Decision: body is cleared by the time the callback runs, so the caller doesn't have to inspect it.
       expect(item.body).toBeUndefined();
       seen.push(item.path);
     });
 
-    // Every item invoked the callback exactly once, with body cleared.
     expect(seen.sort()).toEqual(['/a.html', '/b.css', '/c.js']);
     for (const item of items) {
       expect(item.body).toBeUndefined();
@@ -219,9 +215,8 @@ describe('uploadAssetsToR2', () => {
 
     await expect(uploadAssetsToR2([item], cliLog, fetchMock, onAfterPut)).rejects.toBeDefined();
 
-    // Failed upload must not signal "done" via the cleanup hook — callers
-    // depend on this to avoid prematurely dropping refs they may need to
-    // re-presign / retry against in a future iteration.
+    // Decision: A failed upload must not signal "done" through the cleanup hook: callers depend on this so
+    // they don't drop refs they may need to re-presign or retry later.
     expect(onAfterPut).not.toHaveBeenCalled();
     expect(item.body).toBeDefined();
   });

@@ -124,8 +124,8 @@ async function post(key = crypto.randomUUID(), body: unknown = payload(), jwt = 
     }),
     queuedEnv,
   );
-  // Disconnect every observer immediately. Durable execution must not rely on
-  // consuming this response, and no polling timers should escape the test.
+  // Decision: Disconnect each observer at once. Durable execution mustn't depend on consuming this response,
+  // and no polling timers should escape the test.
   await response.body?.cancel();
   return response;
 }
@@ -1064,8 +1064,7 @@ describe('durable execution claim and revocation', () => {
       mockCfApi({
         uploadWorker: () => {
           uploadCalls++;
-          // The attempt fails after 45 seconds, leaving less than one more
-          // attempt before the run deadline.
+          // Decision: The attempt fails after 45 seconds, which leaves less than one more attempt before the run deadline.
           offset += 45_000;
           throw new TypeError('fetch failed');
         },
@@ -1078,7 +1077,6 @@ describe('durable execution claim and revocation', () => {
       const id = response.headers.get('x-platform-deployment-id')!;
       const list = env.STATIC_ASSETS_R2.list.bind(env.STATIC_ASSETS_R2);
       vi.spyOn(env.STATIC_ASSETS_R2, 'list').mockImplementation(async (options) => {
-        // The run spent this long before it read its staged modules.
         offset ||= elapsedMs;
         return list(options);
       });
@@ -1201,7 +1199,6 @@ describe('durable execution of directly uploaded Worker modules', () => {
     } as unknown as DispatchNamespace;
   });
 
-  /** What the CLI does: request upload URLs, then PUT each module to its key. */
   async function uploadWorker(files: Record<string, string>) {
     const modules = await Promise.all(
       Object.entries(files).map(async ([name, text]) => {
@@ -1273,7 +1270,6 @@ describe('durable execution of directly uploaded Worker modules', () => {
         size: workerInput.modules[0]!.size,
       },
     ]);
-    // Nothing was copied: the prefix holds the upload and the receipt marker.
     expect(await keys(prefix)).toEqual([`${prefix}0`, `${prefix}receipt-platform-worker`]);
 
     const message = await run(id);
@@ -1288,13 +1284,11 @@ describe('durable execution of directly uploaded Worker modules', () => {
     const key = crypto.randomUUID();
     const first = await post(key, workerPayload(workerInput));
     const id = first.headers.get('x-platform-deployment-id')!;
-    // A transport retry repeats the request: the same key and the same upload.
     const retry = await post(key, workerPayload(workerInput));
     expect(retry.status).toBe(200);
     expect(retry.headers.get('x-platform-deployment-id')).toBe(id);
     expect(await keys(prefix)).toContain(`${prefix}0`);
 
-    // A different deploy cannot claim an upload another operation owns.
     const other = await app.fetch(
       new Request(`https://api.test/projects/${project.id}/deploy`, {
         method: 'POST',
@@ -1332,15 +1326,12 @@ describe('durable execution of directly uploaded Worker modules', () => {
     });
     expect(await keys(prefix)).toEqual([]);
 
-    // A transport retry can arrive after execution. It gets the original
-    // receipt and writes nothing under the deleted upload.
     const retry = await post(key, workerPayload(workerInput));
     expect(retry.status).toBe(200);
     expect(retry.headers.get('x-platform-deployment-id')).toBe(id);
     expect(await keys(prefix)).toEqual([]);
     expect(await env.db.select().from(deploymentOperations)).toHaveLength(1);
 
-    // Different input under the same key still needs its own upload.
     const changed = await post(key, { ...workerPayload(workerInput), commit: 'different-commit' });
     expect(changed.status).toBe(400);
     expect(await env.db.select().from(deploymentOperations)).toHaveLength(1);

@@ -187,7 +187,6 @@ describe('operator argument and help coverage', () => {
     expect(parseOperatorArgs(['zero-trust', 'project-public', 'project/id'])).toMatchObject({
       body: { protected: false },
     });
-    // Reconfiguring an enabled installation omits the existing-project choice.
     const reconfigure = parseOperatorArgs([
       'zero-trust',
       'configure',
@@ -1795,7 +1794,6 @@ describe('project AI logging commands', () => {
     source: 'project',
   };
 
-  /** Serves discovery at `platformVersion` (or a status) and operator API replies in order. */
   function serve(
     platformVersion: string | number,
     replies: Array<Record<string, unknown> | Response>,

@@ -77,7 +77,7 @@ export async function verifyProtectionWorkerOrigins(
       );
     }
     if (subdomain.enabled && !expectedWorkersDev) {
-      // Existing custom-domain installations often also expose workers.dev. Disable only after review.
+      // Decision: Existing custom-domain installations often also expose workers.dev. Disable only after review.
       updates.push({ path, enabled: false });
     } else if (subdomain.previews_enabled) {
       updates.push({ path, enabled: expectedWorkersDev && subdomain.enabled });
@@ -309,7 +309,7 @@ export async function runPlatformProtectionConfig(args: PlatformConfigArgs): Pro
             throw new Error('platform: Access protection could not be verified.');
           }
         } finally {
-          // Provisioning stores machine credentials. Management still requires the human's Access session.
+          // Decision: Provisioning stores machine credentials. Management still requires the human's Access session.
           if (originalCredentials === undefined) {
             delete process.env.PLATFORM_ACCESS_CREDENTIALS;
           } else {
@@ -335,7 +335,7 @@ export async function runPlatformProtectionConfig(args: PlatformConfigArgs): Pro
           'platform: Sign in interactively through company Access to enable protection. Service credentials cannot authorize this change.',
         );
       }
-      // Resource checkpointing changes lifecycleVersion. Refresh it after releasing the
+      // Decision: Resource checkpointing changes lifecycleVersion. Refresh it after releasing the
       // lifecycle lock, then verify the origins against that exact captured version. A
       // later lifecycle mutation makes this proof stale at the operator API.
       context = protectionContext(await operator.request('/config/auth/protection'));

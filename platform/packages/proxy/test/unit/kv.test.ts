@@ -4,8 +4,6 @@ import { clearProxyTokenStateCache } from '../../src/proxy-token.ts';
 
 const JWT_SECRET = 'test-secret-key';
 
-// --- HMAC helper ---
-
 function base64urlEncode(data: Uint8Array): string {
   let binary = '';
   for (const byte of data) {
@@ -26,8 +24,6 @@ async function signAiToken(projectId: string, secret: string): Promise<string> {
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(projectId)));
   return base64urlEncode(sig);
 }
-
-// --- Mock factories ---
 
 function createMockApi(resources: Record<string, string> = {}) {
   return {
@@ -79,8 +75,6 @@ function post(path: string, body: unknown): Request {
 function asFetchMock(mock: unknown): typeof fetch {
   return mock as typeof fetch;
 }
-
-// --- Tests ---
 
 describe('KV proxy endpoints', () => {
   let token: string;

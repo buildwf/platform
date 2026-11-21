@@ -137,7 +137,6 @@ describe('dedicated email gateway', () => {
     expect(apiFetch).toHaveBeenCalledTimes(1);
   });
 
-  // Opening the link shows a Confirm button; consent is the button's POST.
   it('relays the Confirm button POST with the token and no request body', async () => {
     const apiFetch = vi.fn(async (input: unknown, init?: RequestInit) => {
       expect(String(input)).toBe('https://api/email/destinations/confirm?token=payload.signature');

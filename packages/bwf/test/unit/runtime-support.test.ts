@@ -46,7 +46,7 @@ describe('runtime support check', () => {
     expect(unsupportedRuntimeMessage({ node: '24.x' }, EXEC_PATH)).toContain('Found Node.js v24.x');
   });
 
-  // Bun reports Node v26.3.0 (1.4.x) or v24.3.0 (1.3.x), so it is checked on its own version.
+  // Decision: Bun reports Node v26.3.0 (1.4.x) or v24.3.0 (1.3.x), so it's checked on its own version.
   it('rejects Bun below the minimum even though it reports a Node version', () => {
     expect(unsupportedRuntimeMessage({ bun: '1.3.14', node: '24.3.0' }, '/usr/local/bin/bun')).toBe(
       'bwf: Bun 1.4.0 or later is required. Found Bun 1.3.14 (/usr/local/bin/bun).\n' +

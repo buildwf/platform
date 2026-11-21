@@ -23,7 +23,7 @@ import { procedure, session } from '@builtbyfriends/bwf/procedure';
 const r = { reason: 'Not part of this test' };
 `;
 
-// Every decision made, so only the name and auth differ between procedures.
+// Decision: Every decision made, so only the name and auth differ between procedures.
 const decided = `.noAuthz(r).noErrors(r).noAnalytics(r).noMcp(r).noCli(r).noAiTool(r)`;
 
 const files: Record<string, string> = {
@@ -176,7 +176,6 @@ describe('procedures/', () => {
     });
     expect((await call(worker, 'billing')).body).toEqual({ data: { ok: true } });
     expect((await call(worker, 'billing.invoices.list')).body).toEqual({ data: ['inv_1'] });
-    // An explicit name wins over the path.
     expect((await call(worker, 'invoices.legacy')).body).toEqual({ data: 'old' });
     expect((await call(worker, 'billing.invoices.renamed')).status).toBe(404);
   });

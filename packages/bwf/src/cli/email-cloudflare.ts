@@ -71,8 +71,6 @@ export function isAwaitingSendingOnboarding(pre: EmailPreflight): boolean {
   );
 }
 
-// ── Injected seams ─────────────────────────────────────────────────────────────
-
 /** Provider results are structured at the subprocess boundary. */
 export type EmailWranglerRunResult = CloudflareCommandResult;
 
@@ -123,7 +121,7 @@ export interface EmailCloudflareInputs {
  * before anything is asked. The writer keeps the same guard, since the file can change first.
  */
 export function findEmailConfigConflicts(config: Record<string, unknown>): Array<string> {
-  // A Set: one malformed field is reported by both lookups (the owner scan reads every field).
+  // Decision: A Set: one malformed field is reported by both lookups (the owner scan reads all fields).
   const conflicts = new Set<string>();
   const check = (field: string, name: string): void => {
     let owner: string | undefined;
@@ -160,8 +158,6 @@ export function emailConfigInputs(
     configConflicts: findEmailConfigConflicts(rootConfig),
   };
 }
-
-// ── Derivation ─────────────────────────────────────────────────────────────────
 
 export type EmailDomainMode = 'apex' | 'subdomain';
 
@@ -223,7 +219,7 @@ export function deriveAddresses(
   for (const def of handlers.addresses) {
     const handler = `email/${def.filePath}`;
     if (def.pattern.kind === 'static' || def.pattern.kind === 'static-tag') {
-      // `address` is the lowercased basename; the literal is everything before the `+`.
+      // Decision: `address` is the lowercased basename; the literal is everything before the `+`.
       const literal = def.address.split('+')[0] ?? def.address;
       const address = `${literal}@${domain}`;
       if (!literals.includes(address)) {
@@ -266,8 +262,6 @@ export function deriveAddresses(
   }
   return { addresses, refused, routes };
 }
-
-// ── Structured command results ────────────────────────────────────────────────
 
 /** The session fields read from the `auth.whoami` operation. */
 export interface WhoamiJson {
@@ -382,7 +376,7 @@ export function readRoutingRules(data: unknown): RoutingRules | null {
           actions.push('forward:' + values.join(','));
         }
       } else {
-        // Unknown actions cannot prove ownership or authorize taking over a rule.
+        // Decision: Unknown actions can't prove ownership or authorize taking over a rule.
         return null;
       }
     }
@@ -467,8 +461,6 @@ function providerErrorCode(result: EmailWranglerRunResult): number | null {
 function isHardFailure(result: EmailWranglerRunResult): boolean {
   return Boolean(result.signal) || Boolean(result.error);
 }
-
-// ── Preflight ──────────────────────────────────────────────────────────────────
 
 type ReadyState = 'ready' | 'pending' | 'unknown';
 
@@ -657,15 +649,15 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
   const block = (scope: 'all' | 'sending', message: string): void => {
     pre.blockers.push({ scope, message });
   };
-  // Every writer refusal the caller precomputed lands here, before anything is asked.
+  // Decision: All writer refusals the caller precomputed land here, before anything is asked.
   for (const conflict of inputs.configConflicts ?? []) {
     block('all', conflict);
   }
 
-  // 1. Session. Require only the email scopes this app uses. An API token's permissions
-  //    cannot be listed, so the reads below gate it and fail closed. A Global API Key has no
-  //    bearer to borrow, so it is refused by name. `bwf cloudflare login` reuses a readable
-  //    session, so an insufficient one is told what to clear first.
+  // Decision: 1. Session. Require only the email scopes this app uses. An API token's permissions can't be
+  // listed, so the reads below gate it and fail closed. A Global API Key has no bearer to borrow, so
+  // it's refused by name. `bwf cloudflare login` reuses a readable session, so an insufficient one is
+  // told what to clear first.
   const whoami = await run({ type: 'auth.whoami' });
   const who = isHardFailure(whoami) || whoami.status !== 0 ? null : parseWhoamiJson(whoami.data);
   if (!who) {
@@ -685,7 +677,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
         `the Cloudflare session is a Global API Key (CLOUDFLARE_API_KEY), which has no bearer to borrow for ${receivesEmail ? 'the subaddressing calls' : 'zone verification'} — unset CLOUDFLARE_API_KEY, then run \`bwf cloudflare login\` or set CLOUDFLARE_API_TOKEN to a token with ${permissions}`,
       );
     } else if (who.authType === undefined || who.authType === 'OAuth Token') {
-      // A missing `authType` is an older payload shape: keep the scope gate (fail closed).
+      // Decision: A missing `authType` is an older payload shape: keep the scope gate (fail closed).
       const scopes = new Set(who.tokenPermissions ?? []);
       pre.session.missingScopes = (receivesEmail ? INBOUND_SCOPES : SENDING_SCOPES).filter(
         (s) => !scopes.has(s),
@@ -704,13 +696,13 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     }
   }
   const tokenSession = pre.session.state === 'ok' && pre.session.authType !== 'OAuth Token';
-  // Appended to a row an API-token session could not read: the likeliest cause is scope.
+  // Decision: Appended to a row an API-token session couldn't read: the likeliest cause is scope.
   const tokenHint = tokenSession
     ? ` (an API token needs ${permissions} on the zone and account)`
     : '';
 
-  // 2. Inbound routing settings also identify the zone. Sending-only apps resolve the
-  //    zone through the bearer read below, without requiring access to Email Routing.
+  // Decision: 2. Inbound routing settings also identify the zone. Sending-only apps resolve the zone through
+  // the bearer read below, without needing access to Email Routing.
   let settings: RoutingSettings | null = null;
   let settingsMiss = false;
   if (receivesEmail && pre.session.state === 'ok') {
@@ -747,7 +739,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     pre.zone.state = 'not-found';
   }
 
-  // 3. Public DNS. Foreign MX on the mail domain is the one thing bwf never routes over.
+  // Decision: 3. Public DNS. Foreign MX on the mail domain is the one thing bwf doesn't route over.
   if (receivesEmail) {
     pre.domainMx = await probeMx(inputs.dns, domain);
     pre.apexMx =
@@ -765,13 +757,12 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     pre.sending.dnsConflicts.push(`(DNS lookup failed for _dmarc.${domain} / cf-bounce.${domain})`);
   }
 
-  // 4. The bearer, borrowed once for the reads keyed on the resolved zone: `GET /zones?name=`
-  //    (without `account.id`, so a zone in another account is told apart from a missing one,
-  //    and `type` refuses partial/secondary zones), then `GET /zones/{z}/email/routing`
-  //    (`support_subaddress`) for inbound apps, or `GET /zones/{z}/email/sending/subdomains`
-  //    for sending-only apps. The provider's sending read first resolves the zone through
-  //    Email Routing settings (Zone Settings Read), which a sending-only token lacks.
-  //    A `null` bearer leaves these rows `unknown`.
+  // Decision: 4. The bearer, borrowed once for the reads keyed on the resolved zone: `GET /zones?name=`
+  // (without `account.id`, so a zone in another account is told apart from a missing one, and `type`
+  // refuses partial or secondary zones), then `GET /zones/{z}/email/routing` (`support_subaddress`)
+  // for inbound apps, or `GET /zones/{z}/email/sending/subdomains` for sending-only apps. The
+  // provider's sending read first resolves the zone through Email Routing settings (Zone Settings
+  // Read), which a sending-only token lacks. A `null` bearer leaves these rows `unknown`.
   let sendingRead: SessionBearerResponse | null = null;
   let bearer: string | null = null;
   if (pre.session.state === 'ok') {
@@ -893,8 +884,8 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
   const apex = pre.apex;
   const mode = pre.mode;
 
-  // 5. Routing status. On the apex, `ready` is the only good state. `unlocked` /
-  //    `misconfigured*` mean its locked records changed — print, never re-lock.
+  // Decision: 5. Routing status. On the apex, `ready` is the only good state. `unlocked` and `misconfigured*`
+  // mean its locked records changed: print, don't re-lock.
   if (settings) {
     if (mode === 'apex') {
       pre.routing = {
@@ -909,12 +900,11 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
         );
       }
     } else {
-      // No command reads a subdomain's routing state (`GET …/routing/dns?subdomain=` is
-      // deprecated), so the subdomain's MX is the readiness signal: Cloudflare's own
-      // exchanges mean enabled. A zone with routing configured only on subdomains reports
-      // the apex as `misconfigured` because the apex has no routing MX; that says nothing
-      // about this domain. Preserve only `unlocked` as an explicit signal that the developer
-      // took control of Cloudflare-managed apex records.
+      // Decision: No command reads a subdomain's routing state (`GET …/routing/dns?subdomain=` is deprecated), so
+      // the subdomain's MX is the readiness signal: Cloudflare's own exchanges mean enabled. A zone with
+      // routing configured only on subdomains reports the apex as `misconfigured` because the apex has no
+      // routing MX; that says nothing about this domain. Keep only `unlocked` as an explicit signal that
+      // the developer took control of Cloudflare-managed apex records.
       pre.routing = {
         state:
           pre.domainMx.state === 'cloudflare'
@@ -949,7 +939,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     }
   }
 
-  // 6. Derivation, then rules: mine / foreign / absent per derived address.
+  // Decision: 6. Derivation, then rules: mine, foreign or absent per derived address.
   pre.derived = deriveAddresses(inputs.handlers, domain, mode);
   if (receivesEmail) {
     const rulesResult = await run({ type: 'email.routing.rules.list', domain: apex });
@@ -980,11 +970,10 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
           }
           continue;
         }
-        // An enabled rule decides the row. A disabled one routes nothing: OUR disabled rule
-        // reads `absent`, like the disabled catch-all above — the address stays in
-        // `addresses`, and wrangler's plan (which writes every rule `enabled: true`) turns
-        // it back on at the next deploy. A disabled FOREIGN rule stays `foreign`: the
-        // matcher is still somebody else's, and taking it over is the same conflict the
+        // Decision: An enabled rule decides the row. A disabled one routes nothing: our disabled rule reads `absent`,
+        // like the disabled catch-all above. The address stays in `addresses`, and wrangler's plan (which
+        // writes all rules `enabled: true`) turns it back on at the next deploy. A disabled foreign rule
+        // stays `foreign`: the matcher is still somebody else's, and taking it over is the same conflict the
         // enabled case prunes the address to avoid.
         const rule =
           rules.rules.find((r) => r.enabled && r.to.includes(address)) ??
@@ -1007,8 +996,8 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
   const foreign = new Set(pre.rules.foreign.map((f) => f.address));
   pre.addresses = pre.derived.addresses.filter((a) => !foreign.has(a));
 
-  // 7. Sending. Not-found is a clean "not onboarded"; anything else unparsable is unknown.
-  //    Sending-only apps reach this point only after the bearer resolved the zone above.
+  // Decision: 7. Sending. Not-found is a clean "not onboarded"; anything else unparsable is unknown.
+  // Sending-only apps reach this point only after the bearer resolved the zone above.
   const sendingResult: EmailWranglerRunResult = receivesEmail
     ? await run({ type: 'email.sending.settings', domain })
     : sendingSettingsFromList(sendingRead, domain);
@@ -1034,7 +1023,7 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     );
   }
 
-  // 8. The config rows: `send_email` binding and `addresses` ownership.
+  // Decision: 8. The config rows: `send_email` binding and `addresses` ownership.
   const existingSendEmail = inputs.existingSendEmail ?? [];
   const names = existingSendEmail.map((e) => (typeof e?.name === 'string' ? e.name : ''));
   if (names.includes(SEND_EMAIL_BINDING)) {
@@ -1050,8 +1039,8 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     const existing = Array.isArray(inputs.existingAddresses)
       ? inputs.existingAddresses.map((a) => (typeof a === 'string' ? a.toLowerCase() : String(a)))
       : ['(not an array)'];
-    // bwf records no provenance for entries it wrote earlier, so a leftover from a deleted
-    // handler reads like a hand-written entry: the step is skipped and the array left alone.
+    // Decision: bwf records no provenance for entries it wrote earlier, so a leftover from a deleted handler reads
+    // like a hand-written entry: the step is skipped and the array left alone.
     const candidates = new Set(pre.derived.addresses);
     const unknown = existing.filter((a) => !candidates.has(a));
     if (unknown.length > 0) {
@@ -1062,9 +1051,9 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
       );
     } else {
       pre.addressesOwnership = { state: 'mine', foreign: [] };
-      // bwf's own array, but not the pruned set: a foreign-routed entry left in place
-      // (or a worker rename, which makes every rule foreign) reaches wrangler's plan as a
-      // `conflict`, and `[]` would plan the deletion of every owned rule.
+      // Decision: bwf's own array, but not the pruned set: a foreign-routed entry left in place (or a worker
+      // rename, which makes all rules foreign) reaches wrangler's plan as a `conflict`, and `[]` would
+      // plan the deletion of all owned rules.
       const pruned = new Set(pre.addresses);
       pre.addressesStale =
         existing.length !== pre.addresses.length || existing.some((a) => !pruned.has(a));
@@ -1077,8 +1066,8 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
     senderVar === inputs.from ? 'ready' : senderVar === undefined ? 'absent' : 'stale';
   pre.rulesPending = pre.rules.absent.filter((a) => pre.addresses.includes(a));
 
-  // Inbound apps can keep their routing-backed, verified-destination sending when onboarding
-  // is blocked or previously refused. That does not establish sending-only readiness.
+  // Decision: Inbound apps can keep their routing-backed, verified-destination sending when onboarding is
+  // blocked or was refused before. That doesn't establish sending-only readiness.
   const sendingBlocked = pre.blockers.some((b) => b.scope === 'sending');
   pre.sendingRetryable = pre.sending.state === 'pending' && !sendingBlocked;
   const sendingSettled =
@@ -1095,8 +1084,6 @@ export async function preflightEmail(inputs: EmailCloudflareInputs): Promise<Ema
 }
 
 type ZoneRecord = { id: string; name: string; type?: string; account?: { id?: string } };
-
-// ── Checklist ──────────────────────────────────────────────────────────────────
 
 /** Column padding for the checklist; an overflowing cell gets three spaces. */
 function pad(text: string, width: number): string {
@@ -1124,7 +1111,7 @@ export function renderEmailChecklist(pre: EmailPreflight): string {
     pre.session.accountName
       ? `account ${pre.session.accountName} (${shortId(pre.accountId)})`
       : `account ${shortId(pre.accountId)}`,
-    // An API token's permissions cannot be listed; a refused read shows up as its row.
+    // Decision: An API token's permissions can't be listed; a refused read shows up as its row.
     pre.session.authType && pre.session.authType !== 'OAuth Token'
       ? `session ${pre.session.email ? `${pre.session.email} ` : ''}(${pre.session.authType})`
       : pre.session.email
@@ -1168,9 +1155,9 @@ export function renderEmailChecklist(pre: EmailPreflight): string {
   } else {
     row('inbound', 'not required');
   }
-  // A pending row the committed binding remembers as refused (see `preflightEmail`) reads
-  // settled, so it says what still works and where the retry lives; a sending-scoped
-  // blocker keeps the bare word — its ✘ row at the end carries the reason.
+  // Decision: A pending row the committed binding remembers as refused (see `preflightEmail`) reads settled, so
+  // it says what still works and where the retry lives; a sending-scoped blocker keeps the bare word,
+  // and its ✘ row at the end carries the reason.
   const sendingWord =
     pre.sending.state === 'ready'
       ? 'onboarded'
@@ -1211,8 +1198,8 @@ export function renderEmailChecklist(pre: EmailPreflight): string {
   const warn = (what: string, why: string): void => {
     changes.push(`    ! ${pad(what, 44)}${why}`);
   };
-  // A subdomain is added to a zone that already routes; when the apex does not, the apply
-  // step makes no call (see `applyEmailSetup`) and the dashboard step is the row instead.
+  // Decision: A subdomain is added to a zone that already routes. When the apex doesn't, the apply step makes no
+  // call (see `applyEmailSetup`) and the dashboard step is the row instead.
   const subdomainNeedsApex = pre.mode === 'subdomain' && pre.routing.enabled !== true;
   if (receivesEmail && pre.routing.state !== 'ready' && subdomainNeedsApex) {
     warn(
@@ -1234,8 +1221,8 @@ export function renderEmailChecklist(pre: EmailPreflight): string {
       `MX/SPF/DKIM on cf-bounce.${pre.domain}, _dmarc.${pre.domain} (p=reject)`,
     );
   }
-  // The config write, listed by the members that actually change (a config-only row —
-  // `addresses` or the sender var — is rewritten without a prompt on the deploy path).
+  // Decision: The config write, listed by the members that actually change (a config-only row, `addresses` or
+  // the sender var, is rewritten without a prompt on the deploy path).
   const parts: Array<string> = [];
   if (pre.binding.state !== 'present') {
     parts.push(`send_email: [{ name: "${SEND_EMAIL_BINDING}" }]`);
@@ -1280,8 +1267,6 @@ export function renderEmailChecklist(pre: EmailPreflight): string {
   return lines.join('\n');
 }
 
-// ── Bearer bridge ──────────────────────────────────────────────────────────────
-
 export interface SessionBearerResponse {
   ok: boolean;
   status: number;
@@ -1308,8 +1293,8 @@ export async function fetchWithSessionBearer(
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
-  // Nothing this function returns may carry the token: a transport error message or an
-  // API error message that echoed the header is scrubbed before it leaves this closure.
+  // Decision: Nothing this function returns may carry the token: a transport error message or an API error
+  // message that echoed the header is scrubbed before it leaves this closure.
   const scrub = (text: string): string => text.split(bearer).join('[redacted]');
   let response: Response;
   try {
@@ -1347,8 +1332,6 @@ export async function fetchWithSessionBearer(
     errors,
   };
 }
-
-// ── Apply ──────────────────────────────────────────────────────────────────────
 
 /**
  * The config patch email setup writes; a subset of `ProvisionedWranglerPatch`.
@@ -1425,7 +1408,7 @@ export async function applyEmailSetup(
       { capture: true },
     );
 
-  // The bearer is borrowed lazily, once, and dropped at the end of this function.
+  // Decision: The bearer is borrowed lazily, once, and dropped at the end of this function.
   let bearer: string | null | undefined;
   let bearerFailed = false;
   let bearerObtained = false;
@@ -1464,7 +1447,7 @@ export async function applyEmailSetup(
   };
   const describeFailure = (response: SessionBearerResponse | null): string => {
     if (!response) {
-      // `auth token --json` failed, so no bearer could be borrowed.
+      // Decision: `auth token --json` failed, so no bearer could be borrowed.
       return 'could not borrow the Cloudflare session (session-bearer step failed)';
     }
     const first = response.errors[0];
@@ -1473,7 +1456,6 @@ export async function applyEmailSetup(
     return `Cloudflare answered ${response.status}${code}${known ? ` — ${known}` : first?.message ? ` — ${first.message}` : ''}`;
   };
 
-  // 1. Routing.
   const apexRoutingOff = pre.mode === 'subdomain' && pre.routing.enabled !== true;
   if (receivesEmail && !result.routingReady) {
     if (pre.mode === 'apex') {
@@ -1488,15 +1470,15 @@ export async function applyEmailSetup(
         );
       }
     } else if (apexRoutingOff) {
-      // A subdomain can only be added to a zone that already routes. Calling here could
-      // enable the zone itself and lock MX over the apex's live mail, so no call is made.
+      // Decision: A subdomain can only be added to a zone that already routes. Calling here could enable the zone
+      // itself and lock MX over the apex's live mail, so no call is made.
       lines.push(
         `  ✘ routing   ${pre.domain}: Email Routing is not enabled on ${apex} — a subdomain can only be added to a zone that already routes; bwf never enables routing on the apex from the subdomain path`,
       );
       lines.push(`    ${subdomainDashboardFallback(apex, pre.domain)}`);
     } else {
-      // Per the OpenAPI spec, POST …/email/routing/dns { name } enables routing on a
-      // subdomain; the `email.routing.enable` operation is apex-only.
+      // Decision: Per the OpenAPI spec, POST …/email/routing/dns { name } enables routing on a subdomain; the
+      // `email.routing.enable` operation is apex-only.
       const response = await withBearer('POST', `/zones/${pre.zone.zoneId}/email/routing/dns`, {
         name: pre.domain,
       });
@@ -1510,7 +1492,7 @@ export async function applyEmailSetup(
     }
   }
 
-  // 2. Subaddressing: per zone, off by default, and reachable only through the REST API.
+  // Decision: 2. Subaddressing: per zone, off by default, and reachable only through the REST API.
   if (receivesEmail && !result.subaddressingReady && !bearerFailed && !apexRoutingOff) {
     const response = await withBearer('PATCH', `/zones/${pre.zone.zoneId}/email/routing`, {
       support_subaddress: true,
@@ -1525,7 +1507,7 @@ export async function applyEmailSetup(
       );
     }
   } else if (receivesEmail && !result.subaddressingReady) {
-    // Skipped because an earlier bearer step failed: name the actual reason.
+    // Decision: Skipped because an earlier bearer step failed: name the actual reason.
     lines.push(
       `  ✘ routing   subaddressing on ${apex}: skipped (${
         apexRoutingOff
@@ -1537,9 +1519,9 @@ export async function applyEmailSetup(
     );
   }
 
-  // 3. Sending. 2040 = already onboarded. Anything else: hint, continue without it.
-  //    Sending-only apps onboard through the bearer on the zone preflight resolved, since
-  //    the provider command first reads Email Routing settings (Zone Settings Read).
+  // Decision: 3. Sending. 2040 means already onboarded. Anything else: hint, and continue without it.
+  // Sending-only apps onboard through the bearer on the zone preflight resolved, since the provider
+  // command first reads Email Routing settings (Zone Settings Read).
   const enableSending = async (): Promise<{
     ok: boolean;
     code: number | null;
@@ -1576,7 +1558,7 @@ export async function applyEmailSetup(
       result.sendingReady = true;
       lines.push(`  ✔ sending   ${pre.domain} onboarded`);
     } else if (noBearer) {
-      // Nothing reached Cloudflare, so the plan is not the reason.
+      // Decision: Nothing reached Cloudflare, so the plan isn't the reason.
       lines.push(
         `  ! sending   ${pre.domain} not onboarded (session bearer unavailable); rerun bwf email setup --platform cloudflare`,
       );
@@ -1594,9 +1576,9 @@ export async function applyEmailSetup(
   }
   bearer = null;
 
-  // 4. The patch. The binding is written only when routing is ready or sending is
-  //    onboarded (a bare account never carries it). `addresses` is written only when
-  //    routing is ready AND no bearer call failed this run; otherwise the key is deleted.
+  // Decision: 4. The patch. The binding is written only when routing is ready or sending is onboarded (a bare
+  // account doesn't carry it). `addresses` is written only when routing is ready and no bearer call
+  // failed this run; otherwise the key is deleted.
   if (result.routingReady || result.sendingReady) {
     result.patch.sendEmail = { name: SEND_EMAIL_BINDING };
     result.patch.vars = { [EMAIL_FROM_VAR]: pre.from };
@@ -1620,8 +1602,6 @@ export async function applyEmailSetup(
     (result.patch.sendEmail !== undefined || pre.binding.state === 'present');
   return result;
 }
-
-// ── Address map ────────────────────────────────────────────────────────────────
 
 /**
  * The post-deploy block:
@@ -1662,8 +1642,6 @@ export function renderAddressMap(map: {
   );
   return lines.join('\n');
 }
-
-// ── Node DNS adapter ───────────────────────────────────────────────────────────
 
 /** The production `EmailDns`: `node:dns/promises` against the system resolver. */
 export async function createNodeEmailDns(): Promise<EmailDns> {

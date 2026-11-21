@@ -1,4 +1,4 @@
-// Internal: not part of the package exports. `defineHandler(middleware..., leaf)`
+// Decision: Internal: not part of the package exports. `defineHandler(middleware..., leaf)`
 // records its middleware and leaf here so page loaders and actions can build the
 // page response inside the middleware chain, as route handlers do.
 import type { CloudContext } from './handler.ts';

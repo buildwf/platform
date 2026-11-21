@@ -29,7 +29,7 @@ export type SandboxProcessWire = {
   stdout: ReadableStream | null;
   stderr: ReadableStream | null;
 };
-// The public SDK also supports consumers on workers-types 4.x, which predates
+// Decision: The public SDK also supports consumers on workers-types 4.x, which predates
 // image selection, abort signals and PTYs on the native Container API.
 export type SandboxNativeContainer = Omit<Container, 'start' | 'exec'> & {
   readonly images: Record<string, string>;
@@ -172,7 +172,7 @@ export class SandboxContainer<Env = unknown> extends DurableObject<Env> {
   protected starting = false;
   #epoch = 0;
 
-  // WebSockets must travel through DO fetch, since RPC cannot serialize them.
+  // Decision: WebSockets must travel through DO fetch, since RPC cannot serialize them.
   async fetch(request: Request): Promise<Response> {
     const value = request.headers.get(SANDBOX_PORT_HEADER);
     if (!value || !/^\d+$/.test(value)) {
@@ -190,7 +190,7 @@ export class SandboxContainer<Env = unknown> extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    // Inactivity timeouts are not retained across Durable Object restarts.
+    // Decision: Inactivity timeouts are not retained across Durable Object restarts.
     this.#ready = ctx.blockConcurrencyWhile(async () => {
       this.#options = (await ctx.storage.get<SandboxOptions>('__platformSandboxOptions')) ?? {};
       if (this.container.running) {
@@ -280,7 +280,7 @@ export class SandboxContainer<Env = unknown> extends DurableObject<Env> {
     }
   }
   protected async initialize(): Promise<void> {
-    // exec waits for boot readiness; `running` alone is true before boot finishes.
+    // Decision: exec waits for boot readiness; `running` alone is true before boot finishes.
     const result = await this.initializationOutput(['sh', '-c', 'mkdir -p /workspace'], {}, 60_000);
     if (result.exitCode !== 0) {
       throw new Error('Sandbox workspace initialization failed.');
@@ -324,7 +324,7 @@ export class SandboxContainer<Env = unknown> extends DurableObject<Env> {
           ...(this.entrypoint ? { entrypoint: this.entrypoint } : {}),
         });
       }
-      // Startup returns before the VM is ready. Retain it while initialization
+      // Decision: Startup returns before the VM is ready. Retain it while initialization
       // waits for boot; setting the timeout afterwards can lose the VM first.
       await this.container.setInactivityTimeout(this.inactivityTimeoutMs);
       await this.initialize();
@@ -333,7 +333,7 @@ export class SandboxContainer<Env = unknown> extends DurableObject<Env> {
       }
       await this.afterStart();
     } catch (error) {
-      // Readiness, admission and initialization must all succeed before use.
+      // Decision: Readiness, admission and initialization must all succeed before use.
       await this.destroy().catch(() => {});
       throw error;
     }

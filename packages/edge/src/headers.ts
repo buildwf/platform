@@ -46,14 +46,13 @@ function parseQuotedString(member: string): string | null {
   for (let i = 1; i < member.length - 1; i += 1) {
     const char = member[i];
     if (char === '\\') {
-      // quoted-pair: take the next character literally.
       i += 1;
       if (i >= member.length - 1) {
-        return null; // trailing backslash before the closing quote
+        return null;
       }
       content += member[i];
     } else if (char === '"') {
-      return null; // unescaped quote before the end
+      return null;
     } else {
       content += char;
     }
@@ -81,7 +80,7 @@ export function parseClearSiteData(value: string): Array<ClearSiteDataMember> {
     const char = value[i];
     if (inQuotes) {
       if (char === '\\') {
-        i += 1; // skip the escaped character so an escaped quote stays in-string
+        i += 1; /* Decision: Skip the escaped character so an escaped quote stays in-string. */
       } else if (char === '"') {
         inQuotes = false;
       }
@@ -152,8 +151,8 @@ export function applyHeaderRules(
   }
 
   const newResponse = new Response(response.body, response);
-  // A Clear-Site-Data rule that sanitizes to nothing falls back to the origin's
-  // own value (also sanitized) instead of keeping an earlier rule's value.
+  // Decision: A Clear-Site-Data rule that sanitizes to nothing falls back to the origin's own value (also
+  // sanitized) instead of keeping an earlier rule's value.
   const isolateSharedDomainCookies = policy?.cookieIsolation !== 'origin';
   const rawOriginClearSiteData = isolateSharedDomainCookies
     ? response.headers.get('clear-site-data')

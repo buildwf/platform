@@ -111,9 +111,7 @@ export async function migrateDeploymentWorker(input: {
               if (data.ready === true) {
                 return true;
               }
-            } catch {
-              // fall through
-            }
+            } catch {}
             readinessFailure = `last readiness response was HTTP ${readyResponse.status}: ${text.slice(0, 200)}`;
             logger.warn('migrate', 'readiness_probe_attempt_failed', {
               attempt,
@@ -237,8 +235,8 @@ export async function migrateDeploymentWorker(input: {
         }
       }
       if (stableCapabilities.endpoints.auth) {
-        // Persist the remotely committed app result before auth runs, and
-        // release the project lock before this request's 300-second timeout.
+        // Decision: Persist the remotely committed app result before auth runs, and release the project lock before
+        // this request's 300-second timeout.
         await context.get('db').transaction(lockProjectForDeploy);
         await dispatchStableAuthMigration(context.env.DISPATCH.get(workerName), proxyToken);
       }

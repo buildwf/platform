@@ -144,10 +144,10 @@ const DEFINE_ENV_PATTERN =
 export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = {}): Plugin {
   const outDir = join(root, '.bwf');
   let envFile: string | null = null;
-  // `config` finds the file again. The transform filter below keeps the ids found here: a hook
+  // Decision: `config` finds the file again. The transform filter below keeps the ids found here: a hook
   // filter is fixed when the plugin is created.
   let envFileIds = envFileIdsFor(findEnvFile(root));
-  // Generated server entries import env.ts only to register its schema. Keep that import when
+  // Decision: Generated server entries import env.ts only to register its schema. Keep that import when
   // the app's package.json declares `"sideEffects": false`, which would let the bundler drop it.
   // The filter matches the resolved id, which for a symlink is the target's path, whatever its
   // file name.
@@ -323,7 +323,7 @@ export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = 
     name: 'platform:env-schema',
     enforce: 'pre',
     async config(_config, environment) {
-      // Plugin `config` hooks run before Vite loads env files, and `pre` puts
+      // Decision: Plugin `config` hooks run before Vite loads env files, and `pre` puts
       // this one ahead of the Cloudflare plugin, whose `config` hook calls `loadEnv`.
       processEnvCopiesBefore = environment.command === 'build' ? readProcessEnvCopies() : undefined;
       const legacyFiles = findLegacyEnvFiles(root);
@@ -332,7 +332,7 @@ export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = 
           `@builtbyfriends/bwf/env supports one local file: .env. Remove ${legacyFiles.join(', ')} and follow the env migration guide.${legacyEnvExampleHint(legacyFiles)}`,
         );
       }
-      // Every mode (serve, build, preview), with or without env.ts. Only the
+      // Decision: Every mode (serve, build, preview), with or without env.ts. Only the
       // file is read: a shell value never reaches the dev Worker unless
       // env.ts declares it, which is checked below. Keys are read with
       // Wrangler's grammar (`export K=v`, `K: v`), since Wrangler is what
@@ -349,7 +349,7 @@ export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = 
         return;
       }
       regenerateTypes();
-      // Import env.ts at config time so onSchema can configure required
+      // Decision: Import env.ts at config time so onSchema can configure required
       // secrets before the Cloudflare plugin resolves worker bindings.
       await importUserEnv(environment.command === 'build');
       await emitSchemaFacts();
@@ -358,7 +358,7 @@ export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = 
     async configResolved(config) {
       command = config.command;
 
-      // `.env` is local-only. Vite loads it during production builds by
+      // Decision: `.env` is local-only. Vite loads it during production builds by
       // default, so remove file-sourced client values before its replacement
       // pass. CI/shell values remain available, and schema defaults are added
       // immediately below.
@@ -385,7 +385,7 @@ export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = 
           throw new Error(lines.join('\n'));
         }
       }
-      // Warn when vite `define` shadows a schema key. The two systems coexist
+      // Decision: Warn when vite `define` shadows a schema key. The two systems coexist
       // — define replaces source literals at build time; defineEnv types and
       // validates the runtime env — but using both for the same name causes
       // silent skew (client sees the define value, server sees .env / schema).
@@ -414,7 +414,7 @@ export function envSchemaPlugin(root: string, options: EnvSchemaPluginOptions = 
       });
     },
     async buildStart() {
-      // `config` runs once per `vite build --watch` session; re-import so
+      // Decision: `config` runs once per `vite build --watch` session; re-import so
       // each rebuild checks client code against the current env.ts.
       if (envFile) {
         await importUserEnv();

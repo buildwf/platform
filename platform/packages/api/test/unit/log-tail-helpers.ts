@@ -1,6 +1,5 @@
 import { formatLogTailMarkdown } from '../../src/build-manager.ts';
 
-/** Extract rendered log text while exercising the production check-run formatter. */
 export async function renderCapturedLog(raw: string): Promise<string> {
   const markdown = await formatLogTailMarkdown([{ line: raw, lineEnding: 'none' }], 1);
   if (markdown === null) {

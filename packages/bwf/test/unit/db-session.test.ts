@@ -50,10 +50,10 @@ async function loadGeneratedDb(bindingName: string): Promise<typeof runtimeDb> {
   return import(pathToFileURL(path).href);
 }
 
-// Miniflare executes real D1 SQL but does not provide controllable replica lag.
-// Model only the session boundary here, as in auth-d1-database.test.ts:
-// PRIMARY advances after a write, REPLICA stays at the original profile.
-// These opaque tokens belong to this fixture, not to Miniflare's Sessions API.
+// Decision: Miniflare runs real D1 SQL but doesn't provide controllable replica lag. Model only the
+// session boundary here, as in auth-d1-database.test.ts: PRIMARY advances after a write,
+// REPLICA stays at the original profile. These opaque tokens belong to this fixture, not to
+// Miniflare's Sessions API.
 const BEFORE_SAVE = 'test-bookmark-001-before-save';
 const AFTER_SAVE = 'test-bookmark-002-after-save';
 
@@ -72,7 +72,7 @@ function laggingBinding(primary: D1Database, replica: D1Database) {
           throw new Error(`Unexpected test query: ${sql}`);
         }
         function statement(params: Array<unknown>) {
-          // Choose at execution time, so a session's reads observe its previous writes.
+          // Decision: Choose at execution time, so a session's reads observe its previous writes.
           async function execute(method: 'run' | 'raw') {
             const database = write || fresh ? primary : replica;
             const prepared = database.prepare(sql).bind(...params);
@@ -94,7 +94,6 @@ function laggingBinding(primary: D1Database, replica: D1Database) {
     } as unknown as D1DatabaseSession;
     return session;
   });
-  // Only the D1 operations used by this reproduction are implemented.
   return { binding: { withSession } as unknown as D1Database, withSession };
 }
 
@@ -143,7 +142,6 @@ describe('D1 cross-request bookmark reproduction (#783)', () => {
             c.header('X-DB-Bookmark', bookmark);
           }
         });
-        // Request A: POST /profile. The write and subsequent read share a session.
         app.post('/profile', async (c) => {
           expect(await readProfile()).toEqual([{ id: 1, name: 'Old name' }]);
           await db.update(profile).set({ name: 'Alice' }).run();
@@ -158,7 +156,6 @@ describe('D1 cross-request bookmark reproduction (#783)', () => {
         const bookmark = saved.headers.get('X-DB-Bookmark');
         expect(bookmark).toBe(AFTER_SAVE);
 
-        // Request B: GET /profile after the redirect should observe the saved profile.
         const loaded = await withRuntimeEnv(env, () =>
           app.request('/profile', {
             headers: { 'X-DB-Bookmark': bookmark! },
@@ -170,18 +167,15 @@ describe('D1 cross-request bookmark reproduction (#783)', () => {
           AFTER_SAVE,
         ]);
 
-        // Control: starting on primary avoids the stale read.
         expect(
           await createDb(binding, { session: 'first-primary' }).select().from(profile),
         ).toEqual([{ id: 1, name: 'Alice' }]);
 
-        // Explicit clients accept the same carried bookmark without casts.
         const explicit = createDb(binding, { session: { bookmark: bookmark! } });
         expect(getBookmark(explicit)).toBe(AFTER_SAVE);
         expect(await explicit.select().from(profile)).toEqual([{ id: 1, name: 'Alice' }]);
         expect(withSession).toHaveBeenLastCalledWith(AFTER_SAVE);
 
-        // Neither control secretly caught up the stale replica.
         expect(await withRuntimeEnv(env, readProfile)).toEqual([{ id: 1, name: 'Old name' }]);
       } finally {
         await miniflare.dispose();
@@ -385,8 +379,8 @@ describe.each(clients)('$module / $bindingName session lifecycle', (testCase) =>
         setSession(start === BEFORE_SAVE ? { bookmark: start } : start);
         setSession('first-unconstrained');
         const session = withSession.mock.results[0]!.value;
-        // D1 advances the bookmark as queries complete. Compare against that
-        // progress, not just the session's original starting value.
+        // Decision: D1 advances the bookmark as queries complete. Compare against that progress, not only the
+        // session's original starting value.
         session.getBookmark.mockReturnValue(AFTER_SAVE);
         setSession({ bookmark: BEFORE_SAVE });
         setSession({ bookmark: AFTER_SAVE });

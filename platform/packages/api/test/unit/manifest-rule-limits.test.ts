@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { MAX_ROUTING_RULES, validateManifestShape } from '../../src/routes/deploy.ts';
 
-/**
- * Each routing rule compiles a regex per request in dispatch. Without a cap,
- * a manifest with 100k entries exhausts CPU on every project request. The
- * deploy-time validator must reject any list exceeding `MAX_ROUTING_RULES`.
- */
+// Decision: Dispatch compiles a regex per routing rule on each request, so a manifest with 100k rules would
+// exhaust CPU on every project request. The deploy-time validator rejects lists over
+// MAX_ROUTING_RULES.
 describe('manifest validation: routing rule count caps', () => {
   function manifestWith(field: 'redirectRules' | 'fallbackRules', count: number) {
     const rules: Array<{ source: string; destination: string; status: number }> = [];

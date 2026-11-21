@@ -3,7 +3,7 @@ import { createSpinner } from './output.ts';
 export function createPlatformProgress(message?: string): ReturnType<typeof createSpinner> {
   const progress = createSpinner({
     onCancel: () => {
-      // Keep the installer's subprocess signal coordinator in charge of cancellation.
+      // Decision: Keep the installer's subprocess signal coordinator in charge of cancellation.
       if (!process.emit('SIGINT')) {
         process.exit(130);
       }

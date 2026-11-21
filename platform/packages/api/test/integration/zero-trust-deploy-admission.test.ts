@@ -54,7 +54,6 @@ const STATIC_MANIFEST = JSON.stringify({
   assetConfig: { not_found_handling: '404-page' },
 });
 
-/** A ready installation whose project protection is still being applied. */
 async function seedReconcilingProtection(projectId: string): Promise<void> {
   await env.db.insert(platformSettings).values({
     key: 'zeroTrust.configuration',
@@ -188,7 +187,6 @@ describe('Zero Trust deploy admission and recovery', () => {
     });
 
     expect(await getDeployment(env.db, abandoned.id)).toMatchObject({ status: 'failed' });
-    // Committed code is restored, and the unsettled protection denies access.
     expect(await env.ROUTING.get(project.slug, 'json')).toMatchObject({
       staticDeploymentId: committed.id,
       zeroTrust: { teamDomain: '', audiences: [] },

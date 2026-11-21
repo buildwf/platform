@@ -40,7 +40,7 @@ export function redactMessage(
   if (typeof rawValue !== 'string' || rawValue.length === 0) {
     return message;
   }
-  // Replace every literal occurrence of the raw value with the sentinel.
+  // Decision: Replace every literal occurrence of the raw value with the sentinel.
   // `split/join` avoids constructing a user-controlled regex.
   return message.split(rawValue).join(REDACTED);
 }
@@ -57,7 +57,7 @@ export function isUnmaskActive(): boolean {
     return unmaskResolved;
   }
   try {
-    // `process` may be missing in Worker bundles, and Deno throws without env permission.
+    // Decision: `process` may be missing in Worker bundles, and Deno throws without env permission.
     const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
     unmaskResolved = proc?.env?.[UNMASK_ENV_VAR] === '1';
   } catch {

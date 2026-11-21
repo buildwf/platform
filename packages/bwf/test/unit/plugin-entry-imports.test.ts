@@ -1,5 +1,5 @@
-// Every `vp dev`/`vp build` imports the plugin entry first, so auth codegen and CLI output
-// must not load at startup.
+// Decision: Each `vp dev` and `vp build` imports the plugin entry first, so auth codegen and CLI output
+// mustn't load at startup.
 import { expect, it, vi } from 'vite-plus/test';
 
 const loaded = vi.hoisted((): Array<string> => []);
@@ -22,7 +22,7 @@ vi.mock('terminal-link', () => {
 });
 
 it('keeps auth codegen and CLI output out of the plugin entry', async () => {
-  // The first import of the whole plugin entry takes a few seconds.
+  // Decision: The first import of the whole plugin entry takes a few seconds.
   await import('../../src/index.ts');
   expect(loaded).toEqual([]);
 }, 30_000);

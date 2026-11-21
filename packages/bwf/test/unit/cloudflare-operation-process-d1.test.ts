@@ -84,7 +84,6 @@ syncBuiltinESMExports();
   }
 });
 
-// Runs the operation process with cf replaced, and returns cf's argv and the decoded result.
 function runWithCf(operation: CloudflareOperation, cfStdout: string, cfStatus = 0, cfStderr = '') {
   const directory = mkdtempSync(join(tmpdir(), 'platform-cf-d1-time-travel-test-'));
   try {

@@ -29,14 +29,14 @@ export async function runCloudflareDeploy(
   cliLog: CliLogger,
   deps: CloudflareDeployDeps = {},
 ): Promise<void> {
-  // readConfig evaluates bwf.config.ts in this process. Record operator input before it runs.
+  // Decision: readConfig evaluates bwf.config.ts in this process. Record operator input before it runs.
   options = withRecordedReadinessAccessOrigin(options);
   const initialCloudflareLink = readCloudflareLink(root);
   const initialCloudflareCandidate = readCloudflareCandidate(root);
   const exitProcess = deps.exit ?? ((code: number): never => process.exit(code));
-  // Most failures leave through exit(), which skips the deploy_end that runDeploy writes on a
-  // throw. Record it here. The logger keeps only the first deploy_end, so a path that already
-  // wrote one (a failed activation) is not recorded twice.
+  // Decision: Most failures leave through exit(), which skips the deploy_end that runDeploy writes on a throw.
+  // Record it here. The logger keeps only the first deploy_end, so a path that already wrote one (a
+  // failed activation) isn't recorded twice.
   const exit = (code: number): never => {
     if (code === 0) {
       cliLog.info('deploy_end', { ok: true, exitCode: code });
@@ -45,9 +45,9 @@ export async function runCloudflareDeploy(
     }
     return exitProcess(code);
   };
-  // Every step below, including the static branch, reads exit from deps.
+  // Decision: All steps below, including the static branch, read exit from deps.
   deps = { ...deps, exit };
-  // One redactor for the whole deploy, so a bearer learned by one child is scrubbed everywhere.
+  // Decision: One redactor for the whole deploy, so a bearer learned by one child is scrubbed everywhere.
   const reporter = createCloudflareChildReporter(cliLog);
   const bwfConfig = readConfig(root);
   const atomic = options.atomic === true || bwfConfig.deploy?.cloudflare?.mode === 'atomic';
@@ -96,7 +96,7 @@ export async function runCloudflareDeploy(
     source,
   });
 
-  // Only a deploy pointer this build writes may pass the post-build checks.
+  // Decision: Only a deploy pointer this build writes may pass the post-build checks.
   removeDeployPointer(root);
   const build = await buildCloudflareWorker({
     root,
@@ -118,7 +118,7 @@ export async function runCloudflareDeploy(
     build,
     skipMigrations: options.skipMigrations,
   });
-  // When migrations were applied, every later failure names the restore point again.
+  // Decision: When migrations were applied, each later failure names the restore point again.
   let restoreReported = false;
   const reportRestore = () => {
     if (migration.d1RestoreCommand && !restoreReported) {
@@ -150,7 +150,7 @@ export async function runCloudflareDeploy(
     reportRestore();
     throw error;
   }
-  // A deploy without email setup already said so during preflight.
+  // Decision: A deploy without email setup already said so during preflight.
   if (preflight.emailMap) {
     log.message(renderAddressMap(preflight.emailMap));
   }

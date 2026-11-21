@@ -18,10 +18,10 @@ export type PlatformWorker = PlatformWorkerDef & {
   dependedBy: ReadonlyArray<PlatformWorkerName>;
 };
 
-// `deployOrder` follows the platform deploy script; rollback-all runs it in
-// reverse. The API's confirmation page posts back through the email gateway,
-// so the gateway ships before the API and rolls back after it. The dispatcher's
-// private preview entrypoint must also exist before the API binds to it.
+// Decision: `deployOrder` follows the platform deploy script; rollback-all runs it in reverse. The API's
+// confirmation page posts back through the email gateway, so the gateway ships before the API and
+// rolls back after it. The dispatcher's private preview entrypoint must also exist before the API
+// binds to it.
 const WORKER_DEFS: ReadonlyArray<PlatformWorkerDef> = [
   {
     name: 'proxy',
@@ -67,7 +67,6 @@ const WORKER_DEFS: ReadonlyArray<PlatformWorkerDef> = [
   },
 ];
 
-// Derive dependedBy from dependsOn (single source of truth for the dependency graph)
 export const PLATFORM_WORKERS: ReadonlyArray<PlatformWorker> = WORKER_DEFS.map((def) => ({
   ...def,
   dependedBy: WORKER_DEFS.filter((other) => other.dependsOn.includes(def.name)).map(

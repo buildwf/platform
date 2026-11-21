@@ -105,7 +105,7 @@ export async function backfillQueueTokens(
         continue;
       }
       if (!entry.workerName) {
-        // Without a workerName there is no binding to read the token from.
+        // Decision: Without a workerName there's no binding to read the token from.
         skipped++;
         continue;
       }
@@ -115,18 +115,16 @@ export async function backfillQueueTokens(
       if (lookup.kind === 'found') {
         proxyToken = lookup.token;
       } else if (lookup.kind === 'error') {
-        // Transient CF failure. Do NOT silently fall back — that would
-        // stamp a potentially wrong token, report the row as `updated`,
-        // and permanently mask a control-plane incident as migrated.
+        // Decision: Transient CF failure. Don't silently fall back: that would stamp a possibly wrong token,
+        // report the row as `updated`, and permanently mask a control-plane incident as migrated.
         console.error(
           `[backfill-queue-tokens] CF API error reading bindings for "${entry.workerName}": ${lookup.error.message}. Skipping "${name}" — rerun when CF is healthy.`,
         );
         errored++;
         continue;
       } else if (entry.projectId) {
-        // lookup.kind === 'missing' — legacy worker, no baked binding.
-        // Fall back to re-derivation. Only safe while JWT_SECRET has
-        // not rotated since this worker was deployed.
+        // Decision: lookup.kind === 'missing': legacy worker, no baked binding. Fall back to re-derivation. Only
+        // safe while JWT_SECRET hasn't rotated since this worker was deployed.
         proxyToken = await hmacSignState(entry.projectId, opts.jwtSecret);
       } else {
         skipped++;

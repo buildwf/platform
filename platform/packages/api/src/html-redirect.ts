@@ -11,18 +11,15 @@
  * @param title  document `<title>` shown briefly while redirecting
  */
 export function localhostRedirectResponse(target: string, title = 'Redirecting…'): Response {
-  // Safe to embed in an inline <script>: JSON.stringify escapes quotes/backslashes
-  // but NOT `</script>` / `<!--`, which would break out of the script element.
-  // Escape `<` (and `>` for symmetry) so the literal is safe regardless of caller
-  // input. `&` is deliberately NOT escaped: HTML does not decode entities inside a
-  // <script> element, so a literal `&` is safe here, and escaping it would corrupt
-  // the `&`-separated query string the browser must navigate to.
+  // Decision: Safe to embed in an inline <script>: JSON.stringify escapes quotes and backslashes but not
+  // `</script>` or `<!--`, which would break out of the script element. Escape `<` (and `>`) so the
+  // literal is safe for any input. Don't escape `&`: HTML doesn't decode entities inside <script>, and
+  // escaping it would corrupt the query string the browser navigates to.
   const targetLiteral = JSON.stringify(target)
     .replaceAll('<', '\\u003c')
     .replaceAll('>', '\\u003e');
-  // The noscript fallback puts `target` in a double-quoted HTML attribute;
-  // HTML-escape `&` FIRST, then `"` `<` `>` so it cannot break the attribute or
-  // inject markup.
+  // Decision: The noscript fallback puts `target` in a double-quoted HTML attribute. Escape `&` first, then `"`,
+  // `<` and `>`, so it can't break the attribute or inject markup.
   const targetAttr = target
     .replaceAll('&', '&amp;')
     .replaceAll('"', '&quot;')

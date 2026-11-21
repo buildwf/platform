@@ -312,7 +312,6 @@ describe('pending login replacement', () => {
   it('replaces the login settings from a file with a new setup code', async () => {
     vi.stubEnv('TEST_NEW_GOOGLE_SECRET', 'new-google-secret');
     const output = vi.spyOn(console, 'log').mockImplementation(() => {});
-    // Listed in another order than installed, with the Access login kept by ID.
     const file = await writeAuthFile({
       connections: [{ configuration: { id: 'access', kind: 'cloudflare-access' } }, googleFile],
       protection,
@@ -334,7 +333,7 @@ describe('pending login replacement', () => {
       expect.stringContaining('https://api.example.com/auth/callback'),
     );
     expect(JSON.stringify(output.mock.calls)).not.toContain('new-google-secret');
-    // The platform records the same hash whether or not the request resets setup.
+    // Decision: The platform records the same hash whether or not the request resets setup.
     expect(authenticationSetupRequestHash(result.authenticationSetupJson)).toBe(
       authenticationSetupRequestHash(JSON.stringify({ ...setup, resetPending: undefined })),
     );

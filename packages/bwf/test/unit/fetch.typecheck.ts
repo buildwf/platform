@@ -38,7 +38,6 @@ describe('typed fetch client', () => {
       void hello.ok.toUpperCase();
 
       const users = await typedFetch('/api/users');
-      // array methods are available
       void users.map;
       // @ts-expect-error - toFixed does not exist on array
       void users.toFixed();
@@ -63,16 +62,12 @@ describe('typed fetch client', () => {
 
   it('type: enforces input types for body and params', () => {
     const _check = async () => {
-      // POST with correct body — compiles
       await typedFetch('/api/users', { method: 'POST', body: { name: 'Alice' } });
 
-      // GET with correct params — compiles
       await typedFetch('/api/users/:id', { params: { id: '42' } });
 
-      // DELETE with no required input — compiles
       await typedFetch('/api/items/:id', { method: 'DELETE' });
 
-      // Extra options alongside typed input — compiles
       await typedFetch('/api/users', {
         method: 'POST',
         body: { name: 'Bob' },

@@ -76,7 +76,7 @@ export async function guardAuthenticationLifecycleMutation(db: Db): Promise<void
 
 /** Shared lock order for provider changes, identity linking, and administrator removal. */
 export async function lockAuthSettings(db: Db): Promise<AuthSettings | null> {
-  // Serialize first-time import too, when there is no singleton row to lock yet.
+  // Decision: Serialize first-time import too, when there's no singleton row to lock yet.
   await db.execute(sql`LOCK TABLE ${platformAuthSettings} IN SHARE ROW EXCLUSIVE MODE`);
   const [settings] = await db
     .select()
@@ -162,7 +162,7 @@ export async function importLegacyAuthentication(
     const signupFlag = await env.ROUTING.get('signup:enabled');
     const signupOpen =
       signupFlag === 'false' || (!env.PLATFORM_INSTALLATION_ID && signupFlag !== 'true');
-    // The insert serializes concurrent first imports; its winner owns the snapshot.
+    // Decision: The insert serializes concurrent first imports; its winner owns the snapshot.
     const inserted = await transaction
       .insert(platformAuthSettings)
       .values({

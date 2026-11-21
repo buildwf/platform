@@ -21,7 +21,7 @@ export function createMigrationHandler(
       );
     }
 
-    // A later failure, such as Better Auth's step, still reports the files that committed.
+    // Decision: A later failure, such as Better Auth's step, still reports the files that committed.
     const results: Array<MigrationResult> = [];
     try {
       return Response.json(await runMySqlMigrations(env, migrations, results, runAuthMigrations));
@@ -50,7 +50,7 @@ async function runMySqlMigrations(
   }
 
   const { createConnection } = await import('mysql2/promise');
-  // Hyperdrive runs one statement per query, so a file is sent statement by statement.
+  // Decision: Hyperdrive runs one statement per query, so a file is sent statement by statement.
   const connection = await createConnection({
     uri: hyperdrive.connectionString,
     disableEval: true,
@@ -58,7 +58,7 @@ async function runMySqlMigrations(
   let leaseConnection: Connection | undefined;
   let lease: MySqlMigrationLease | undefined;
   try {
-    // Lease statements must stay out of the migration transactions, so they get their own connection.
+    // Decision: Lease statements must stay out of the migration transactions, so they get their own connection.
     const leaseClient = await createConnection({
       uri: hyperdrive.connectionString,
       disableEval: true,
@@ -80,7 +80,7 @@ async function runMySqlMigrations(
       }
       const start = Date.now();
       try {
-        // Data changes commit with the tracking row. MySQL commits DDL, and anything before it,
+        // Decision: Data changes commit with the tracking row. MySQL commits DDL, and anything before it,
         // on its own. Hyperdrive keeps one connection for the open transaction.
         await connection.query('BEGIN');
         for (const statement of splitMySqlMigrationStatements(migration.sql)) {
@@ -108,7 +108,7 @@ async function runMySqlMigrations(
       }
     }
 
-    // Better Auth's migrations change the schema too, so they run before the lease is released.
+    // Decision: Better Auth's migrations change the schema too, so they run before the lease is released.
     if (runAuthMigrations) {
       await holdMySqlMigrationLease(lease, runAuthMigrations);
     }

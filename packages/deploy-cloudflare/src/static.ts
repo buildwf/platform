@@ -119,9 +119,9 @@ export function writeCloudflareStaticDeployConfig(options: CloudflareStaticDeplo
   upsert(['assets', 'run_worker_first'], options.assetConfig.run_worker_first ?? true);
   upsert(['assets', 'not_found_handling'], options.assetConfig.not_found_handling ?? 'none');
   upsert(['assets', 'html_handling'], options.assetConfig.html_handling ?? 'auto-trailing-slash');
-  // The generated static entry only exports a fetch handler. Keep Durable Object migration
-  // history, which Cloudflare treats as append-only, but detach every configuration surface that
-  // would require an application-worker export or event handler.
+  // Decision: The generated static entry only exports a fetch handler. Keep Durable Object migration
+  // history, which Cloudflare treats as append-only, but detach each configuration surface that
+  // would need an application-worker export or event handler.
   upsert(['durable_objects', 'bindings'], []);
   upsert(['queues', 'producers'], []);
   upsert(['queues', 'consumers'], []);

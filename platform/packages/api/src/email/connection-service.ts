@@ -152,8 +152,8 @@ const SHARED_SYNC_STEPS = [
   'sending_onboard',
   'publish',
 ] as const;
-// Custom apex routes can share the installation Worker, while their catch-all
-// still needs to be provisioned. Native Worker secrets are deployment-owned.
+// Decision: Custom apex routes can share the installation Worker, but their catch-all still needs provisioning.
+// Native Worker secrets are owned by the deployment.
 const NATIVE_CUSTOM_SYNC_STEPS = [
   'routing_enable',
   'catchall_ensure',
@@ -161,7 +161,7 @@ const NATIVE_CUSTOM_SYNC_STEPS = [
   'sending_onboard',
   'publish',
 ] as const;
-// Outbound-only routes never deploy ingress or touch Email Routing, so the apex MX is left alone.
+// Decision: Outbound-only routes don't deploy ingress or touch Email Routing, so the apex MX is left alone.
 const OUTBOUND_ONLY_STEPS = ['sending_onboard', 'publish'] as const;
 const OUTBOUND_ONLY_INBOUND_REASON =
   "Outbound only: inbound mail stays with the domain's MX provider";
@@ -443,7 +443,7 @@ async function probeGatewayAcceptance(
   };
 }
 function ingressName(installationId: string, zoneId: string): string {
-  // Stable, bounded, and owned by an installation/zone rather than a project.
+  // Decision: Stable, bounded, and owned by an installation and zone, not a project.
   const suffix = [installationId, zoneId]
     .join('-')
     .toLowerCase()
@@ -1299,8 +1299,8 @@ export async function inspectEmailInboundRoute(
     if (!supportsSubaddressing(settings) || (settings as { enabled?: unknown }).enabled !== true) {
       return 'Cloudflare Email Routing and subaddressing must be enabled for shared email';
     }
-    // Domain readiness does not assert recipient coverage. Each project's
-    // exact provider rule is verified by the shared-recipient service.
+    // Decision: Domain readiness doesn't assert recipient coverage. The shared-recipient service verifies each
+    // project's exact provider rule.
     return null;
   }
   const [catchall, rules, exchanges] = await Promise.all([
@@ -1403,7 +1403,7 @@ export async function requestEmailDomainAdd(
     domain,
     actor: input.actor.kind,
     tokenDigest: input.token ? await digest(input.token) : null,
-    // Only outbound-only requests carry the mode, so earlier managed digests still match.
+    // Decision: Only outbound-only requests carry the mode, so earlier managed digests still match.
     ...(outboundOnly ? { inboundMode } : {}),
   });
   const previous = await findEmailOperationByKey(db, installationId, actorScope, key);
@@ -1472,7 +1472,7 @@ export async function requestEmailDomainAdd(
       throw new EmailOperationError('Cloudflare API token is not active', 403);
     }
     verifiedToken = verifiedApiTokenMetadata(verification);
-    // The actual zone read above proves resource scope more reliably than a template URL.
+    // Decision: The real zone read above proves resource scope more reliably than a template URL.
     if (outboundOnly) {
       await client.listSendingSubdomains(zone.id);
     } else {
@@ -1493,7 +1493,7 @@ export async function requestEmailDomainAdd(
       .limit(1)
   )[0];
   const existingAssignment = await resolveEmailDomain(db, domain);
-  // Outbound-only setup never takes the apex MX or catch-all, so their owners do not matter.
+  // Decision: Outbound-only setup doesn't take the apex MX or catch-all, so their owners don't matter.
   const mxPreflight =
     !outboundOnly && (!existingAssignment || existingAssignment.route.desired_state !== 'active');
   if (mxPreflight) {
@@ -1662,7 +1662,7 @@ export async function requestEmailDomainAdd(
             403,
           );
         }
-        // The MX preflight was skipped for an active route. If it was removed meanwhile,
+        // Decision: The MX preflight was skipped for an active route. If the route was removed meanwhile,
         // reactivating it here could take over mail that another provider now receives.
         if (!outboundOnly && !mxPreflight && existingRoute.desired_state !== 'active') {
           throw new EmailOperationError('email domain changed during the request; retry', 409);
@@ -1846,8 +1846,8 @@ export async function requestEmailDomainAdd(
           })
           .where(eq(emailZoneConnections.id, connection.id));
       } else if (input.token) {
-        // A sibling assignment supplies the manager's current zone token.
-        // The connection, rather than either project, owns its ciphertext.
+        // Decision: A sibling assignment supplies the manager's current zone token. The connection, not either
+        // project, owns its ciphertext.
         const replacement = await encryptPlatformCredential(
           env,
           installationId,
@@ -1936,8 +1936,8 @@ export async function requestEmailDomainAdd(
       return { operationId, routeId };
     });
   } catch (error) {
-    // A concurrent insert may have committed the same caller attempt while this
-    // transaction waited on uniqueness. Fetch it, but never infer success from a domain row.
+    // Decision: A concurrent insert may have committed the same caller attempt while this transaction waited on
+    // uniqueness. Fetch it, but don't infer success from a domain row.
     const winner = await findEmailOperationByKey(db, installationId, actorScope, key);
     if (winner && winner.request_digest === requestDigest && winner.route_id) {
       return { operationId: winner.id, routeId: winner.route_id };
@@ -2081,8 +2081,8 @@ export async function ensureSharedEmailConnection(db: Db, env: Bindings): Promis
       )[0]!;
     }
     if (existingRoute) {
-      // A completed legacy catch-all observation says nothing about shared
-      // subdomain recipients or plus addressing. Re-probe before readiness.
+      // Decision: A completed legacy catch-all observation says nothing about shared subdomain recipients or plus
+      // addressing. Re-probe before readiness.
       await tx
         .update(emailZoneConnections)
         .set({
@@ -2130,8 +2130,8 @@ export async function ensureSharedEmailConnection(db: Db, env: Bindings): Promis
       request_digest: requestDigest,
       desired_generation: connection.desired_generation,
     });
-    // Native gateway is deployed with the platform. Uploading the customer
-    // relay source here would replace it and sever shared mail delivery.
+    // Decision: The native gateway is deployed with the platform. Uploading the customer relay source here would
+    // replace it and cut shared mail delivery.
     const steps = ['routing_enable', 'subaddressing_ensure', 'inbound_probe', 'publish'] as const;
     const stepRoute: EmailStepRoute = {
       id: routeId,
@@ -2659,9 +2659,9 @@ export async function runEmailOperation(db: Db, env: Bindings, operationId: stri
       ) {
         return null;
       }
-      // Every operation driver and recovery path locks the connection before
-      // the operation and step. Read the operation once without a lock only to
-      // discover that connection, then re-read and validate it under the lock.
+      // Decision: Each operation driver and recovery path locks the connection before the operation and step. Read
+      // the operation once without a lock only to find that connection, then re-read and validate it
+      // under the lock.
       const connection = (
         await tx
           .select()
@@ -2693,8 +2693,8 @@ export async function runEmailOperation(db: Db, env: Bindings, operationId: stri
         throw new EmailOperationError('email operation generation changed');
       }
       if (op.kind === 'remove') {
-        // Removal intents form a durable chain. A later sibling removal may
-        // wait for this one, but must never stop it from making progress.
+        // Decision: Removal intents form a durable chain. A later sibling removal may wait for this one, but must not
+        // stop it from making progress.
         const predecessorId = op.current_step?.startsWith('wait:')
           ? op.current_step.slice(5)
           : null;
@@ -2730,9 +2730,8 @@ export async function runEmailOperation(db: Db, env: Bindings, operationId: stri
         return null;
       }
       if (step.status === 'in_flight') {
-        // A second scheduler must leave the current driver alone. A crashed
-        // driver is fenced only after its lease ages out; its provider write
-        // is never replayed merely because the lease expired.
+        // Decision: A second scheduler must leave the current driver alone. A crashed driver is fenced only after its
+        // lease ages out; its provider write isn't replayed just because the lease expired.
         const lease = (
           await tx
             .select({
@@ -2808,8 +2807,8 @@ export async function runEmailOperation(db: Db, env: Bindings, operationId: stri
             ),
           )
           .limit(1);
-        // An outbound-only route never installed a catch-all or ingress Worker, so its
-        // removal has nothing to clean up in Email Routing or Workers.
+        // Decision: An outbound-only route never installed a catch-all or ingress Worker, so its removal has nothing
+        // to clean up in Email Routing or Workers.
         const retained = sibling
           ? { retainedForSibling: true }
           : route?.inboundMode === 'none'
@@ -2824,8 +2823,8 @@ export async function runEmailOperation(db: Db, env: Bindings, operationId: stri
           await forgetUnusedEmailCredential(tx, connection.id, op.route_id);
         }
         if (retained) {
-          // Local retention is atomic with its outcome, so a driver crash cannot
-          // turn a step that never called the provider into an unknown write.
+          // Decision: Local retention is atomic with its outcome, so a driver crash can't turn a step that never called
+          // the provider into an unknown write.
           await tx
             .update(emailOperationSteps)
             .set({ status: 'confirmed', outcome: retained, finished_at: sql`now()` })
@@ -2933,8 +2932,8 @@ export async function runEmailOperation(db: Db, env: Bindings, operationId: stri
         }
       });
     } catch (error) {
-      // A write may have reached Cloudflare even if fetch failed. Stop until
-      // an explicit probe or operator decision establishes its outcome.
+      // Decision: A write may have reached Cloudflare even if fetch failed. Stop until an explicit probe or an
+      // operator decision settles its outcome.
       const detail = error instanceof Error ? error.message : String(error);
       const blocked =
         error instanceof EmailOperationPreflightError ||
@@ -3220,7 +3219,7 @@ async function executeEmailStep(
     if (!route || route.addressing !== 'shared') {
       throw new EmailOperationError('shared email route is unavailable');
     }
-    // Compatibility for interrupted catch-all-era shared bootstrap operations.
+    // Decision: Kept for interrupted shared bootstrap operations from the catch-all era.
     if (kind === 'catchall_ensure') {
       await client.enableRouting(
         connection.zone_id,
@@ -3282,8 +3281,8 @@ async function executeEmailStep(
       throw new EmailOperationError(issue);
     }
     const observed = await db.transaction(async (tx) => {
-      // Route-bearing transactions always lock route before connection. Re-read
-      // both generations because the provider probe ran outside this transaction.
+      // Decision: Route-bearing transactions lock the route before the connection. Re-read both generations because
+      // the provider probe ran outside this transaction.
       const currentRoute = (
         await tx
           .select()
@@ -3358,10 +3357,10 @@ async function executeEmailStep(
         );
       throw new EmailOperationError(message, 409);
     };
-    // The apex usually belongs to another mail provider. Onboarding only adds records on
-    // cf-bounce.<domain> and _dmarc.<domain>; refuse before writing if any of them clash.
-    // Missing records are expected here, since onboarding creates them. A domain that is
-    // already onboarded owns those records, so a later sync skips the check.
+    // Decision: The apex usually belongs to another mail provider. Onboarding only adds records on
+    // cf-bounce.<domain> and _dmarc.<domain>; refuse before writing if any of them clash. Missing records
+    // are expected, since onboarding creates them. An already onboarded domain owns those records, so a
+    // later sync skips the check.
     if (
       outboundOnly &&
       !(await emailOperationPreflight(() =>
@@ -3388,8 +3387,8 @@ async function executeEmailStep(
       try {
         onboarded = await sendingOnboardedReadback(client, connection.zone_id, route.domain);
       } catch {
-        // A failed probe cannot narrow the original write outcome. Preserve the
-        // original error so an uncertain POST remains behind operator recovery.
+        // Decision: A failed probe can't narrow the original write outcome. Keep the original error so an uncertain
+        // POST stays behind operator recovery.
         throw error;
       }
       if (!onboarded) {
@@ -3399,7 +3398,7 @@ async function executeEmailStep(
           throw error;
         }
         if (outboundOnly) {
-          // Verified-only sending needs an Email Routing domain, so it is no fallback here.
+          // Decision: Verified-only sending needs an Email Routing domain, so it's no fallback here.
           await blockOutbound(
             'Cloudflare Sending onboarding unavailable',
             `Cloudflare refused Email Sending for ${route.domain} (HTTP ${error.status}). It needs the Workers Paid plan; enable it, then run domain-sync.`,
@@ -3466,8 +3465,8 @@ export async function reconcilePendingEmailOperations(
     .orderBy(emailOperations.updated_at, emailOperations.id)
     .limit(limit);
   for (const row of rows) {
-    // Ambiguous writes may need human recovery. Rotate visits so they cannot
-    // occupy every batch slot forever; step.started_at still owns its lease.
+    // Decision: Ambiguous writes may need human recovery. Rotate visits so they can't fill each batch slot
+    // forever; step.started_at still owns its lease.
     await db
       .update(emailOperations)
       .set({ updated_at: sql`now()` })
@@ -4013,8 +4012,8 @@ export async function reconcileUnknownEmailOperation(
       } else if (step.kind === 'catchall_ensure') {
         const route = await findEmailRoute(db, op.route_id);
         if (route?.addressing === 'shared') {
-          // Legacy shared-domain operations used this step for an apex-only
-          // catch-all. Recovery must confirm the new subdomain prerequisites.
+          // Decision: Legacy shared-domain operations used this step for an apex-only catch-all. Recovery must confirm
+          // the new subdomain prerequisites.
           if (!(await inspectEmailInboundRoute(client, connection, route.domain, 'shared'))) {
             outcome = { subaddressing: true };
           }
@@ -4238,8 +4237,8 @@ export async function flushEmailCacheOutbox(db: Db, kv: KVNamespace, limit = 25)
     if (newest?.version === row.version) {
       const base = `email-cache:${row.resource_kind}:${row.resource_id}`;
       await kv.put(`${base}:v${row.version}`, JSON.stringify(row.payload));
-      // This mutable pointer is never security authority. Out-of-order
-      // publication may make display stale until a later refresh.
+      // Decision: This mutable pointer isn't a security authority. Out-of-order publication may leave the display
+      // stale until a later refresh.
       await kv.put(`${base}:latest`, String(row.version));
     }
     await db

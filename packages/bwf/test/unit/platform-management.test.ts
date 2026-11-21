@@ -169,8 +169,7 @@ function client(manifest: PlatformInstallationManifest) {
       _account: string,
       { id, kind }: Readonly<{ id: string; kind: string; name: string }>,
     ): Promise<void> => {
-      // Like Cloudflare, refuse to delete a Queue while a platform Worker
-      // still binds it.
+      // Decision: Like Cloudflare, refuse to delete a Queue while a platform Worker still binds it.
       const bindingWorker = (await fake.listWorkerNames())[0];
       if (kind === 'queue' && bindingWorker) {
         throw new Error(
@@ -265,7 +264,7 @@ function client(manifest: PlatformInstallationManifest) {
         remoteWrites.push(value);
       }
     },
-    // Only --purge-resources calls these; platform-teardown.test.ts covers it.
+    // Decision: Only --purge-resources calls these; platform-teardown.test.ts covers it.
     deleteAccessResource: unexpectedPurgeCall,
     deleteDispatchNamespaceScript: unexpectedPurgeCall,
     deleteEmailRoutingRule: unexpectedPurgeCall,
@@ -559,9 +558,9 @@ describe('uninstall with project Zero Trust', () => {
     expect(listInstallationManifests()[0]?.status).toBe('uninstalled');
   });
 
-  // Models the PostgreSQL advisory lock and the uninstall fence: an API Zero
-  // Trust writer that asks for the lock while uninstall holds it gets it only
-  // after the release, then refuses if the fence is still in place.
+  // Decision: Models the PostgreSQL advisory lock and the uninstall fence: an API Zero Trust writer that
+  // asks for the lock while uninstall holds it gets it only after the release, then refuses if
+  // the fence is still in place.
   function zeroTrustLock(events: Array<string>) {
     let release: (() => void) | undefined;
     let free = Promise.resolve();
@@ -618,8 +617,8 @@ describe('uninstall with project Zero Trust', () => {
       readProjectZeroTrust: async () => {
         events.push('check');
         if (events.includes('lock')) {
-          // A configure request admitted before traffic was disabled arrives
-          // right after the final check and waits on the lock.
+          // Decision: A configure request admitted before traffic was disabled arrives right after the final check
+          // and waits on the lock.
           writer = gate.writer();
         }
         return projectZeroTrustUninstallState(disabledZeroTrust, []);
@@ -662,7 +661,6 @@ describe('uninstall with project Zero Trust', () => {
       }),
     ).rejects.toThrow('KV write failed');
     await writer;
-    // The platform still serves traffic, so the waiting writer proceeds.
     expect(events).toEqual(['lock', 'fence', 'lift fence', 'unlock', 'zero-trust write']);
     expect(gate.fenced).toBe(false);
     expect(fake.disabledWrites).toEqual([]);
@@ -690,7 +688,6 @@ describe('uninstall with project Zero Trust', () => {
         readProjectZeroTrust: async () => projectZeroTrustUninstallState(disabledZeroTrust, []),
       }),
     ).rejects.toThrow('KV write failed after it was applied');
-    // Only enabling the platform again lifts the fence.
     expect(events).toEqual(['lock', 'fence', 'disable traffic', 'unlock']);
     expect(gate.fenced).toBe(true);
     expect(listInstallationManifests()[0]?.status).toBe('failed');
@@ -1555,7 +1552,7 @@ describe('platform lifecycle management', () => {
       'worker: api-worker (platform-example-api)',
       'worker: dispatch-worker (platform-example-dispatch)',
       'dispatch-namespace: dispatch-namespace (dispatch-namespace-id)',
-      // Cloudflare refuses the tail Worker while other Workers send it logs.
+      // Decision: Cloudflare refuses the tail Worker while other Workers send it logs.
       'worker: tail-worker (platform-example-tail)',
       'kv-namespace: routing-kv (routing-kv-id)',
       'hyperdrive: hyperdrive (hyperdrive-id)',

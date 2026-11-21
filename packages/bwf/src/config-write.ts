@@ -74,7 +74,7 @@ function isGeneratedStaticConfig(source: string): boolean {
   let program: StaticNode;
   try {
     const parsed = parseSync(TYPED_CONFIG_FILE, source, {
-      // Generated config is plain JavaScript; authored TypeScript must stay untouched.
+      // Decision: Generated config is plain JavaScript; authored TypeScript must stay untouched.
       lang: 'js',
       sourceType: 'module',
       preserveParens: false,

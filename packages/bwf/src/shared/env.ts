@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs';
 import { join } from 'pathslash';
 import { parseDotenvFile } from './dotenv.ts';
 
-// Shared helpers for environment resolution, used by the Vite plugins,
+// Decision: Shared helpers for environment resolution, used by the Vite plugins,
 // prerender, and the CLI. Keep these as leaf helpers — they must not
 // import from any non-leaf module, otherwise the prerender subprocess's
 // worker bundle acquires unwanted transitive dependencies.

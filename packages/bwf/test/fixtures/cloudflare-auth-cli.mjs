@@ -1,4 +1,4 @@
-// File-backed stand-in for bwf's bundled Cloudflare CLI. Identities are synthetic.
+// Decision: File-backed stand-in for bwf's bundled Cloudflare CLI. Identities are synthetic.
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const filename = 'auth-fixture.json';

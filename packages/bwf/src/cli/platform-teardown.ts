@@ -81,7 +81,7 @@ type Target =
   | Readonly<{
       phase:
         | 'dns'
-        // The resource is the email gateway Worker the rules send mail to.
+        // Decision: The resource is the email gateway Worker the rules send mail to.
         | 'email'
         | 'queue-consumers'
         | 'workers'
@@ -96,7 +96,7 @@ type Target =
     }>
   | Readonly<{ phase: 'access'; access: AccessResource }>;
 
-// Workers deleted in this order before the tail Worker. Cloudflare accepted it
+// Decision: Workers deleted in this order before the tail Worker. Cloudflare accepted it
 // without force; anything else that sends logs to the tail Worker goes first.
 const WORKER_ORDER = ['email-gateway-worker', 'proxy-worker', 'dispatch-worker', 'api-worker'];
 
@@ -225,7 +225,7 @@ function purgeResourcesTargets(manifest: PlatformInstallationManifest): Array<Ta
   const routing = resources.find((resource) => resource.key === 'routing-kv');
   const candidate = (resource: InstallationResource) =>
     isPurgeResourcesCandidate(manifest, resource);
-  // Without the remote checkpoint nothing can be proven, so nothing is deleted.
+  // Decision: Without the remote checkpoint nothing can be proven, so nothing is deleted.
   if (!routing || (routing.state !== 'ready' && !candidate(routing))) {
     return [];
   }
@@ -258,13 +258,13 @@ function purgeResourcesTargets(manifest: PlatformInstallationManifest): Array<Ta
       !isPurgedAccessResource(manifest, entry) &&
       purgeResourcesKeptReason(manifest, `access:${entry.key}`) === null,
   );
-  // An application can admit the service token, so delete applications first.
+  // Decision: An application can admit the service token, so delete applications first.
   for (const kind of ['application', 'service-token'] as const) {
     for (const entry of access.filter((candidate) => candidate.kind === kind)) {
       targets.push({ phase: 'access', access: entry });
     }
   }
-  // Rules that send mail to the gateway Worker go before the Worker.
+  // Decision: Rules that send mail to the gateway Worker go before the Worker.
   const gateway = workers.find((worker) => worker.key === 'email-gateway-worker');
   if (gateway && emailRoutingZone(manifest) && !hasStep(manifest, 'email-routing')) {
     targets.push({ phase: 'email', resource: gateway });
@@ -479,7 +479,7 @@ export async function checkPurgeResourcesCredentials(
   const emailZone = targets.some((target) => target.phase === 'email')
     ? emailRoutingZone(manifest)
     : null;
-  // Access can live in a separate identity account.
+  // Decision: Access can live in a separate identity account.
   const accounts = [...new Set([manifest.account.id, ...access.map((entry) => entry.accountId)])];
   const scope = `${accounts.length === 1 ? 'account' : 'accounts'} ${accounts.join(' and ')}${has('dns-record') || has('worker-route') ? ` and zone ${zone?.name ?? ''}` : ''}${emailZone ? ` and Email Routing zone ${emailZone}` : ''}`;
   if (credential.source === 'oauth') {
@@ -610,7 +610,7 @@ export type PurgeResourcesContext = Readonly<{
   readProjects: () => Promise<ReadonlyArray<string>>;
 }>;
 
-// The installer records a provision intent right before it creates the AI
+// Decision: The installer records a provision intent right before it creates the AI
 // Gateway. Allow for clock differences between this machine and Cloudflare.
 const AI_GATEWAY_CREATION_WINDOW_MS = 10 * 60_000;
 
@@ -786,7 +786,7 @@ export async function runPurgeResourcesTeardown(
         .listWorkerDependents(accountId, resource.name)
         .catch(() => null);
       const outside = dependents?.workers.filter((name) => !workerTarget(name)) ?? [];
-      // Prove each dependent live, like the Worker itself: a name match alone
+      // Decision: Prove each dependent live, like the Worker itself: a name match alone
       // could be another Worker that took a recorded name.
       const keys = outside.length
         ? []
@@ -854,7 +854,7 @@ export async function runPurgeResourcesTeardown(
       continue;
     }
     const current = next.resources.find((resource) => resource.key === target.resource.key);
-    // Already handled on an earlier run, or by an earlier step of this one.
+    // Decision: Already handled on an earlier run, or by an earlier step of this one.
     if (
       !current ||
       current.state === 'deleted' ||
@@ -867,7 +867,7 @@ export async function runPurgeResourcesTeardown(
       case 'traffic': {
         const worker = next.resources.find((resource) => resource.key === target.worker.key);
         if (!worker || !isPurgeResourcesCandidate(next, worker) || !(await prove(worker))) {
-          // The Worker it served is gone, so the attachment cannot be proven.
+          // Decision: The Worker it served is gone, so the attachment cannot be proven.
           break;
         }
         if (current.kind === 'worker-route') {
@@ -915,7 +915,7 @@ export async function runPurgeResourcesTeardown(
         }
         break;
       case 'email': {
-        // Prove the gateway Worker is still this installation's before
+        // Decision: Prove the gateway Worker is still this installation's before
         // touching rules that send mail to it.
         if (!(await prove(current))) {
           break;
@@ -972,7 +972,7 @@ export async function runPurgeResourcesTeardown(
         if (!(await prove(current))) {
           break;
         }
-        // A platform API that creates projects without the configuration
+        // Decision: A platform API that creates projects without the configuration
         // lock can add one after the final check, and it owns an application
         // Worker here.
         const projects = await context.readProjects();
@@ -1006,7 +1006,7 @@ export async function runPurgeResourcesTeardown(
           (gateway) => gateway.id === current.id && gateway.name === current.name,
         );
         if (live && !createdDuringInstallation(next, current, live.createdAt)) {
-          // It may be a replacement with the same id, so keep and list it.
+          // Decision: It may be a replacement with the same id, so keep and list it.
           await keep(current.key, 'Cloudflare does not show it was created during installation');
           break;
         }
@@ -1020,7 +1020,7 @@ export async function runPurgeResourcesTeardown(
         await purgeBucket(current);
         break;
       case 'routing':
-        // The caller deletes routing KV after recording completion.
+        // Decision: The caller deletes routing KV after recording completion.
         break;
     }
   }
@@ -1032,7 +1032,7 @@ export async function runPurgeResourcesTeardown(
       if (!(await prove(bucket))) {
         return;
       }
-      // Keep the ownership marker until last, and prove the bucket again
+      // Decision: Keep the ownership marker until last, and prove the bucket again
       // before every page of deletes.
       await client.emptyR2Bucket(
         accountId,
@@ -1052,7 +1052,7 @@ export async function runPurgeResourcesTeardown(
       if (!(await prove(bucket))) {
         return;
       }
-      // Once the marker is gone, the generation saved with this step is the
+      // Decision: Once the marker is gone, the generation saved with this step is the
       // proof that a rerun still sees the same bucket.
       const generation = await context.bucketGeneration(next, bucket);
       if (generation === null) {

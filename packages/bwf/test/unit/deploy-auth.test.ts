@@ -106,8 +106,8 @@ beforeEach(() => {
   mockGetToken.mockReturnValue('token');
   mockGetTokenSource.mockReturnValue('manual');
   mockGetApiUrl.mockReturnValue('https://api.test');
-  // Default: not running in GitHub Actions, so the OIDC branch is inert and the
-  // existing auth tests are unaffected.
+  // Decision: Default: not running in GitHub Actions, so the OIDC branch is inert and the other auth tests
+  // aren't affected.
   mockIsOidcAvailable.mockReturnValue(false);
   mockExchangeOidc.mockResolvedValue('minted-token');
   mockProjectLookup.mockRejectedValue(new Error('expired-token'));
@@ -117,8 +117,8 @@ beforeEach(() => {
   mockPromptForLoginToken.mockResolvedValue('fresh-token');
   Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
 
-  // Isolate process.env.BWF_TOKEN across tests: the OIDC branch now exports
-  // the minted token there, so start each test clean and restore afterwards.
+  // Decision: Isolate process.env.BWF_TOKEN across tests: the OIDC branch exports the minted token there,
+  // so start each test clean and restore afterwards.
   savedBwfToken = process.env.BWF_TOKEN;
   savedBwfApiUrl = process.env.BWF_API_URL;
   delete process.env.BWF_TOKEN;
@@ -210,8 +210,8 @@ describe('runDeploy project access', () => {
     root = mkdtempSync(join(tmpdir(), 'platform-deploy-project-access-'));
     savedProject = process.env.BWF_PROJECT;
     delete process.env.BWF_PROJECT;
-    // Stop allowed projects at app configuration, before building or uploading.
-    // Reader errors must precede this deliberately invalid configuration.
+    // Decision: Stop allowed projects at app configuration, before building or uploading.
+    // Reader errors must come before this deliberately invalid configuration.
     writeFileSync(join(root, 'bwf.json'), '{');
   });
 
@@ -244,7 +244,7 @@ describe('runDeploy project access', () => {
       if (source === 'environment') {
         process.env.BWF_PROJECT = 'my-app';
       } else if (source === 'saved') {
-        // Linked identity is the project ID, even if the saved slug is outdated.
+        // Decision: Linked identity is the project ID, even if the saved slug is out of date.
         linkProject('old-slug');
       }
 
@@ -327,7 +327,6 @@ describe('runDeploy GitHub Actions OIDC exchange', () => {
     expect(mockMaskSecret).not.toHaveBeenCalled();
     expect(mockClientCtor).toHaveBeenCalledTimes(1);
     expect(mockClientCtor.mock.calls[0][0]).toBe('ambient-saved-token');
-    // The saved token is never promoted into process.env (still clean here).
     expect(process.env.BWF_TOKEN).toBeUndefined();
   });
 
@@ -392,7 +391,6 @@ describe('runDeploy GitHub Actions OIDC exchange', () => {
     const savedProject = process.env.BWF_PROJECT;
     delete process.env.BWF_PROJECT;
     try {
-      // No --project, no BWF_PROJECT, no .bwf/project.json → slug is unknown.
       await expect(runDeploy(root)).rejects.toThrow(
         'running in GitHub Actions but the project is unknown',
       );
@@ -428,7 +426,7 @@ describe('runDeploy keeps the CF Access service token in process.env', () => {
         };
         return Promise.resolve('fresh-token');
       });
-      // First call expires (triggers re-auth), second fails to end the loop.
+      // Decision: The first call expires (which triggers re-auth), and the second fails to end the loop.
       mockProjectLookup
         .mockRejectedValueOnce(new Error('expired-token'))
         .mockRejectedValueOnce(new Error('second failure'));
@@ -521,12 +519,11 @@ describe('buildEnv', () => {
   });
 });
 
-// localBinRoot is opt-in: git and drizzle-kit children must keep the system PATH,
-// so a dependency's node_modules/.bin cannot shadow them.
+// Decision: localBinRoot is opt-in: git and drizzle-kit children keep the system PATH, so a
+// dependency's node_modules/.bin can't shadow them.
 describe('buildEnv — local node_modules/.bin on PATH', () => {
   const DELIMITER = process.platform === 'win32' ? ';' : ':';
 
-  /** Read PATH the way a child process would: case-insensitively (Windows: `Path`). */
   function readPath(env: NodeJS.ProcessEnv): string | undefined {
     const key = Object.keys(env).find((k) => k.toLowerCase() === 'path');
     return key ? env[key] : undefined;

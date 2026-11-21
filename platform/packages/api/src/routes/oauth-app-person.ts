@@ -70,7 +70,8 @@ async function appPersonUser(
   try {
     return (await createUser(db, provider, person, profile.login, profile.email)) as User;
   } catch (error) {
-    // Two first calls for one person race on the unique (provider, provider_id) index.
+    // Decision: Two first calls for one person race on the unique (provider, provider_id) index, so re-read
+    // after a conflict.
     const raced = await find();
     if (raced) {
       return raced;
@@ -138,8 +139,8 @@ export async function appPersonToken(
   };
   return db.transaction(async (tx) => {
     await activeOAuthClient(tx, client.id, true);
-    // Each token is its own grant, so the app can hold several at once (two bots of one person).
-    // Grants that can no longer be used go as new ones are made.
+    // Decision: Each token is its own grant, so the app can hold several at once (two bots of one person).
+    // Grants that can't be used any more are removed as new ones are made.
     await tx
       .delete(oauthGrants)
       .where(
@@ -188,7 +189,7 @@ export async function appPersonToken(
       const now = new Date().toISOString();
       const data = {
         ...request.data,
-        // The deploy runs on this token's grant, which lasts longer than the approval.
+        // Decision: The deploy runs on this token's grant, which outlives the approval.
         grantId,
         projectId: await approval.project(context, tx as Db, request.data.slug!, user),
       };
@@ -205,7 +206,6 @@ export async function appPersonToken(
         .returning();
       const credential = await approval.token(context.env, approved!, user.id);
       const project = await getProject(tx as Db, data.projectId);
-      // Where the app will answer once this deploy is live, so the application can show it.
       return project && context.env.PLATFORM_APPLICATION
         ? { ...credential, url: projectUrl(project, context.env) }
         : credential;

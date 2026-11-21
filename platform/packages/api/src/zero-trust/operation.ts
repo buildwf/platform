@@ -90,8 +90,8 @@ export function leaseActive(operation: ZeroTrustOperation): boolean {
 }
 
 export async function operationStartedAt(db: DbOrTx): Promise<string> {
-  // Project timestamps are stored without a time zone. Use their database clock,
-  // rather than a Worker clock/UTC literal that may compare in a different zone.
+  // Decision: Project timestamps are stored without a time zone. Use the database clock, not a Worker clock or
+  // UTC literal that may compare in a different zone.
   const result = await db.execute<{ startedAt: string }>(
     sql`SELECT now()::timestamp::text AS "startedAt"`,
   );
@@ -228,9 +228,9 @@ async function skipFailedProject(
   const reconciledOperation = skippedOperationKey(configuration.operation);
   const lastError = errorMessage(error);
   const skipped = await withProjectZeroTrustLock(db, projectId, async (lockedDb) => {
-    // A claim takes the exclusive lock, so the revision cannot change while this
-    // shared lock is held. A newer operation may already have reconciled this
-    // row; recording the stale failure would overwrite its result.
+    // Decision: A claim takes the exclusive lock, so the revision can't change while this shared lock is held. A
+    // newer operation may already have reconciled this row; recording the stale failure would overwrite
+    // its result.
     if (!sameConfiguration(configuration, await readZeroTrustConfigurationStrict(lockedDb))) {
       return false;
     }
@@ -305,9 +305,8 @@ async function withZeroTrustOperationLock(
     if (!sameConfiguration(configuration, saved) || !saved.operation?.owner) {
       throw new ZeroTrustUnavailableError('The Zero Trust operation was replaced.');
     }
-    // The provider write and its checkpoint share the claim lock. A CAS after
-    // the provider call alone cannot stop a stale request restoring old policy
-    // or deleting the application used by a newer operation.
+    // Decision: The provider write and its checkpoint share the claim lock. A CAS after the provider call alone
+    // can't stop a stale request restoring old policy or deleting the application a newer operation uses.
     return mutate(tx);
   });
 }
@@ -329,17 +328,16 @@ async function completeConfigureOperation(
     if (!sameConfiguration(configuration, saved) || !saved.operation) {
       throw new ZeroTrustUnavailableError('A newer Zero Trust operation replaced this request.');
     }
-    // Project mutation/deployment holds the shared lock. Recheck under its exclusive
-    // counterpart so the final publication cannot overtake an in-flight reconciliation.
+    // Decision: Project mutation and deployment hold the shared lock. Recheck under the exclusive one so the final
+    // publication can't overtake an in-flight reconciliation.
     if ((await reconciliationCandidates(tx, saved.operation, 1)).length) {
       return null;
     }
     if (saved.operation.applicationTarget) {
-      // A skipped project still lacks the new hostnames: a protected route has
-      // no audience for them (dispatch answers 403) and a public bypass does
-      // not cover them (Access asks for sign-in). Keep the domain unpublished,
-      // make those projects candidates for the next run, and stop this run
-      // failed so only the hourly tier or an operator retries it.
+      // Decision: A skipped project still lacks the new hostnames: a protected route has no audience for them
+      // (dispatch answers 403) and a public bypass doesn't cover them (Access asks for sign-in). Keep the
+      // domain unpublished, make those projects candidates again, and stop this run as failed so only the
+      // hourly tier or an operator retries it.
       const skipped = await skippedProjectIds(tx, saved.operation, 6);
       if (skipped.length > 0) {
         await retrySkippedProjects(tx, saved.operation);
@@ -473,8 +471,8 @@ export async function runConfigureOperation(
       if (operation.phase === 'wildcard') {
         const healthHostname = platformHealthHostname(readPlatformApplication(env));
         if (healthHostname && !configuration.healthApplicationName) {
-          // Configurations saved before the health exception existed lack its
-          // name. Commit it before any create so a lost response is recoverable.
+          // Decision: Configurations saved before the health exception existed lack its name. Commit it before any
+          // create so a lost response is recoverable.
           configuration = await patchConfiguration(db, configuration, {
             healthApplicationName: await applicationName(env, 'platform-health'),
           });
@@ -482,9 +480,8 @@ export async function runConfigureOperation(
         }
         const name = configuration.wildcardApplicationName;
         configuration = await withZeroTrustOperationLock(db, configuration, async (lockedDb) => {
-          // Health probes reach dispatch through this bypass of `/health` on
-          // the health hostname. It exists before the wildcard covers that
-          // hostname, and dispatch never routes that path to a project.
+          // Decision: Health probes reach dispatch through this bypass of `/health` on the health hostname. It exists
+          // before the wildcard covers that hostname, and dispatch doesn't route that path to a project.
           const health =
             healthHostname && configuration.healthApplicationName
               ? await client.ensureHealthApplication(
@@ -530,8 +527,7 @@ export async function runConfigureOperation(
         let stoppedForRoutingBudget = false;
         for (const candidate of candidates) {
           const batch = configuration;
-          // The budget check runs after the project checkpoint, which may
-          // create the row or change its intent.
+          // Decision: The budget check runs after the project checkpoint, which may create the row or change its intent.
           await runOperationProjectStep(db, batch, candidate.project.id, () =>
             reconcileProjectZeroTrust(env, db, candidate.project.id, {
               configuration: batch,
@@ -584,15 +580,14 @@ async function disableProjectZeroTrust(
         return;
       }
       const row = await getProjectZeroTrustState(lockedDb, projectId);
-      // Record public intent before any routing write. Partial pages and caught
-      // provider failures commit this checkpoint, so later metadata writes cannot
-      // restore protection behind the cleanup cursor. Unvisited projects retain
-      // their existing protection until their own disable batch starts.
+      // Decision: Record public intent before any routing write. Partial pages and caught provider failures commit
+      // this checkpoint, so later metadata writes can't restore protection behind the cleanup cursor.
+      // Unvisited projects keep their protection until their own disable batch starts.
       await putProjectState(lockedDb, projectId, {
         desired_protected: false,
         status: 'reconciling',
-        // Replay older partial checkpoints that still recorded protected intent;
-        // readers may have restored protection to keys before their saved cursor.
+        // Decision: Replay older partial checkpoints that still recorded protected intent; readers may have restored
+        // protection to keys before their saved cursor.
         ...(row?.desired_protected ? { routing_cursor: null } : {}),
       });
       if (
@@ -611,8 +606,8 @@ async function disableProjectZeroTrust(
         effective_protected: false,
         status: 'ready',
         reconciled_operation: operation.id,
-        // Public exceptions must outlive the wildcard, including when a later
-        // project or wildcard deletion fails. The final phase clears these handles.
+        // Decision: Public exceptions have to outlive the wildcard, including when a later project or wildcard deletion
+        // fails. The final phase clears these handles.
         protected_application_id: null,
         protected_application_name: null,
         protected_application_audience: null,
@@ -697,8 +692,8 @@ export async function runDisableOperation(
       }
       if (operation.phase === 'wildcard-delete') {
         configuration = await withZeroTrustOperationLock(db, configuration, async (lockedDb) => {
-          // A resumed cleanup must drain late/legacy project work before losing
-          // the wildcard checkpoint, including work left by an errored request.
+          // Decision: A resumed cleanup has to drain late or legacy project work before losing the wildcard checkpoint,
+          // including work left by an errored request.
           if ((await disableCandidates(lockedDb, operation, 1)).length > 0) {
             return advanceOperation(lockedDb, configuration, 'projects');
           }
@@ -706,10 +701,9 @@ export async function runDisableOperation(
             configuration.wildcardApplication?.id,
             configuration.wildcardApplicationName,
           );
-          // The health exception outlives the wildcard, so health probes never
-          // meet Access. Deleting the wildcard again on a retry is a no-op.
-          // A different name identifies a verified installer/operator-owned
-          // exception. Keep it for platform health after project Access ends.
+          // Decision: The health exception outlives the wildcard, so health probes don't meet Access. Deleting the
+          // wildcard again on a retry is a no-op. A different name means a verified installer- or
+          // operator-owned exception; keep it for platform health after project Access ends.
           if (
             !configuration.healthApplication ||
             configuration.healthApplication.name === configuration.healthApplicationName
@@ -746,8 +740,8 @@ export async function runDisableOperation(
           return releaseOperation(db, configuration);
         }
         configuration = await withZeroTrustOperationLock(db, configuration, async (lockedDb) => {
-          // Recheck late project work under the lock used by project mutations
-          // before releasing the disable operation and allowing configuration again.
+          // Decision: Recheck late project work under the lock project mutations use before releasing the disable
+          // operation and allowing configuration again.
           if ((await disableCandidates(lockedDb, operation, 1)).length > 0) {
             return advanceOperation(lockedDb, configuration, 'projects');
           }

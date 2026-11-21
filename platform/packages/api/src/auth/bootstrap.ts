@@ -162,7 +162,7 @@ export async function initializeAuthentication(
       );
     }
     if (settings) {
-      // Explicit owner-authorized reset is only possible before the first user exists.
+      // Decision: Explicit owner-authorized reset is only possible before the first user exists.
       await transaction.delete(platformAuthAttempts);
       await transaction.delete(platformAuthBootstrap);
       await transaction.delete(platformLoginRevisions);

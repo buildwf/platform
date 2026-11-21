@@ -189,7 +189,7 @@ describe('authoritative Zero Trust routing publication', () => {
       ) => {
         if (key === project.slug) {
           staleReads += 1;
-          // Writes cannot invalidate an older edge read, even under a DB lock.
+          // Decision: Writes can't invalidate an older edge read, even under a DB lock.
           return staleRoute;
         }
         return Reflect.apply(originalGet, env.ROUTING, [key, ...rest]);
@@ -314,8 +314,8 @@ describe('authoritative Zero Trust routing publication', () => {
         audiences: [{ hostname: previous.slug + '.apps.example.com', audience: 'aud-previous' }],
       },
     });
-    // Each KV read is independent: domain reconciliation can see the missing
-    // slug route while the activation copy still sees the deleted project's.
+    // Decision: Each KV read is independent: domain reconciliation can see the missing slug route while the
+    // activation copy still sees the deleted project's.
     const originalGet = env.ROUTING.get.bind(env.ROUTING);
     let slugReads = 0;
     vi.spyOn(env.ROUTING, 'get').mockImplementation((async (

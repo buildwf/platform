@@ -66,7 +66,7 @@ export async function runFullDeploy(
 ): Promise<void> {
   cliLog?.info('deploy_mode', { mode: 'full' });
 
-  // Build in a child process to avoid Vite API side effects on bundle output.
+  // Decision: Build in a child process to avoid Vite API side effects on bundle output.
   if (!skipBuild) {
     const { label: buildCmd, command: buildExec } = resolveFullDeployBuildCommand(
       root,
@@ -76,7 +76,7 @@ export async function runFullDeploy(
     cliLog?.info('build_start', { command: buildCmd });
     const buildStartedAt = Date.now();
     try {
-      // PLATFORM_DEPLOY_PROJECT_ID marks a managed build: platform dispatch owns routing.
+      // Decision: PLATFORM_DEPLOY_PROJECT_ID marks a managed build: platform dispatch owns routing.
       execSync(buildExec, {
         cwd: root,
         stdio: 'inherit',
@@ -94,12 +94,11 @@ export async function runFullDeploy(
     cliLog?.info('build_skipped', { reason: 'skipBuild' });
   }
 
-  // Resolve output paths from build artifacts instead of re-resolving the Vite
-  // config here; plugins run only once, inside the build.
+  // Decision: Resolve output paths from build artifacts instead of resolving the Vite config again here;
+  // plugins run only once, inside the build.
   const distDir = resolveDistDir(root);
   const workerDirName = resolveWorkerDirName(distDir);
 
-  // Detect non-default assetsDir from Vite client manifest for _headers generation
   let assetsPrefix = 'assets';
   const clientManifestPath = join(distDir, 'client', '.vite', 'manifest.json');
   if (existsSync(clientManifestPath)) {
@@ -133,8 +132,6 @@ export async function runFullDeploy(
     process.exit(1);
   }
 
-  // Merge user `_headers` / `_redirects` in the built client dir with
-  // `bwf.config.ts` routing rules.
   const clientDir = join(distDir, 'client');
   const { headerRules, redirectRules, fallbackRules } = mergeAndLintRoutingRules(
     clientDir,
@@ -143,16 +140,15 @@ export async function runFullDeploy(
 
   assertDeploySchemaDriftFree(root, dialect);
 
-  // Validate migrations before the Hyperdrive check so migrations can gate provisioning.
+  // Decision: Validate migrations before the Hyperdrive check so migrations can gate provisioning.
   const validatedMigrations = validateDeployMigrations(
     paths.migrationsDir,
     analysis.migrations,
     paths.sourceRelative,
   );
 
-  // Pre-deploy: ensure Hyperdrive is provisioned for external SQL projects.
-  // Migrations on disk also gate this — even if inference says needsD1: false,
-  // buildBwfManifest will add the hyperdrive binding when migrations are present.
+  // Decision: Migrations on disk also gate this: even if inference says needsD1: false, buildBwfManifest adds
+  // the hyperdrive binding when migrations are present.
   if (dialect !== 'sqlite' && analysis.needsDatabase) {
     await ensureManagedHyperdrive(client, config.projectId, dialect);
   }
@@ -199,9 +195,8 @@ export async function runFullDeploy(
     notFound: bwfConfig.routing?.notFound,
   });
 
-  // Preflight: hash assets and check which ones changed.
-  // `assetFiles` carries the in-memory buffer cache through to the upload
-  // step so each asset is read from disk exactly once.
+  // Decision: `assetFiles` carries the in-memory buffer cache through to the upload step so each asset is read
+  // from disk exactly once.
   s.start('Checking for changes...');
   cliLog?.info('preflight_start', { dir: clientDir });
   const { assetManifest, assetFiles } = await collectAndHashAssets(clientDir, onProgress);
@@ -236,8 +231,6 @@ export async function runFullDeploy(
     ...(liveConfig && { live: liveConfig }),
   };
 
-  // Surface the non-SPA-fallbacks mismatch (if any) before invoking the
-  // I/O-free manifest builder.
   const fallbackWarning = detectNonSpaFallbackWarning(assetConfig, fallbackRules);
   if (fallbackWarning) {
     onProgress(fallbackWarning);

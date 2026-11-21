@@ -23,8 +23,8 @@ beforeEach(async () => {
   mocks.pool.mockImplementation(function () {
     const query = async (sql: string, values?: Array<unknown>) => {
       queries.push(sql);
-      // PGlite has one session and no advisory locks. All ownership, migration,
-      // checkpoint, and protocol SQL still runs against real PostgreSQL.
+      // Decision: PGlite has one session and no advisory locks. All ownership, migration, checkpoint and
+      // protocol SQL still runs against real PostgreSQL.
       if (sql.includes('pg_try_advisory_lock')) {
         return { rows: [{ acquired: true }] };
       }
@@ -84,8 +84,8 @@ it('refuses leftover migration history before claiming and still resumes its own
   );
   expect(claim.rows).toEqual([{ relation: null }]);
 
-  // A resumed installation has already claimed the database and written its
-  // own migration history; the matching claim must still be accepted.
+  // Decision: A resumed installation has already claimed the database and written its own migration
+  // history; the matching claim still has to be accepted.
   await database.exec(`DROP SCHEMA "drizzle" CASCADE`);
   await claimPlatformDatabase(url, 'test-install', 'test-owner');
   lock = await acquirePlatformDatabaseLifecycleLock(url, 'test-install', 'test-owner');
@@ -99,7 +99,6 @@ it('refuses leftover migration history before claiming and still resumes its own
 it('tells a reinstall on the same database to use a new empty database', async () => {
   const url = 'postgresql://owner:pw@db.example.com/platform?sslmode=require';
   await claimPlatformDatabase(url, 'test-install', 'test-owner');
-  // Uninstall leaves the claim and the data, and a reinstall gets a new owner.
   await expect(claimPlatformDatabase(url, 'test-install', 'next-owner')).rejects.toThrow(
     'platform: This PostgreSQL database is already claimed by bwf platform installation test-install. Uninstall keeps the database and its data, so use a dedicated empty database for each installation.',
   );

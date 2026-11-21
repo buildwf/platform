@@ -212,9 +212,9 @@ const STATUS_TRANSITIONS: Readonly<Record<InstallationStatus, ReadonlyArray<Inst
     ],
     'waiting-for-dns': ['provisioning', 'disabling', 'failed', 'uninstalling'],
     'waiting-for-oauth': ['provisioning', 'deploying', 'disabling', 'failed', 'uninstalling'],
-    // Re-enter provisioning after a hard interruption. Every provisioning and
-    // deployment step is checkpointed/idempotent, so resume safely reconciles
-    // resources before redeploying and verifying again.
+    // Decision: Re-enter provisioning after a hard interruption. Each provisioning and deployment step is
+    // checkpointed and idempotent, so resume reconciles resources before redeploying and
+    // verifying again.
     deploying: ['provisioning', 'verifying', 'disabling', 'disabled', 'failed', 'uninstalling'],
     verifying: ['provisioning', 'installed', 'disabling', 'failed', 'uninstalling'],
     installed: ['provisioning', 'disabling', 'uninstalling', 'failed'],
@@ -294,7 +294,7 @@ export function parsePlatformResourceOwnershipMarker(
       `Unsupported platform resource ownership schema version: ${String(value.schemaVersion)}.`,
     );
   }
-  // The constructor validates every field.
+  // Decision: The constructor validates each field.
   return createPlatformResourceOwnershipMarker(
     value as Parameters<typeof createPlatformResourceOwnershipMarker>[0],
   );

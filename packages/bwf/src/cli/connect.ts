@@ -44,8 +44,8 @@ async function authenticateConnection(
   discovery: PlatformDiscoveryDocument,
   interactive: boolean,
 ): Promise<void> {
-  // An environment token is usable only when explicitly bound to this origin.
-  // Project metadata and another saved platform must never select its recipient.
+  // Decision: An environment token is usable only when it's explicitly bound to this origin. Project metadata
+  // and another saved platform mustn't select its recipient.
   const envToken = process.env.BWF_TOKEN;
   const envUrl = process.env.BWF_API_URL;
   const matchingEnv = Boolean(
@@ -54,7 +54,7 @@ async function authenticateConnection(
   const token = matchingEnv ? envToken : readPlatformToken(discovery.apiUrl);
   if (token) {
     try {
-      // Login must work on any platform version.
+      // Decision: Login has to work on any platform version.
       await new PlatformClient(token, {
         apiUrl: discovery.apiUrl,
         checkPlatformVersion: false,

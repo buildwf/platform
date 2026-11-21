@@ -47,8 +47,8 @@ describe('verifyGithubOidcToken', () => {
     jwk.use = 'sig';
     const jwks = { keys: [jwk] };
 
-    // Serve the GitHub Actions JWKS from the stubbed fetch so the module-cached
-    // remote JWKS set resolves our test public key (no network).
+    // Decision: The stubbed fetch serves the GitHub Actions JWKS, so the module-cached remote JWKS set resolves
+    // the test public key with no network.
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: string | URL | Request) => {
@@ -98,11 +98,9 @@ describe('verifyGithubOidcToken', () => {
   });
 
   it('returns null for a tampered token', async () => {
-    // Mutating a few bytes of the real signature is PROBABILISTIC — an RS256
-    // signature with ~1-2 flipped bytes still verifies for a small fraction of
-    // keypairs (~0.3%), so `${sig.slice(0, -2)}AA` flaked. Splice in a signature
-    // from a DIFFERENT key instead: the JWKS public key can never verify it, so
-    // rejection is deterministic.
+    // Decision: Flipping a few bytes of a real RS256 signature still verifies for a small share of keypairs
+    // (~0.3%), so that version flaked. A signature from a different key can't verify, so rejection is
+    // deterministic.
     const token = await sign(baseClaims);
     const foreign = await generateKeyPair('RS256', { extractable: true });
     const forged = await new SignJWT(baseClaims)

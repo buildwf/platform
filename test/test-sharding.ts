@@ -1,4 +1,3 @@
-/** Stable across checkout directories and Windows/POSIX path separators. */
 export function testFileKey(file: string, root: string): string {
   const path = file.replaceAll('\\', '/');
   const prefix = `${root.replaceAll('\\', '/').replace(/\/$/, '')}/`;
@@ -9,7 +8,6 @@ export function compareKeys(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-/** Preserve reproducible --sequence.shuffle.files runs with a custom sequencer. */
 export function shuffleTests<T>(tests: ReadonlyArray<T>, seed: number): Array<T> {
   const shuffled = [...tests];
   let state = seed >>> 0;
@@ -21,7 +19,6 @@ export function shuffleTests<T>(tests: ReadonlyArray<T>, seed: number): Array<T>
   return shuffled;
 }
 
-/** Longest-first greedy packing; every discovered test appears in exactly one shard. */
 export function balanceTests<T>(
   tests: ReadonlyArray<T>,
   count: number,

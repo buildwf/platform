@@ -52,7 +52,7 @@ const COLUMN_TYPES = new Set(['string', 'text', 'datetime', 'integer', 'boolean'
 
 const VALID_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
 
-// *_HYPHENS variant also allows hyphens (cron/queue/middleware).
+// Decision: The *_HYPHENS variant also allows hyphens (cron, queue, middleware).
 const NAME_RE = /^[a-z_][a-z0-9_]*$/;
 const NAME_WITH_HYPHENS_RE = /^[a-z_][a-z0-9_-]*$/;
 
@@ -131,7 +131,6 @@ function parseRouteArgs(args: Array<string>): GenArgs {
     }
   }
 
-  // Strip leading slashes
   const cleanPath = routePath.replace(/^\/+/, '');
   return { subcommand: 'route', path: cleanPath, methods };
 }

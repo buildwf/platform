@@ -459,7 +459,7 @@ export function createLiveDurableObject(): LiveDurableObjectClass {
           }
           const response = outcome.value;
           const items = batch[index]![1];
-          // A missed delivery does not prove the still-open SSE connection is gone.
+          // Decision: A missed delivery does not prove the still-open SSE connection is gone.
           if (!response) {
             continue;
           }

@@ -6,7 +6,7 @@ import {
 } from '@platform-service/api/proxy-token';
 import type { Env } from './types.ts';
 
-// One floor cache per isolate, shared by every request it serves.
+// Decision: One floor cache per isolate, shared by all the requests it serves.
 const stateCache = createProxyTokenStateCache();
 
 /** @internal Exposed for testing only. */

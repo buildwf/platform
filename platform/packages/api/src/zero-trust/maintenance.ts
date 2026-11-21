@@ -59,7 +59,7 @@ async function retireDisabledProjectZeroTrust(
         routingBudget.exhausted = true;
         return;
       }
-      // The wildcard is gone, so neither exception application still guards anything.
+      // Decision: The wildcard is gone, so neither exception application guards anything any more.
       await client.deleteApplication(row.protected_application_id, row.protected_application_name);
       await client.deleteApplication(row.bypass_application_id, row.bypass_application_name);
       await updateProjectState(lockedDb, projectId, {
@@ -129,12 +129,12 @@ export async function reconcilePendingProjectZeroTrust(
     return;
   }
   if (configuration.operation) {
-    // The hourly tier also retries an operation that failed; the fast tier does not.
+    // Decision: The hourly tier also retries a failed operation; the fast tier doesn't.
     await resumePlatformZeroTrustOperation(env, db, { saved: configuration, retryFailed: true });
     return;
   }
   if (!configuration.enabled) {
-    // Projects skipped by a completed disable operation still hold protection.
+    // Decision: Projects skipped by a completed disable operation still hold protection.
     await retirePendingDisabledProjectZeroTrust(env, db, configuration, limit);
     return;
   }
@@ -148,8 +148,8 @@ export async function reconcilePendingProjectZeroTrust(
         or(isNull(projectZeroTrust.project_id), sql`${projectZeroTrust.status} <> 'ready'`),
       ),
     )
-    // A project without a row has no recorded attempt and cannot deploy, so it
-    // goes first. Postgres would otherwise sort its NULL timestamp last.
+    // Decision: A project without a row has no recorded attempt and can't deploy, so it goes first. Postgres would
+    // otherwise sort its NULL timestamp last.
     .orderBy(sql`${projectZeroTrust.updated_at} ASC NULLS FIRST`, projects.created_at)
     .limit(limit);
   if (rows.length === 0) {
@@ -173,9 +173,8 @@ export async function reconcilePendingProjectZeroTrust(
         projectId: row.project.id,
         error,
       });
-      // A checkpoint failure rolls back without touching the row, or without
-      // creating it. Record it so the project moves behind other pending
-      // projects in the next run.
+      // Decision: A checkpoint failure rolls back without touching or creating the row. Record it so the project
+      // moves behind other pending projects in the next run.
       await markPendingProjectError(
         db,
         row.project.id,

@@ -19,7 +19,7 @@ export function releasePolicy(
   tag: string,
   packages: ReadonlyArray<{ name: string; version: string }>,
 ): { version: string; npmTag: string } {
-  // Retry metadata identifies a Git release attempt, not a new npm version.
+  // Decision: Retry metadata identifies a Git release attempt, not a new npm version.
   // Keep real prereleases in the captured version and in channel selection.
   const match =
     /^v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?)(?:\+retry\.[1-9]\d*)?$/.exec(

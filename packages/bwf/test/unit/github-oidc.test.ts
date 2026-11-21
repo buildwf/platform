@@ -87,7 +87,6 @@ describe('exchangeGithubOidcForDeployToken', () => {
     expect(token).toBe('deploy-token');
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // 1. GET the OIDC token with audience=platform appended and the request bearer.
     const [getUrl, getInit] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(String(getUrl)).toContain('audience=platform');
     expect(String(getUrl)).toContain('token.actions.githubusercontent.com');
@@ -97,7 +96,6 @@ describe('exchangeGithubOidcForDeployToken', () => {
       `Bearer ${REQUEST_TOKEN}`,
     );
 
-    // 2. POST the JWT to the bwf API; body is exactly { oidcToken, project }.
     const [postUrl, postInit] = fetchMock.mock.calls[1] as [string, RequestInit];
     expect(postUrl).toBe(`${apiUrl}/auth/github-oidc`);
     expect(postInit.method).toBe('POST');
@@ -117,7 +115,7 @@ describe('exchangeGithubOidcForDeployToken', () => {
 
     await exchangeGithubOidcForDeployToken(gatedApiUrl, 'my-app', oidcEnv());
 
-    // The GitHub OIDC GET goes to token.actions.githubusercontent.com, never through CF Access.
+    // Decision: The GitHub OIDC GET goes to token.actions.githubusercontent.com, not through CF Access.
     const [, getInit] = fetchMock.mock.calls[0] as [URL, RequestInit];
     const getHeaders = getInit.headers as Record<string, string>;
     expect(getHeaders['CF-Access-Client-Id']).toBeUndefined();
@@ -177,7 +175,6 @@ describe('exchangeGithubOidcForDeployToken', () => {
     await expect(exchangeGithubOidcForDeployToken(apiUrl, 'my-app', oidcEnv())).rejects.toThrow(
       /Failed to mint a GitHub OIDC token \(403\): nope/,
     );
-    // The second hop must not run once the first fails.
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

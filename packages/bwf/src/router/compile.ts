@@ -181,7 +181,6 @@ export function compileRouteTable(
   }
   lines.push('');
 
-  // Generate eager imports for middleware
   for (let i = 0; i < scan.middleware.length; i++) {
     const mw = scan.middleware[i];
     lines.push(`import middleware${i} from ${JSON.stringify(`${middlewareDir}/${mw.filePath}`)};`);
@@ -190,7 +189,7 @@ export function compileRouteTable(
     const route = webSockets[i];
     lines.push(`import websocket${i} from ${JSON.stringify(`${routesDir}/${route.filePath}`)};`);
   }
-  // Procedures load eagerly, unlike routes: the registry check is the deploy gate.
+  // Decision: Procedures load eagerly, unlike routes: the registry check is the deploy gate.
   const procedureFiles = options.procedures ? (scan.procedures ?? []) : [];
   if (procedureFiles.length > 0) {
     lines.push(
@@ -217,7 +216,7 @@ export function compileRouteTable(
   }
 
   lines.push(`const app = new Hono();`);
-  // Route files may use dotted names (`feed.xml.ts`), so `c.rewrite()` must still reach them.
+  // Decision: Route files may use dotted names (`feed.xml.ts`), so `c.rewrite()` must still reach them.
   const routePatterns: Array<string> = [];
   for (const r of scan.routes) {
     routePatterns.push(r.pattern);
@@ -238,7 +237,7 @@ export function compileRouteTable(
   lines.push('app.use(__routingRuntime.requestMiddleware);');
   lines.push('');
 
-  // Edge routing middleware. Every target without managed platform dispatch
+  // Decision: Edge routing middleware. Every target without managed platform dispatch
   // owns routing end-to-end, including native Cloudflare production builds.
   // Managed bundles omit it because dispatch applies the same rules first.
   const emitEdgeRules = !managedDispatch;
@@ -273,7 +272,6 @@ export function compileRouteTable(
     lines.push('app.use("*", __routingRuntime.headerMiddleware(__headerRules));');
   }
 
-  // Register user middleware
   for (let i = 0; i < scan.middleware.length; i++) {
     lines.push(`app.use(middleware${i});`);
   }
@@ -281,7 +279,7 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // WebSocket upgrades must enter the Hono app so global auth and user
+  // Decision: WebSocket upgrades must enter the Hono app so global auth and user
   // middleware run before the Durable Object receives the request. Register
   // them before HTTP routes to preserve WebSocket priority when both route
   // kinds share a path, while non-upgrade requests continue through normally.
@@ -322,7 +320,6 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // Register routes with lazy-loaded handlers (shared loader per file)
   const seenFiles = new Set<string>();
   const routeNames = createIdentifierNames();
   for (const route of scan.routes) {
@@ -337,7 +334,6 @@ export function compileRouteTable(
     }
 
     if (route.methods.length === 0) {
-      // No recognized HTTP exports — register as all()
       lines.push(
         `app.all(${JSON.stringify(route.pattern)}, __createHttpRouteHandler(${loaderName}, "default"));`,
       );
@@ -387,7 +383,7 @@ export function compileRouteTable(
     lines.push(`__platformWebSocketRoutes[${i}].key = websocket${i}.key;`);
   }
   if (webSockets.length > 0 && options.webSocketRuntimePath) {
-    // Register after `key` is attached so getRoom() shares the client's addressing.
+    // Decision: Register after `key` is attached so getRoom() shares the client's addressing.
     lines.push('__registerWebSocketRoutes(__platformWebSocketRoutes);');
   }
   for (const className of options.webSocketTombstones ?? []) {
@@ -404,7 +400,7 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // Ordinary HTTP hooks are fallbacks for WebSocket paths. Explicit API and
+  // Decision: Ordinary HTTP hooks are fallbacks for WebSocket paths. Explicit API and
   // Pages handlers win for their methods; upgrades were forwarded above.
   for (let i = 0; i < webSockets.length; i++) {
     lines.push(
@@ -440,7 +436,7 @@ export function compileRouteTable(
       lines.push(`const job${i}Crons = ${JSON.stringify(job.crons)};`);
     }
     lines.push('');
-    // Workers log capture keeps only an error's own name, message and stack (not
+    // Decision: Workers log capture keeps only an error's own name, message and stack (not
     // AggregateError.errors or cause), so each job logs its own error, with the job file
     // and cron, as soon as it fails.
     lines.push('export async function scheduled(controller, env, ctx) {');
@@ -519,7 +515,7 @@ export function compileRouteTable(
       relative(options.projectRoot, `${queuesDir}/${queue.filePath}`),
     );
     lines.push(`const __queueLabels = ${JSON.stringify(queueLabels)};`);
-    // Queue dispatch as a standalone function — called directly by native queue handler
+    // Decision: Queue dispatch as a standalone function — called directly by native queue handler
     // and via the authenticated HTTP route. No global mutable state needed.
     // It logs why a batch failed: the native handler throws only "queue: Handler failed.",
     // the HTTP route returns no handler error, and the bwf Cloud relay ignores `error`.
@@ -593,7 +589,7 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // Inbound email: the first recipient pattern in scanner order wins, then `_default`.
+  // Decision: Inbound email: the first recipient pattern in scanner order wins, then `_default`.
   const email = scan.email;
   const emailDir = options.emailDir;
   if (emailDir && email && (email.addresses.length > 0 || email.defaultHandler)) {
@@ -621,12 +617,12 @@ export function compileRouteTable(
     }
     lines.push('');
     lines.push('export async function __emailHandler(message, env, ctx, __opts) {');
-    // Match the wire recipient: `createMessageProxy` already stripped the slug from `message.to`.
+    // Decision: Match the wire recipient: `createMessageProxy` already stripped the slug from `message.to`.
     // Keep the case; patterns use the `i` flag so captured tags stay intact.
     lines.push('  const __platformTo = message ? message.__platformTo : undefined;');
     lines.push('  const __to = String((__platformTo ?? (message && message.to)) || "");');
     lines.push('  const __localFull = __to.split("@")[0] || "";');
-    // With a slug configured, `<slug>[+<tag>]` routes on the tag; a bare `<slug>@` has an empty tag.
+    // Decision: With a slug configured, `<slug>[+<tag>]` routes on the tag; a bare `<slug>@` has an empty tag.
     lines.push('  let __local = __localFull;');
     lines.push('  if (__opts && __opts.slug) {');
     lines.push('    const __plus = __localFull.indexOf("+");');
@@ -659,7 +655,7 @@ export function compileRouteTable(
       lines.push('  }');
       lines.push('  return await __dmod.default(message, env, ctx, { params: {} });');
     } else {
-      // Reject unmatched mail so the sender gets a bounce instead of silent loss.
+      // Decision: Reject unmatched mail so the sender gets a bounce instead of silent loss.
       lines.push('  if (typeof message.setReject === "function") {');
       lines.push(
         '    message.setReject("no handler matched recipient \\"" + __to + "\\" — add email/_default.ts to handle unmatched mail");',
@@ -670,7 +666,7 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // /__platform/migrate handler — runs bundled DB + auth migrations in-worker
+  // Decision: /__platform/migrate handler — runs bundled DB + auth migrations in-worker
   if (options.migrationHandlerPath && (options.migrations?.length || auth)) {
     const d1BindingName = options.bindingNames?.d1;
     lines.push(
@@ -759,7 +755,7 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // /__platform/* handler — native binding access via WfP dispatch (always injected for CF targets)
+  // Decision: /__platform/* handler — native binding access via WfP dispatch (always injected for CF targets)
   if (options.bindingHandlerPath) {
     lines.push(
       `import { createBindingHandler as __createBindingHandler } from ${JSON.stringify(options.bindingHandlerPath)};`,
@@ -776,19 +772,19 @@ export function compileRouteTable(
     lines.push('');
   }
 
-  // Request-scoped raw env — safe for concurrent requests (uses ALS, not a module global).
+  // Decision: Request-scoped raw env — safe for concurrent requests (uses ALS, not a module global).
   // The worker entry wraps each request in __withRawEnv(env, fn). Internal route handlers
   // read it via __getRawEnv() which returns the per-request value from AsyncLocalStorage.
   lines.push('const __rawEnvStore = new AsyncLocalStorage();');
   lines.push('export function __withRawEnv(env, fn) { return __rawEnvStore.run(env, fn); }');
   lines.push('function __getRawEnv() { return __rawEnvStore.getStore(); }');
-  // Build-time key for internal route auth when __PLATFORM_PROXY_TOKEN is absent.
+  // Decision: Build-time key for internal route auth when __PLATFORM_PROXY_TOKEN is absent.
   // Embedded in the compiled route table — only same-build callers know it.
   lines.push(`export const __PLATFORM_BUILD_KEY = ${JSON.stringify(crypto.randomUUID())};`);
   lines.push(
     `export const __PLATFORM_DEV_TRIGGER_TOKEN = ${JSON.stringify(options.devTriggerToken ?? crypto.randomUUID())};`,
   );
-  // Manual trigger auth (`/__platform/scheduled`, `/__platform/queue`) is fixed when the
+  // Decision: Manual trigger auth (`/__platform/scheduled`, `/__platform/queue`) is fixed when the
   // module is compiled, not read from `import.meta.env.DEV`: a build with
   // NODE_ENV=development still has DEV=true, and must keep the proxy-token /
   // build-key rule. Only the Vite dev server compiles with `dev: true`.
@@ -957,7 +953,7 @@ export function compileWorkerEntry(options: WorkerEntryOptions = {}): string {
   const remoteImport = remote
     ? `import { createRemoteEnv } from ${JSON.stringify(remote.remotePath)};\n`
     : '';
-  // Importing env.ts registers the schema that `_validateEnvOnce` checks.
+  // Decision: Importing env.ts registers the schema that `_validateEnvOnce` checks.
   const envSchemaImport = envSchemaModule
     ? `import ${JSON.stringify(envSchemaModule.importPath)};\nimport { _validateEnvOnce } from ${JSON.stringify(envSchemaModule.helperPath)};\n`
     : '';
@@ -981,14 +977,14 @@ ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env
   return withRuntimeEnv(env, () => scheduled(controller, userEnv, ctx));
 }`;
 
-  // Both the authenticated receipt endpoint and native Cloudflare email event
+  // Decision: Both the authenticated receipt endpoint and native Cloudflare email event
   // run the same handler. Native events replay recorded actions on the real
   // message; receipts return bounded action frames to the platform.
   const emailImport = hasEmail ? ', __emailHandler' : '';
   const emailProxyImport = hasEmail
     ? `import { createMessageProxy as __createMessageProxy, enactEmailActions as __enactEmailActions, isForwardableEmailMessage as __isForwardableEmailMessage } from ${JSON.stringify(runtimeEmailPath)};\nimport { EMAIL_PROTOCOL_VERSION as __EMAIL_PROTOCOL_VERSION, encodeEmailActions as __encodeEmailActions, readEmailEnvelope as __readEmailEnvelope, verifyEmailReceiptThroughProxy as __verifyEmailReceiptThroughProxy } from "@builtbyfriends/bwf/_email-protocol";\n`
     : '';
-  // Custom-domain receipts (`viaDomain`) carry no `<slug>+` prefix, so they get no slug.
+  // Decision: Custom-domain receipts (`viaDomain`) carry no `<slug>+` prefix, so they get no slug.
   // On the shared domain the prefix is the slug or the project's email alias. The
   // platform router already matched it to this project, so strip the name the
   // recipient actually used.
@@ -1031,7 +1027,7 @@ ${envValidateCall}${remoteEnvSwap}  const userEnv = __filterInternalBindings(env
 }`
     : '';
 
-  // The default export remains a WorkerEntrypoint for platform fetch dispatch.
+  // Decision: The default export remains a WorkerEntrypoint for platform fetch dispatch.
   // Its email method accepts only native events on direct Cloudflare deploys;
   // platform mail enters through the authenticated receipt fetch endpoint.
   const entryImport = `import { WorkerEntrypoint } from "cloudflare:workers";\n`;

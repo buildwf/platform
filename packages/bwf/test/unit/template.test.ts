@@ -6,7 +6,7 @@ import {
 } from '../../src/cli/template.ts';
 
 describe('React starter', () => {
-  // The starter and the playgrounds use the same @vitejs/plugin-react, so a catalog bump must
+  // Decision: The starter and the playgrounds use the same @vitejs/plugin-react, so a catalog bump has to
   // update the starter too.
   it("pins @vitejs/plugin-react to the workspace catalog's range", () => {
     const workspace = readFileSync(
@@ -21,8 +21,8 @@ describe('React starter', () => {
 });
 
 describe('Vite+ starter', () => {
-  // vite-plus refuses any core other than the one it pins, so a new app must get
-  // the core from the same release as its vite-plus.
+  // Decision: vite-plus refuses any core other than the one it pins, so a new app has to get the core from
+  // the same release as its vite-plus.
   it("pins vite-plus and its core to the workspace catalog's Vite+ release", () => {
     const workspace = readFileSync(
       new URL('../../../../pnpm-workspace.yaml', import.meta.url),

@@ -19,10 +19,9 @@ const emit = defineEmits<{
 
 const terminal = ref<HTMLElement | null>(null);
 const viewport = ref<HTMLElement | null>(null);
-// A complete, readable poster is available before hydration and with reduced motion.
 const elapsed = ref(props.demo.duration);
 const lines = computed(() => terminalFrame(props.demo, elapsed.value));
-// Draw the box edges across the full terminal cell height. Font glyphs leave
+// Decision: Draw the box edges across the full terminal cell height. Font glyphs leave
 // gaps at our readable line spacing; the transcript keeps the original glyphs.
 const renderedLines = computed(() =>
   lines.value.map((line) => {

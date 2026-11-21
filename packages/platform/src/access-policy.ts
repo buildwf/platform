@@ -1,5 +1,5 @@
-// Rule kinds whose non-empty value names a company identity source or an
-// Access group built from such rules.
+// Decision: Rule kinds whose non-empty value names a company identity source or an Access group built
+// from such rules.
 const COMPANY_IDENTITY_RULES = [
   'email_list',
   'gsuite',
@@ -11,14 +11,13 @@ const COMPANY_IDENTITY_RULES = [
   'group',
 ] as const;
 
-// Identity provider types whose required settings name one company directory:
-// an Entra ID tenant, a Centrify, Okta or OneLogin account, a Google Workspace
-// domain or a PingOne environment. One-time PIN, passkeys and public logins
-// such as GitHub, Google (consumer accounts), Facebook, LinkedIn and Yandex
-// admit anyone with an email address or an account there. Generic OIDC and
-// SAML connect any provider, including ones with public sign-up, such as
-// consumer Google in Cloudflare's own OIDC example, so their type proves
-// nothing about who can sign in.
+// Decision: Identity provider types whose required settings name one company directory: an Entra ID
+// tenant, a Centrify, Okta or OneLogin account, a Google Workspace domain or a PingOne
+// environment. One-time PIN, passkeys and public logins such as GitHub, Google (consumer
+// accounts), Facebook, LinkedIn and Yandex admit anyone with an email address or an account
+// there. Generic OIDC and SAML connect any provider, including ones with public sign-up, such
+// as consumer Google in Cloudflare's own OIDC example, so their type proves nothing about who
+// can sign in.
 const COMPANY_IDENTITY_PROVIDER_TYPES: ReadonlySet<unknown> = new Set([
   'azureAD',
   'centrify',
@@ -42,7 +41,7 @@ export function isPlatformAccessCompanyIdentityProvider(
   provider: Readonly<Record<string, unknown>>,
 ): boolean {
   if (provider.type === 'cloudflare') {
-    // Without this setting, any Cloudflare user can sign in.
+    // Decision: Without this setting, any Cloudflare user can sign in.
     return plainObject(provider.config) && provider.config.restrict_to_account_members === true;
   }
   return COMPANY_IDENTITY_PROVIDER_TYPES.has(provider.type);
@@ -78,7 +77,7 @@ export function isPlatformAccessIdentityRule(
     );
   }
   if (rule.cloudflare_account_member) {
-    // Members of one Cloudflare account; without an ID, the account that owns the policy.
+    // Decision: Members of one Cloudflare account; without an ID, the account that owns the policy.
     const member = rule.cloudflare_account_member;
     return (
       plainObject(member) &&

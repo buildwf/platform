@@ -180,7 +180,6 @@ it('bounds each D1 request and the upload instead of the whole import', async ()
 });
 
 it('gives the upload time for a 25 MB file on a slow link', () => {
-  // 25 MB at 1 Mbit/s takes 200 seconds, on top of the 2-minute request bound.
   expect(d1ImportUploadTimeoutMs(25 * 1024 * 1024)).toBe(320_000);
   expect(d1ImportUploadTimeoutMs(0)).toBe(120_000);
 });

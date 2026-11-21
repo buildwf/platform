@@ -60,7 +60,7 @@ describe('createCredentialRedactor', () => {
 
   it('scrubs before truncation, so a token across the 4096-char cap leaks no prefix', () => {
     const redactor = createCredentialRedactor({ CLOUDFLARE_API_TOKEN: TOKEN });
-    // The token starts 10 chars before the formatter's cut.
+    // Decision: The token starts 10 chars before the formatter's cut.
     const stderr = `${'x'.repeat(4086)}${TOKEN}\nmore`;
     const unsafe = cloudflareCommandDiagnostic({ status: 1, stdout: '', stderr })!;
     expect(unsafe).toContain(TOKEN.slice(0, 10));
@@ -115,7 +115,6 @@ describe('observeCloudflareRunner', () => {
       capture: true,
       input: `secret-input-${TOKEN}\n`,
     });
-    // The caller still gets the credential.
     expect(token.data).toEqual({ type: 'oauth', token: TOKEN });
     const whoami = await run({ type: 'auth.whoami' }, { capture: true });
     expect(whoami.stderr).toBe('cf echoed <redacted>');

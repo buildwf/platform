@@ -39,7 +39,7 @@ import {
 } from './helpers.ts';
 
 let env: TestEnv, operatorToken: string;
-// Each custom mail hostname is the apex of its own test zone.
+// Decision: Each custom mail hostname is the apex of its own test zone.
 const zones = Object.fromEntries(
   [
     'email-gateway.example.test',
@@ -193,7 +193,6 @@ describe('operator email domain management', () => {
     });
     expect(stub.calls.filter((call) => call.method !== 'GET')).toEqual([]);
 
-    // Without Email Sending the domain cannot send at all, so setup fails instead of degrading.
     const blocked = await request('/email/domains', body);
     expect(await blocked.json()).toMatchObject({
       ok: false,
@@ -271,7 +270,6 @@ describe('operator email domain management', () => {
       .update(emailDomainRoutes)
       .set({ outbound_status: 'pending', outbound_observed_at: null })
       .where(eq(emailDomainRoutes.domain, 'brand-race.example.com'));
-    // The refresh reads an empty Sending list, then a setup step records 'ready'.
     on.sendingSubdomainsGet = async () => {
       await env.db
         .update(emailDomainRoutes)

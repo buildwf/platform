@@ -111,7 +111,7 @@ async function call<T>(
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
 }
@@ -192,15 +192,13 @@ function canonicalizeBwfMime(raw: Uint8Array): Uint8Array {
         (asciiPrefixEquals(raw, lineStart, lineEnd, 'Date: ') ||
           asciiPrefixEquals(raw, lineStart, lineEnd, 'Message-ID: '))
       ) {
-        // Remove the generated field and its CRLF. The next header (or the
-        // terminating empty line) remains byte-for-byte unchanged.
         replace(lineStart, nextLine, new Uint8Array());
       } else if (isMultipartContentType(raw, lineStart, lineEnd)) {
         let headerEnd = lineEnd;
         let afterHeader = nextLine;
         let line = decoder.decode(raw.subarray(lineStart, headerEnd));
-        // The SDK folds longer multipart boundary parameters onto continuation lines.
-        // Folding whitespace is SP or HTAB only; other leading characters stay significant.
+        // Decision: The SDK folds long multipart boundary parameters onto continuation lines. Folding whitespace is
+        // SP or HTAB only; other leading characters stay significant.
         while (raw[afterHeader] === 32 || raw[afterHeader] === 9) {
           headerEnd = findCrlf(raw, afterHeader);
           line += ` ${decoder.decode(raw.subarray(afterHeader, headerEnd)).replace(/^[ \t]+/, '')}`;

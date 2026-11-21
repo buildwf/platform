@@ -194,12 +194,11 @@ describe('staging kitchen-sink fixture env', () => {
   it.each([200, 500, 502])(
     'validates the real schema and keeps API response %i values private',
     async (status) => {
-      // The CLI checks the platform version before its first request.
+      // Decision: The CLI checks the platform version before its first request.
       const discovery = await platformDiscoveryResponse('https://api.staging.void.cloud').text();
       const script = fileURLToPath(
         new URL('../../../scripts/kitchen-sink-staging-env.ts', import.meta.url),
       );
-      // Exercise the real entrypoint and API client while preventing all live I/O.
       const preload = `const stored = new Set(); globalThis.fetch = async (url, options) => {
       if (url === 'https://api.staging.void.cloud/.well-known/platform') {
         return new Response(${JSON.stringify(discovery)}, { headers: { 'Content-Type': 'application/json' } });
@@ -237,7 +236,7 @@ describe('staging kitchen-sink fixture env', () => {
             ...process.env,
             BWF_API_URL: 'https://api.staging.void.cloud',
             BWF_TOKEN: 'fake-token',
-            // Scope fixture credentials so no personal Access session is consulted.
+            // Decision: Scope fixture credentials, so no personal Access session is used.
             PLATFORM_ACCESS_ORIGIN: 'https://api.staging.void.cloud',
             PLATFORM_ACCESS_CREDENTIALS: '',
             CF_ACCESS_CLIENT_ID: 'fake-access-id',

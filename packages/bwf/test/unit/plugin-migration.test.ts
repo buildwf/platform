@@ -8,7 +8,6 @@ import { getMiniflareDatabasePath } from '../../src/migrations/runner.ts';
 import { migrationPlugin } from '../../src/plugin-migration.ts';
 
 const mysqlQueries = vi.hoisted((): Array<string> => []);
-// Each lock, release, recorded file and Better Auth run, with the database it went to.
 const mysqlSteps = vi.hoisted((): Array<string> => []);
 
 vi.mock('mysql2/promise', () => ({
@@ -139,12 +138,12 @@ describe("migrationPlugin in Vitest's server", () => {
       });
       await server.close();
     };
-    // Vitest adds plugins of its own to the server that runs the tests.
+    // Decision: Vitest adds plugins of its own to the server that runs the tests.
     for (const mode of ['test', 'staging']) {
       await startServer(mode, [{ name: 'vitest:config' }, migrationPlugin(root, 'sqlite')]);
       expect(existsSync(dbPath)).toBe(false);
     }
-    // A server that a test starts has none, even in mode `test`.
+    // Decision: A server that a test starts has none, even in mode `test`.
     await startServer('test', [migrationPlugin(root, 'sqlite')]);
     expect(existsSync(dbPath)).toBe(true);
   });
@@ -169,7 +168,7 @@ describe('migrationPlugin Better Auth config', () => {
 });
 
 describe('migrationPlugin with MySQL and Better Auth', () => {
-  // Better Auth reads the schema, then adds what is missing, so two runs at once both add it.
+  // Decision: Better Auth reads the schema, then adds what's missing, so two runs at once both add it.
   // An app without migration files reads DATABASE_URL like Better Auth: the shell before .env.
   it.each([
     { files: true, url: '.env' },
@@ -210,7 +209,7 @@ describe('migrationPlugin with MySQL and Better Auth', () => {
     },
   );
 
-  // Migration files apply to the database in .env, as `bwf db migrate` does. Better Auth's
+  // Decision: Migration files apply to the database in .env, as `bwf db migrate` does. Better Auth's
   // migrations change the one DATABASE_URL names in the shell, else in .env.
   it.each([
     {
@@ -310,8 +309,8 @@ async function captureConsoleLog(run: () => Promise<void>): Promise<Array<string
 }
 
 describe('migrationPlugin with destructive migrations', () => {
-  // Like `bwf db migrate`, dev applies none of the pending files when one of them is
-  // destructive without the pragma, and the dev server still starts.
+  // Decision: Like `bwf db migrate`, dev applies none of the pending files when one of them is destructive
+  // without the pragma, and the dev server still starts.
   it('applies no SQLite migrations when a pending file is destructive without the pragma', async () => {
     const root = createProjectRoot();
     await runConfigureServer(migrationPlugin(root, 'sqlite'));
@@ -400,7 +399,7 @@ describe('migrationPlugin with PostgreSQL and Better Auth', () => {
     expect(mysqlSteps).toEqual([]);
   });
 
-  // An empty DATABASE_URL in the shell counts as unset, so the one in .env is used.
+  // Decision: An empty DATABASE_URL in the shell counts as unset, so the one in .env is used.
   it('uses DATABASE_URL from .env when the shell value is empty', async () => {
     const root = createProjectRoot();
     rmSync(join(root, 'db'), { recursive: true });

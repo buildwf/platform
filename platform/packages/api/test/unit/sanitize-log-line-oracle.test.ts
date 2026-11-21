@@ -3,21 +3,11 @@ import { describe, expect, it } from 'vite-plus/test';
 import { TERMINAL_RENDER_COLUMNS } from '../../src/build-manager.ts';
 import { renderCapturedLog } from './log-tail-helpers.ts';
 
-/**
- * Differential test: `renderCapturedLog` must render each captured log
- * line exactly as a real terminal would.
- *
- * The unit tests next door assert specific strings, which only confirm the
- * author's own model of terminal semantics. Here xterm.js (the VT engine VS Code
- * ships) decides what "correct" means.
- *
- * Use the production fixed width. A terminal is a fixed-width grid and wraps at
- * its right margin; sharing one documented width prevents non-painting source
- * bytes from changing semantics and keeps the oracle faithful to deployment.
- */
+// Decision: Differential test: xterm.js (the VT engine VS Code ships) decides what correct rendering is, not
+// the author's own model of terminal semantics. It uses the production fixed width: a terminal
+// wraps at its right margin, and one shared width keeps the oracle faithful to deployment.
 const COLS = TERMINAL_RENDER_COLUMNS;
 
-/** What a real terminal would be showing after consuming `raw`. */
 async function render(raw: string): Promise<string> {
   const term = new Terminal({ cols: COLS, rows: 1, allowProposedApi: true });
   try {
@@ -33,10 +23,6 @@ const CASES: Record<string, string> = {
   plain: '[build-agent] source extracted',
   'spinner frames': '◒ Hash (100/281)\x1b[1G\x1b[J◐ Hash (200/281)\x1b[1G\x1b[J◇ Checked',
   'trailing erase after the message': '◆  Deployed!\x1b[1G\x1b[J',
-  // A column-1 move with no erase behind it only REPOSITIONS: what follows
-  // overwrites from the start and the rest of the row stays on screen. The
-  // regex sanitizer treated all four of these as frame boundaries and returned
-  // 'Done', dropping 14 visible characters of diagnostic text.
   'bare column-1 move (CHA 1)': 'Downloading assets\x1b[1GDone',
   'bare column-1 move (CHA default)': 'Downloading assets\x1b[GDone',
   'bare column-1 move (CHA 0)': 'Downloading assets\x1b[0GDone',
@@ -50,9 +36,6 @@ const CASES: Record<string, string> = {
   'erase display up (ED1)': 'Downloading\x1b[1J done',
   'erase display all (ED2)': 'Downloading\x1b[2J done',
   'selective erase display all (DECSED 2)': 'SECRET_TOKEN\x1b[?2J\x1b[1GERR',
-  // ED3 erases scrollback only. The first cell model I wrote folded it into ED2
-  // and blanked the row; nothing here caught that, so these four are the case
-  // the oracle was missing rather than a case it already covered.
   'erase saved lines (ED3) leaves the row alone': 'Downloading\x1b[3J done',
   'clear-screen combo 2J 3J H': 'Downloading\x1b[2J\x1b[3J\x1b[H done',
   'clear-screen combo 3J H 2J': 'Downloading\x1b[3J\x1b[H\x1b[2J done',
@@ -61,8 +44,6 @@ const CASES: Record<string, string> = {
   'cursor forward': 'ab\x1b[3Ccd',
   'cursor back': 'abcdef\x1b[3Dxy',
   backspace: 'abcdef\b\bxy',
-  // DEL is a control byte, not a printable cell. Painting it also advances the
-  // modeled cursor and makes a following backspace overwrite the wrong column.
   'DEL is ignored': 'ab\x7f\bX',
   'SGR color': '\x1b[32m✓\x1b[0m building client + server bundles...',
   'colon-form truecolor SGR': '\x1b[38:2::255:0:0mRED\x1b[0m done',
@@ -73,8 +54,6 @@ const CASES: Record<string, string> = {
   'APC payload (kitty graphics)': 'before\x1b_Gf=100,a=T;PAYLOAD\x1b\\after',
   'DCS payload (sixel)': 'before\x1bPq#0;2;0;0;0PAYLOAD\x1b\\after',
   'BEL inside DCS does not terminate': 'a\x1bPq hidden\x07 still-hidden\x1b\\b',
-  // xterm aborts a string control on a bare ESC and starts a new sequence;
-  // swallowing to ST instead eats every remaining visible cell on the row.
   'embedded ESC aborts APC': 'a\x1b_Gpayload\x1b[0mmoretail',
   'embedded ESC aborts DCS': 'a\x1bPq payload\x1b[0mmoretail',
   'CAN aborts APC': 'before\x1b_hidden\x18after',
@@ -107,20 +86,14 @@ const CASES: Record<string, string> = {
   'TBC clears the current default stop': '12345678\x1b[g\r\tX',
   '8-bit HTS sets a stop': 'abcdef\u0088\r\tX',
 
-  // HT moves to the next tab stop, it does not paint. Treating it as one glyph
-  // desynchronised every cursor move after it.
   'tab advances to a tab stop': 'ab\tcd',
   'tab at a stop boundary': 'abcdefgh\tX',
   'tab then column move': 'a\tb\x1b[3GZ',
   'many tabs': '\t\t\tx',
-  // ECH erases in place without moving the cursor; dropping it resurrected text
-  // the terminal had blanked.
   'ECH erases in place': 'TOKEN\x1b[5D\x1b[5X',
   'ECH partial': 'abcdef\x1b[3D\x1b[2X',
   'ECH default param': 'abcdef\x1b[3D\x1b[X',
   'ECH past end of row': 'abc\x1b[99X done',
-  // DCH/ICH SHIFT cells rather than blanking them. Left in the default branch,
-  // DCH resurrected text the terminal had removed — the same class as ECH.
   'DCH deletes and shifts left': 'TOKEN\x1b[5D\x1b[5P',
   'DCH partial': 'abcdef\x1b[6D\x1b[2P',
   'DCH default param': 'abcdef\x1b[6D\x1b[P',
@@ -128,41 +101,29 @@ const CASES: Record<string, string> = {
   'ICH inserts blanks': 'abcdef\x1b[3D\x1b[2@',
   'ICH default param': 'abcdef\x1b[3D\x1b[@',
   'DCH then write': 'abcdef\x1b[6D\x1b[3PXY',
-  // Intermediate bytes are part of the command identity: `SP @`/`SP A` are
-  // Scroll Left/Right, not bare ICH/CUU commands that happen to share a final.
   'SL shifts the row left': 'SECRET\x1b[1G\x1b[3 @\x1b[1GERR',
   'SR shifts the row right': 'SECRET\x1b[1G\x1b[3 A\x1b[1GERR',
   'DECIC inserts columns': "SECRET\x1b[1G\x1b[3'}\x1b[1GERR",
   'DECDC deletes columns': "SECRET\x1b[1G\x1b[3'~\x1b[1GERR",
   'DECSTR resets the saved cursor': 'abc\x1b7\x1b[1GX\x1b[!p\x1b8Y',
   'unknown intermediate does not alias ICH': 'SECRET\x1b[1G\x1b[3!@\x1b[1GERR',
-  // DECSC/DECRC and their SCO equivalents. Treated as inert, a restore was
-  // silently dropped and the following text landed at the wrong column.
   'DECSC/DECRC': 'abc\x1b7\x1b[1GX\x1b8Y',
   'DECRC with no save': 'abc\x1b8X',
   'SCOSC/SCORC (CSI s/u)': 'abc\x1bs\x1b[1GX\x1buY'
     .replace('\x1bs', '\x1b[s')
     .replace('\x1bu', '\x1b[u'),
   'DECSC then erase': 'abcdef\x1b7\x1b[1G\x1b[K\x1b8X',
-  // ICH must shift within the row, not grow it without bound.
   'ICH at column 0': 'abc\x1b[3D\x1b[2@',
   'ICH large count': 'abcdef\x1b[3D\x1b[40@X',
   'ICH repeated': 'abcdef\x1b[6D\x1b[4@\x1b[4@\x1b[4@Z',
   'REP paints repeated ASCII': 'SECRET\rX\x1b[5b',
   'REP is invalidated by another CSI': 'SECRET\rX\x1b[31m\x1b[5b',
 
-  // DECSCA marks subsequently written cells as protected. DECSEL/DECSED respect
-  // that bit; ordinary erase still clears every cell.
   'DECSED preserves protected cells': '\x1b[1"qSECRET\x1b[?2K',
   'DECSED clears only unprotected cells': 'A\x1b[1"qBC\x1b[0"qDE\x1b[1G\x1b[?2K',
   'ordinary ED clears protected cells': '\x1b[1"qSECRET\x1b[2K',
   'SGR0 resets protection': '\x1b[1"qA\x1b[0mB\x1b[?2K',
 
-  // A cell holds a GRAPHEME. Stepping by UTF-16 code unit split astral emoji
-  // across two cells, so any move/erase landing between the halves emitted a
-  // lone surrogate (U+FFFD on GitHub); combining marks stole a column they do
-  // not occupy; and CJK/emoji took one column instead of two, so every later
-  // absolute column move landed on the wrong cell.
   'combining mark + backspace': 'e\u0301\bX',
   'combining mark, no move': 'e\u0301 done',
   'combining mark with nothing to its left': '\u0301abc',
@@ -177,17 +138,11 @@ const CASES: Record<string, string> = {
   'fullwidth forms': '\uff21\uff22\x1b[2GX',
   'ZWJ emoji sequence': '\u{1F468}\u200D\u{1F4BB} built',
   'emoji then CR overwrite': '\u{1F600}\u{1F600}\rok',
-  // A mark following a WIDE glyph belongs on the glyph, not on its continuation
-  // marker. Appending to the marker also destroyed the sentinel `splitWideAt`
-  // reads, so a later write into the trailing half kept a glyph xterm discards.
   'combining mark on a wide glyph': '\u4E2D\u0301X',
   'combining mark on a wide glyph + backspace': '\u4E2D\u0301\bX',
   'combining mark on a fullwidth glyph + column move': '\uFF21\u0301\x1b[2GX',
   'decomposed Hangul Jamo + column move': '\u1100\u1161\x1b[3GX',
 
-  // 8-bit C1 controls: the single-code-point form of `ESC <char>`. Build output
-  // is decoded text, so these arrive as real code points; matching only the
-  // 7-bit forms leaked whole sequences \u2014 and entire DCS/APC payloads \u2014 as text.
   '8-bit CSI (U+009B)': 'Downloading\u009B1GDone',
   '8-bit CSI erase': 'Downloading\u009BK done',
   '8-bit APC payload, ST-terminated': 'before\u009Fpayload\u009Cafter',
@@ -196,35 +151,24 @@ const CASES: Record<string, string> = {
   '8-bit CSI aborts a DCS payload': 'before\x1bPq\u009B1GHIDDEN\x1b\\after',
   '8-bit and 7-bit mixed': 'a\u009B2Cb\x1b[1GX',
 
-  // ESC <intermediates 0x20-0x2F> <final>. Assuming two bytes printed the final
-  // byte of terminfo's `sgr0` (`ESC ( B`) into every colourised build's tail.
   'ESC ( B charset reset (terminfo sgr0)': 'red\x1b(B\x1b[mplain',
   'ESC ) 0 charset designation': 'a\x1b)0b',
   'ESC % G utf-8 designation': 'a\x1b%Gb',
   'ESC ( B then column move': 'abc\x1b(B\x1b[1GX',
 
-  // RIS. Dropping it would resurrect content the terminal had explicitly
-  // cleared, like ignoring ECH.
   'RIS clears the row': 'TOKEN\x1bc failed',
   'RIS then text': 'secret\x1bcvisible',
   'RIS resets the saved cursor': 'abcdef\x1b7\x1bcX\x1b8Y',
 
-  // A WIDE write covers two columns, so the glyph it orphans may start at the
-  // second one. Clearing only at the cursor would leave a stray continuation
-  // marker that later reads as "inside a glyph".
   'wide write orphans a wide head one column on': ' 中\x1b[1G中\x1b[3GX',
   'wide write lands exactly on a wide glyph': '中中\x1b[1G中X',
   'wide write over a narrow then wide': 'a中\x1b[1G中\x1b[3GX',
 
-  // SU/SD scroll the only row we model out of view. Falling through as
-  // non-painting resurrected content the terminal had scrolled away.
   'scroll up (SU) blanks the row': 'SECRET_TOKEN\x1b[S\x1b[1GERR',
   'scroll up explicit count': 'SECRET_TOKEN\x1b[2S\x1b[1GERR',
   'scroll down (SD) blanks the row': 'SECRET_TOKEN\x1b[T\x1b[1GERR',
   'scroll up leaves the cursor put': 'SECRET_TOKEN\x1b[S done',
 
-  // In a one-row terminal IL/DL replace the only modeled row with blanks. The
-  // same is true when a vertical motion scrolls beyond the sole top/bottom row.
   'insert line (IL) blanks the row': 'SECRET_TOKEN\x1b[L\x1b[1GERR',
   'delete line (DL) blanks the row': 'SECRET_TOKEN\x1b[M\x1b[1GERR',
   'index (IND) blanks the row': 'SECRET_TOKEN\x1bD\x1b[1GERR',
@@ -243,8 +187,8 @@ describe('renderCapturedLog matches a real terminal (xterm.js oracle)', () => {
     });
   }
 
-  // xterm defers writes through timers. Overlap independent comparisons in eight
-  // lanes; each lane owns and resets its terminal, with real timers throughout.
+  // Decision: xterm defers writes through timers. Comparisons run in eight lanes with real timers, and each
+  // lane owns and resets its own terminal.
   it('agrees on randomly generated escape soup', async () => {
     const atoms = [
       'a',
@@ -324,9 +268,8 @@ describe('renderCapturedLog matches a real terminal (xterm.js oracle)', () => {
       }
       inputs.add(raw);
     };
-    // Preserve every input from the original regression corpus. Its floating
-    // point LCG produced 691 distinct strings from 900 iterations, almost all
-    // with lengths 1, 5 or 9. Rechecking duplicates adds no independent coverage.
+    // Decision: Keeps each input from the original regression corpus. Its floating point LCG made 691 distinct
+    // strings from 900 iterations, so rechecking duplicates adds no coverage.
     let legacySeed = 0x2f6e2b1;
     const legacyRand = (n: number): number => {
       legacySeed = (legacySeed * 1103515245 + 12345) & 0x7fffffff;
@@ -337,8 +280,6 @@ describe('renderCapturedLog matches a real terminal (xterm.js oracle)', () => {
     }
     expect(inputs.size).toBe(691);
 
-    // Replace the 209 duplicate inputs with deterministic xorshift32 cases.
-    // Cycle lengths explicitly so all lengths 1..12 are exercised.
     let seed = 0x2f6e2b1;
     const rand = (n: number): number => {
       seed ^= seed << 13;
@@ -368,8 +309,7 @@ describe('renderCapturedLog matches a real terminal (xterm.js oracle)', () => {
         term.dispose();
       }
     });
-    // Drain every lane before reporting failure, so no terminal work leaks into
-    // another test when one comparison fails.
+    // Decision: Each lane drains before a failure is reported, so no terminal work leaks into another test.
     const results = await Promise.allSettled(lanes);
     for (const result of results) {
       if (result.status === 'rejected') {

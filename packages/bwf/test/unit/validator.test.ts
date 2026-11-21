@@ -11,7 +11,6 @@ type ValidationIssueBody = {
   }>;
 };
 
-/** Create a mock Standard Schema that always fails with the given issues. */
 function failSchema(issues: Array<StandardSchemaV1.Issue>): StandardSchemaV1 {
   return {
     '~standard': {

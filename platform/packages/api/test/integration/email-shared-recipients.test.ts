@@ -139,7 +139,7 @@ describe('shared inbound allocation', () => {
       .where(eq(deployments.project_id, project.id));
     for (const manifest of [
       { version: 3, type: 'static', bindings: {} },
-      // Outbound SDK use does not emit the inbound protocol declaration.
+      // Decision: Outbound SDK use doesn't emit the inbound protocol declaration.
       { version: 3, type: 'platform', bindings: {}, workerMain: 'worker.js' },
     ]) {
       await env.db
@@ -171,7 +171,7 @@ describe('shared inbound allocation', () => {
 
   it('reaches a receiving app in a bounded repair batch behind non-email projects', async () => {
     const { user, project, provider } = await setup();
-    // These sort ahead of the receiving app and must not consume the repair limit.
+    // Decision: These sort ahead of the receiving app and mustn't use up the repair limit.
     for (let index = 0; index < 12; index++) {
       const id = `proj_a_static_${index}`;
       await env.db
@@ -577,8 +577,8 @@ describe('managed shared subdomain recipients', () => {
       binding_name: 'CACHE',
       cf_id: 'owned-kv',
     });
-    // This is the cascade a previous Worker version runs, without the
-    // provider cleanup hook. Its transaction must not release the slug.
+    // Decision: This is the cascade a previous Worker version runs, without the provider cleanup hook. Its
+    // transaction mustn't release the slug.
     await expect(deleteProjectCascade(env.db, project.id)).rejects.toThrow();
     await expect(
       env.db.update(projects).set({ slug: 'reassigned-slug' }).where(eq(projects.id, project.id)),
@@ -953,7 +953,7 @@ describe('project email alias recipients', () => {
     const { project, provider } = await setup();
     await setEmailAlias(project.id, 'team-inbox');
     await reconcileSharedEmailRecipient(env.db, bindings(), project.id);
-    // An older runtime after a rollback knows only the slug, so it removes the alias rule.
+    // Decision: An older runtime after a rollback knows only the slug, so it removes the alias rule.
     await removeSharedEmailRecipients(env.db, bindings(), project.id, [slugAddress]);
     const removed = (await recipientRows(project.id)).get(aliasAddress)!;
     expect(removed).toMatchObject({ status: 'removed' });
@@ -970,8 +970,8 @@ describe('project email alias recipients', () => {
     expect((await recipientRows(project.id)).get(slugAddress)).toMatchObject({
       status: 'removed',
     });
-    // The stub numbers new rules by count; an unrelated rule keeps the next
-    // slug rule from reusing the alias rule's ID.
+    // Decision: The stub numbers new rules by count. An unrelated rule keeps the next slug rule from reusing the
+    // alias rule's ID.
     provider.routingRuleStates.get('shared-zone')!.set('support', {
       id: 'support',
       name: null,
@@ -1030,7 +1030,6 @@ describe('project email alias recipients', () => {
     const second = await createTestProject(env.db, user.id, 'second-project');
     await deployEmailHandlers(second.id);
     await reconcileSharedEmailRecipient(env.db, bindings(), second.id);
-    // The slug row is now the newest, so only the missing alias row puts this project first.
     await reconcileSharedEmailRecipient(env.db, bindings(), project.id);
     await setEmailAlias(project.id, 'team-inbox');
     await reconcileSharedEmailRecipients(env.db, bindings(), 1);
@@ -1099,12 +1098,11 @@ describe('project email alias recipients', () => {
         });
       }
     };
-    // 199 rules and no slug rule: the slug and the alias need two more.
+    // Decision: 199 rules and no slug rule: the slug and the alias need two more.
     fill(199);
     await expect(
       checkSharedEmailAliasRoutable(env.db, bindings(), 'shared-project', 'team-inbox'),
     ).rejects.toMatchObject({ status: 409, message: expect.stringContaining('no room') });
-    // Once the slug rule exists (rule 199), one more fits.
     rules.delete('filler-0');
     await reconcileSharedEmailRecipient(env.db, bindings(), project.id);
     expect(rules.size).toBe(199);
@@ -1148,7 +1146,7 @@ describe('project email alias recipients', () => {
     await setEmailAlias(project.id, 'team-inbox');
     await reconcileSharedEmailRecipient(env.db, bindings(), project.id);
     const ready = (await recipientRows(project.id)).get(aliasAddress)!;
-    // An older runtime claimed the alias row for removal, then Cloudflare failed.
+    // Decision: An older runtime claimed the alias row for removal, then Cloudflare failed.
     await env.db
       .update(emailSharedRecipients)
       .set({ removing: true, status: 'blocked', reason: 'Cloudflare is unavailable' })
@@ -1162,7 +1160,7 @@ describe('project email alias recipients', () => {
       reason: null,
     });
     expect(callsByTag(provider.calls, 'literalRuleCreate')).toHaveLength(2);
-    // The same, after the older runtime had already deleted the rule.
+    // Decision: The same, after the older runtime had already deleted the rule.
     await env.db
       .update(emailSharedRecipients)
       .set({ removing: true, status: 'blocked', reason: 'lost response' })

@@ -21,7 +21,6 @@ export async function getProjectUsage(
   projectId: string,
   ownerBillingCycleStart: User['billing_cycle_start'],
 ): Promise<UsageTotals & { projectId: string; billingPeriodStart: string }> {
-  // Dev bypass — skip slow CF Analytics Engine API calls
   if (isDevBypass(env)) {
     return {
       projectId,
@@ -81,7 +80,6 @@ export async function getAccountUsage(
     return { requests: 0, bandwidthBytes: 0, aiNeurons: 0, projects: [] };
   }
 
-  // Dev bypass — skip slow CF Analytics Engine API calls
   if (isDevBypass(env)) {
     return {
       billingPeriodStart: since.toISOString(),
@@ -556,8 +554,8 @@ function aiUsageGraphqlErrors(errors: ReadonlyArray<unknown>, apiToken: string):
       ) {
         return 'Unknown GraphQL error';
       }
-      // Provider messages are useful; response extensions, echoed documents,
-      // and authentication values do not belong in persisted billing diagnostics.
+      // Decision: Keep provider messages, but leave response extensions, echoed documents and authentication
+      // values out of persisted billing diagnostics.
       let message = error.message;
       if (apiToken) {
         message = message.replaceAll(apiToken, '[redacted]');
@@ -584,11 +582,10 @@ async function queryProjectAiUsage(
   until?: Date,
   failOnError = false,
 ): Promise<{ neurons: number }> {
-  // The platform AI Gateway accepts requests from anyone who knows its URL, so
-  // anyone can write a log row with any metadata. The proxy tags its rows with
-  // a value signed under JWT_SECRET; filtering on that value means rows the
-  // platform did not write are never counted.
-  // The proxy owns the whole metadata object and writes only this projectId.
+  // Decision: The platform AI Gateway accepts requests from anyone who knows its URL, so anyone can write a log
+  // row with any metadata. The proxy tags its rows with a value signed under JWT_SECRET; filtering on
+  // it means rows the platform didn't write aren't counted. The proxy owns the whole metadata object
+  // and writes only this projectId.
   const usageTag = await deriveAiUsageTag(jwtSecret, projectId);
   const query = `query {
   viewer {

@@ -139,8 +139,8 @@ describe('backfillQueueTokens', () => {
       );
 
       expect(result).toEqual({ scanned: 1, updated: 0, skipped: 0, raced: 0, errored: 1 });
-      // Value must be untouched — writing a re-derived token on a transient
-      // CF failure would permanently mask the incident as a successful migration.
+      // Decision: Leave the value untouched. Writing a re-derived token on a transient CF failure would hide the
+      // incident as a successful migration.
       expect(kv.store.get('queue:proj-rl-emails')).toBe(original);
       expect(errSpy).toHaveBeenCalled();
       const logged = errSpy.mock.calls
@@ -221,9 +221,8 @@ describe('backfillQueueTokens', () => {
       }),
     });
 
-    // Simulate a concurrent deploy that writes a new entry between our
-    // initial read and our final put. The backfill must re-read before
-    // writing and skip if the snapshot no longer matches.
+    // Decision: Simulate a concurrent deploy that writes a new entry between the first read and the final put.
+    // The backfill re-reads before writing and skips when the snapshot no longer matches.
     let getCalls = 0;
     const originalGet = kv.get.bind(kv) as (
       key: string,
@@ -232,7 +231,6 @@ describe('backfillQueueTokens', () => {
     kv.get = vi.fn(async (key: string, type?: 'json' | 'text') => {
       getCalls++;
       if (getCalls === 2 && key === 'queue:proj-a-emails') {
-        // Second read (our re-check right before put) sees a mutated value.
         kv.store.set(
           key,
           JSON.stringify({
@@ -249,7 +247,6 @@ describe('backfillQueueTokens', () => {
     const result = await backfillQueueTokens(kv, makeOpts());
 
     expect(result).toEqual({ scanned: 1, updated: 0, skipped: 0, raced: 1, errored: 0 });
-    // The concurrent writer's value must survive — backfill must not overwrite.
     const patched = JSON.parse(kv.store.get('queue:proj-a-emails')!);
     expect(patched.workerName).toBe('user-a-dpl_2');
     expect(patched.proxyToken).toBe('written-by-concurrent-deploy');

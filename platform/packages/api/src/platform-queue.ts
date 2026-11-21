@@ -22,15 +22,15 @@ export async function processPlatformQueue(
   processors: PlatformQueueProcessors = defaultProcessors,
 ): Promise<void> {
   if (batch.queue === (env.DEPLOYMENTS_QUEUE_NAME ?? 'platform-deployments')) {
-    // Admitted operations drain through maintenance; the database lifecycle
-    // checkpoint closes new admission before a downgrade waits for this Queue.
+    // Decision: Admitted operations drain through maintenance; the database lifecycle checkpoint closes new
+    // admission before a downgrade waits for this Queue.
     await (processors.deployments ?? processDeploymentBatch)(batch, env);
     return;
   }
   const cronQueue = env.CRON_FIRES_QUEUE_NAME ?? 'platform-cron-fires';
   if (batch.queue !== cronQueue) {
-    // Usage is durable accounting data. It must drain even while application
-    // traffic is disabled, and deliberately performs no lifecycle-gate read.
+    // Decision: Usage is durable accounting data. It must drain even while application traffic is disabled, and
+    // on purpose reads no lifecycle gate.
     await processors.usage(batch, env);
     return;
   }
@@ -41,10 +41,9 @@ export async function processPlatformQueue(
     (env.PLATFORM_INSTALLATION_ID !== undefined &&
       (await env.ROUTING.get(PLATFORM_DISABLED_KEY)) === PLATFORM_DISABLED_VALUE);
   if (blocked) {
-    // Cron invocations are time-bound actions rather than stored user data.
-    // Running an old firing after a long disable would be more surprising and
-    // dangerous than cancellation, so acknowledge it explicitly and leave an
-    // auditable Worker log instead of silently returning from the queue event.
+    // Decision: Cron invocations are time-bound actions, not stored user data. Running an old firing after a long
+    // disable would be more surprising and dangerous than cancelling it, so acknowledge it and leave an
+    // auditable Worker log instead of returning silently.
     console.warn(
       `[platform-lifecycle] canceled ${batch.messages.length} pending cron firing(s) for disabled installation ${env.PLATFORM_INSTALLATION_ID ?? 'staging'}`,
     );

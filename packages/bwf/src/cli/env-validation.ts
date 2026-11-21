@@ -114,8 +114,8 @@ export async function validateProdEnv(
       `env: only .env is supported for local development. Remove ${legacyFiles.join(', ')} and follow the env migration guide.${legacyEnvExampleHint(legacyFiles)}`,
     );
   }
-  // Same rule as the Vite plugin, which stops dev and build on these names.
-  // Production validation never reads .env; the build itself reports it.
+  // Decision: Same rule as the Vite plugin, which stops dev and build on these names.
+  // Production validation doesn't read .env; the build itself reports it.
   const reservedInDotenv = options.productionOnly
     ? []
     : findReservedEnvKeys(scanWranglerDotenvKeys(join(root, LOCAL_ENV_FILE)));
@@ -153,8 +153,8 @@ export async function validateProdEnv(
   const merged: Record<string, unknown> = { ...local, ...shell };
 
   const report = await mod.validateAllEnv(merged);
-  // Remote secret values are unreadable here, so a missing server key that exists
-  // remotely passes; the Worker validates the real value at boot.
+  // Decision: Remote secret values are unreadable here, so a missing server key that exists remotely passes;
+  // the Worker validates the real value at boot.
   const remoteSet = new Set(options.remoteSecrets ?? []);
   if (remoteSet.size > 0 && report.missing.length > 0) {
     report.missing = report.missing.filter((key) => isClientEnvKey(key) || !remoteSet.has(key));
@@ -185,7 +185,6 @@ export function formatEnvReport(report: EnvValidationReport): string {
   return lines.join('\n');
 }
 
-/** Convenience: fetch remote secret names from the platform. */
 export async function fetchRemoteSecretNames(
   client: PlatformClient,
   projectId: string,
@@ -198,8 +197,8 @@ export async function fetchRemoteSecretNames(
   }
 }
 
-// Self-host (`bwf deploy --platform cloudflare`) secret gate. It checks the vars the
-// build emitted and the remote secret names. Its errors name keys only, never values.
+// Decision: Self-host (`bwf deploy --platform cloudflare`) secret gate. It checks the vars the build emitted
+// and the remote secret names. Its errors name keys only, not values.
 
 type SchemaProbe = StandardSchemaV1<unknown, unknown>['~standard'];
 
@@ -265,8 +264,8 @@ export type SelfHostSchemaFailureReason = 'schema-load-failed' | 'schema-validat
 export class SelfHostSchemaError extends Error {
   override name = 'SelfHostSchemaError';
   readonly reason: SelfHostSchemaFailureReason;
-  // Explicit fields (not TS parameter properties) so this module type-strips under
-  // plain Node — the env-schema probe child imports it.
+  // Decision: Explicit fields (not TS parameter properties) so this module type-strips under plain Node: the
+  // env-schema probe child imports it.
   constructor(message: string, reason: SelfHostSchemaFailureReason) {
     super(message);
     this.reason = reason;
@@ -402,8 +401,8 @@ export function readEmittedWorkerVars(root: string): EmittedWorkerVarsResult {
     return resolved;
   }
   const vars = resolved.config.vars;
-  // A malformed `vars` must fail closed: read as `{}`, every required key would look
-  // absent and a remote secret could satisfy it.
+  // Decision: A malformed `vars` has to fail closed: read as `{}`, all required keys would look absent and a
+  // remote secret could satisfy them.
   if (vars === undefined) {
     return { ok: true, vars: {} };
   }
@@ -634,7 +633,7 @@ async function fetchSelfHostSecretNames(
   }
   if (typeof result.status !== 'number' || result.status !== 0) {
     const exitCode = typeof result.status === 'number' ? result.status : undefined;
-    // Only a completed provider failure may identify a missing Worker.
+    // Decision: Only a completed provider failure may identify a missing Worker.
     if (
       Number.isSafeInteger(result.status) &&
       result.status! > 0 &&
@@ -650,8 +649,8 @@ async function fetchSelfHostSecretNames(
   }
   const names: Array<string> = [];
   for (const member of parsed) {
-    // One malformed member fails the whole list: a partial list could vouch for
-    // secrets that were never seen.
+    // Decision: One malformed member fails the whole list: a partial list could vouch for secrets that were never
+    // seen.
     const name =
       member !== null && typeof member === 'object' && !Array.isArray(member)
         ? (member as { name?: unknown }).name
@@ -734,15 +733,13 @@ export function createDefaultSecretListRunner(
         resolvePromise(decodeCloudflareOperationResult(result));
       };
       const timeoutNote = `env: wrangler secret list exceeded the ${timeoutMs}ms timeout`;
-      // Referenced timers keep the process alive until the outcome is known.
+      // Decision: Referenced timers keep the process alive until the outcome is known.
       const commandTimer = setTimeout(() => {
         timedOut = true;
         try {
           child.kill('SIGKILL');
-        } catch {
-          // The fallback timer below settles as a hard failure.
-        }
-        // If `close` never fires, settle as a hard failure rather than hang.
+        } catch {}
+        // Decision: If `close` never fires, settle as a hard failure instead of hanging.
         killFallbackTimer = setTimeout(() => {
           settle({
             stdout,
@@ -760,7 +757,7 @@ export function createDefaultSecretListRunner(
         settle({
           stdout,
           stderr: timedOut ? [stderr, timeoutNote].filter(Boolean).join('\n') : stderr,
-          // A signal-killed child reports `code: null`; keep it nonzero.
+          // Decision: A signal-killed child reports `code: null`; keep it nonzero.
           status: typeof code === 'number' ? code : -1,
           signal: signal ?? (timedOut ? 'SIGKILL' : null),
         });

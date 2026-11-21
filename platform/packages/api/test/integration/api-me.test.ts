@@ -62,7 +62,6 @@ describe('POST /rpc/me.get', () => {
   });
 
   it('returns 401 with expired JWT', async () => {
-    // Insert user with real timers
     const userId = 'user_expired';
     await env.db.insert(users).values({
       id: userId,
@@ -72,7 +71,6 @@ describe('POST /rpc/me.get', () => {
       email: null,
     });
 
-    // Sign JWT in the past so it's expired
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2020-01-01'));
     const jwt = await signJwt({ sub: userId, login: 'expired', aud: 'api' }, JWT_SECRET);

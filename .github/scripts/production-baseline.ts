@@ -36,8 +36,8 @@ async function productionBaseline(options: {
     }
     return response.json();
   };
-  // The branch can already point at the candidate. GitHub's last successful
-  // environment deployment identifies the runtime that actually finished rollout.
+  // Decision: The branch can already point at the candidate. GitHub's last successful environment deployment
+  // shows which runtime actually finished rollout.
   const deployments = await get(
     `deployments?environment=${encodeURIComponent(environment)}&per_page=100`,
   );

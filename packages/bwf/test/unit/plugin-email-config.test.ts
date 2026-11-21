@@ -13,8 +13,8 @@ import type { Plugin } from 'vite';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { getHookHandler } from '../helpers/vite-hooks.ts';
 
-// The Cloudflare plugin defu-merges the returned patch over `resolved`, so a key
-// can only be removed by mutating `resolved`.
+// Decision: The Cloudflare plugin defu-merges the returned patch over `resolved`, so a key can only be
+// removed by mutating `resolved`.
 type MockCloudflarePluginConfig = {
   config: (resolved: Record<string, unknown>) => Record<string, unknown>;
 };
@@ -42,8 +42,8 @@ function createProjectRoot(
   );
   mkdirSync(join(root, 'routes/api'), { recursive: true });
   if (usesBwfEmail) {
-    // An app that actually sends mail, so `needsEmail` is inferred the way it
-    // would be for a real project rather than forced through config.
+    // Decision: An app that actually sends mail, so `needsEmail` is inferred as it would be for a real
+    // project instead of forced through config.
     writeFileSync(
       join(root, 'routes/api/notify.ts'),
       `
@@ -56,8 +56,8 @@ export async function POST() {
 `,
     );
   } else {
-    // An app that never imports `@builtbyfriends/bwf/email` and drives Cloudflare's email
-    // API through its own binding, so `needsEmail` is inferred false.
+    // Decision: An app that doesn't import `@builtbyfriends/bwf/email` and drives Cloudflare's email API
+    // through its own binding, so `needsEmail` is inferred false.
     writeFileSync(
       join(root, 'routes/api/notify.ts'),
       `
@@ -103,7 +103,6 @@ async function resolveCloudflareConfig(
 const SERVE: import('vite').ConfigEnv = { command: 'serve', mode: 'development' };
 const BUILD: import('vite').ConfigEnv = { command: 'build', mode: 'production' };
 
-/** A root wrangler.jsonc as `bwf deploy --platform cloudflare` leaves it. */
 function provisionedRootConfig(): Record<string, unknown> {
   return {
     assets: { binding: 'ASSETS' },
@@ -246,7 +245,7 @@ describe('dev-trigger token file mode (inbox credential)', () => {
       const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, SERVE);
 
       expect(modeOf(tokenPath(root))).toBe(0o600);
-      // Tightening never rotates: saved curl scripts and the worker keep working.
+      // Decision: Tightening doesn't rotate the token: saved curl scripts and the worker keep working.
       expect(readFileSync(tokenPath(root), 'utf8')).toBe('stable-token\n');
       const vars = result.vars as Record<string, string>;
       expect(vars.__PLATFORM_EMAIL_DEV_INBOX_TOKEN).toBe('stable-token');
@@ -261,8 +260,8 @@ describe('dev-trigger token file mode (inbox credential)', () => {
 
     const result = await resolveCloudflareConfig(root, { assets: { binding: 'ASSETS' } }, SERVE);
 
-    // Same inode, same mode, same ctime: no chmod was issued on a file that
-    // was already tight, so a read-only or foreign-owned token still loads.
+    // Decision: Same inode, mode and ctime: no chmod was issued on a file that was already tight, so a
+    // read-only or foreign-owned token still loads.
     const after = statSync(tokenPath(root));
     expect(after.mode).toBe(before.mode);
     expect(after.ctimeMs).toBe(before.ctimeMs);

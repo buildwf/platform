@@ -187,15 +187,13 @@ function formatDeploymentRow(
   let manifest: {
     type?: string;
     static?: string;
-    // Deployments made before framework mode was removed.
+    // Decision: Deployments made before framework mode was removed.
     framework?: string;
   } | null = null;
   if (d.manifest) {
     try {
       manifest = JSON.parse(d.manifest);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
   const appType = manifest?.type ?? (manifest?.framework ? 'framework' : 'platform');

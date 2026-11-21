@@ -55,8 +55,8 @@ type RoutingEntry = Readonly<{
   suspended?: string;
   hashedAssetsPrefix?: string;
   headerRules?: ReadonlyArray<HeaderRule>;
-  // `redirectRules` fires pre-asset, `fallbackRules` fires post-asset.
-  // List identity encodes the pre-vs-post-asset semantic.
+  // Decision: `redirectRules` run before assets and `fallbackRules` after them. Which list a rule is in sets
+  // when it runs.
   redirectRules?: ReadonlyArray<RedirectRule>;
   alwaysUseHttps?: boolean;
   fallbackRules?: ReadonlyArray<RedirectRule>;
@@ -67,8 +67,8 @@ type RoutingEntry = Readonly<{
   privatePreview?: boolean;
 }>;
 
-// Written by the API (suspension.ts projectSuspensionKey) while an administrator
-// has suspended the project's owner.
+// Decision: The API writes this key (projectSuspensionKey in suspension.ts) while an administrator has
+// suspended the project's owner.
 async function isProjectSuspended(env: Env, projectId: string): Promise<boolean> {
   try {
     return (await env.ROUTING.get(`project-suspended:${projectId}`, { cacheTtl: 60 })) !== null;
@@ -82,24 +82,21 @@ type QueueRoutingEntry = Readonly<{
   workerName: string;
   projectId: string;
   queueName: string;
-  // HMAC-signed proxy token matching the user worker's __PLATFORM_PROXY_TOKEN
-  // binding. The framework-generated /__platform/queue handler rejects relays
-  // without a matching `x-platform-internal` header with 401. Absent on entries
-  // written by older API versions.
+  // Decision: HMAC-signed proxy token that matches the user worker's __PLATFORM_PROXY_TOKEN. The generated
+  // /__platform/queue handler returns 401 for relays without a matching `x-platform-internal`
+  // header. Entries written by older API versions don't have it.
   proxyToken?: string;
 }>;
 
 const STATIC_ASSET_HEDGE_DELAY_MS = 1000;
 const PLATFORM_QUEUE_RETRY_DELAY_SECONDS = 300;
-// Batches of a project whose owner an administrator suspended wait here. Each
-// retry uses one of the queue's max_retries (3 unless the app sets maxRetries),
-// so a message survives about one hour per retry, and a queue with maxRetries 0
-// drops it on the first suspended delivery. Delivery resumes within about an
-// hour of a restore.
+// Decision: Batches of a project whose owner is suspended wait here. Each retry uses one of the queue's
+// max_retries (3 unless the app sets maxRetries), so a message lasts about an hour per retry, and a
+// queue with maxRetries 0 drops it on the first suspended delivery.
 const SUSPENDED_PROJECT_QUEUE_RETRY_DELAY_SECONDS = 3600;
-// A relay the Worker rejects for its token is retried after the queue routing
-// entry (read with cacheTtl 60) has had time to catch up with a token rotation,
-// so one rotation costs a message about one attempt instead of all of them.
+// Decision: A relay rejected for its token is retried after the routing entry (read with cacheTtl 60) has
+// caught up with a token rotation, so a rotation costs about one attempt per message, not all of
+// them.
 const QUEUE_TOKEN_REJECTED_RETRY_DELAY_SECONDS = 120;
 const PLATFORM_STATIC_ASSET_TIMEOUT: FailureKind = 'platform-static-asset-timeout';
 const PLATFORM_STATIC_ASSET_ERROR: FailureKind = 'platform-static-asset-error';
@@ -120,9 +117,7 @@ function platformHealthExceptionPath(request: Request, url: URL): boolean {
     let decoded = path;
     try {
       decoded = decodeURIComponent(path);
-    } catch {
-      // Malformed escapes are matched as sent.
-    }
+    } catch {}
     return decoded
       .replace(/[\\/]+/g, '/')
       .toLowerCase()
@@ -130,9 +125,6 @@ function platformHealthExceptionPath(request: Request, url: URL): boolean {
   });
 }
 
-// Fast body-less response for an operation bounded by `withTimeout` that
-// stalled past the budget. `X-Platform-Timeout` names the stalled operation for
-// observability; 503s advertise a short `Retry-After` so clients back off.
 function timeoutResponse(status: number, label: string): Response {
   return new Response(null, {
     status,
@@ -228,8 +220,8 @@ function resolveCachedWfpFallbackPathname(
   return fallback?.type === 'rewrite' ? fallback.destination : undefined;
 }
 
-// CF's error text for WC-4511 asset dedupe poisoning. Not guaranteed
-// stable — monitor fallback telemetry if CF's worker-runtime changes.
+// Decision: Cloudflare's error text for WC-4511 asset dedupe poisoning. It isn't guaranteed stable, so watch
+// the fallback telemetry if Cloudflare's worker runtime changes.
 const CF_ASSETS_STUB_MARKER = 'Assets have not yet been deployed to this script';
 
 function isLikelyCfAssetStub(response: Response): boolean {
@@ -325,11 +317,9 @@ async function fetchAssetManifest(
   }
 }
 
-// Serve the requested asset from platform R2/KV using the mirror written
-// on deploy. Returns null if the routing entry lacks a manifest, the
-// manifest is missing from KV, or the path/hash cannot be resolved. The
-// caller turns that confirmed poison-stub fallback miss into an attributed
-// platform 503 so no successful cache entry can be written.
+// Decision: Serves the asset from platform R2/KV using the mirror written on deploy. It returns null when the
+// entry has no manifest or the path can't be resolved; the caller turns that confirmed poison-stub
+// miss into an attributed platform 503, so no successful cache entry gets written.
 async function serveWfpAssetFallback(
   env: Env,
   routing: RoutingEntry,
@@ -447,9 +437,8 @@ async function maybeServeWfpAssetFallback(opts: {
       opts.fallbackPathname,
     );
   } catch (error) {
-    // Once the CF poison stub is confirmed, never pass its HTTP 200 through:
-    // callers may cache successful responses. Surface an attributed platform
-    // 503 instead so the failure is retryable without poisoning edge caches.
+    // Decision: Once the poison stub is confirmed, its HTTP 200 mustn't pass through: callers may cache
+    // successful responses. An attributed 503 keeps the failure retryable without poisoning caches.
     if (error instanceof DispatchTimeoutError) {
       if (!stubConfirmed) {
         return {
@@ -510,9 +499,8 @@ export function rebuildRequest(
 ): Request {
   const headers = new Headers(request.headers);
   mutateHeaders(headers);
-  // `cf` (country, colo, botManagement, tlsClientAuth, …) is populated by
-  // the CF edge and read by user workers. A plain `new Request(url, init)`
-  // does not propagate it; we have to thread it through init.cf explicitly.
+  // Decision: `cf` (country, colo, botManagement, tlsClientAuth and so on) is set by the edge and read by user
+  // workers. `new Request(url, init)` doesn't carry it over, so it's passed through init.cf.
   const cfProperties = request.cf;
   if (request.bodyUsed || request.body?.locked) {
     headers.delete('content-length');
@@ -548,9 +536,8 @@ const dispatcher = {
     ) {
       return Response.json({ ok: true });
     }
-    // The installer proves the complete cutover while the public routing gate
-    // remains closed. This endpoint exposes no application data and is already
-    // reserved for the installer's exact health-check header.
+    // Decision: The installer proves the full cutover while the public routing gate is still closed. This
+    // endpoint exposes no app data and is reserved for the installer's exact health-check header.
     if (
       env.PLATFORM_HEALTH_PROBE_TOKEN &&
       url.pathname === '/health' &&
@@ -561,9 +548,8 @@ const dispatcher = {
         ...(env.PLATFORM_APPLICATION ? { installationId: env.PLATFORM_INSTALLATION_ID } : {}),
       });
     }
-    // Project Zero Trust leaves `/health` on this hostname outside Cloudflare
-    // Access for the probe above. Nothing else on that path may reach a
-    // project; every other path stays behind Access and is routed normally.
+    // Decision: Project Zero Trust leaves `/health` on this hostname outside Cloudflare Access for the probe
+    // above. Nothing else on that path may reach a project; other paths stay behind Access.
     if (
       url.hostname.startsWith(`${PLATFORM_HEALTH_HOSTNAME_LABEL}.`) &&
       url.hostname === platformHealthHostname(readPlatformApplication(env)) &&
@@ -580,20 +566,16 @@ const dispatcher = {
       return createMaintenanceResponse(request);
     }
     const startTime = Date.now();
-    // Keep platform storage/background work bounded. Foreground user workers
-    // follow the client's lifetime unless the operator configures a deadline:
-    // returning early can cancel a mutation after its external side effect.
+    // Decision: Platform storage and background work stay bounded. Foreground user workers follow the client's
+    // lifetime unless the operator sets a deadline: returning early can cancel a mutation after its
+    // external side effect.
     const timeoutMs = resolveTimeoutMs(env.DISPATCH_TIMEOUT_MS);
     const workerTimeoutMs = resolveTimeoutMs(env.DISPATCH_TIMEOUT_MS, 0);
 
-    // Block Platform-internal routes from external HTTP access.
-    // Only /__platform/* is reserved by the platform — other __ prefixes
-    // (e.g. /__nuxt_content, /__og-image__) are user/framework assets.
+    // Decision: Only /__platform/* is reserved by the platform. Other __ prefixes (/__nuxt_content,
+    // /__og-image__) are user or framework assets.
     if (
       url.pathname.startsWith('/__platform/') ||
-      // Legacy: old SDK versions register these top-level paths. Block them
-      // at the edge so we don't rely solely on worker-side token checks.
-      // TODO: remove once all deployed workers use /__platform/* paths. See #88
       url.pathname === '/__scheduled' ||
       url.pathname === '/__queue'
     ) {
@@ -625,8 +607,8 @@ const dispatcher = {
     if (selected.projectId && selected.projectId !== routing.projectId) {
       return createErrorResponse(request, 404, 'Not Found');
     }
-    // Keep omission distinct from false so a future platform default can change
-    // without overriding an application's explicit opt-out.
+    // Decision: Omission stays distinct from false, so a future platform default can change without overriding
+    // an app's explicit opt-out.
     if (routing.alwaysUseHttps ?? false) {
       const redirect = redirectToHttps(request);
       if (redirect) {
@@ -653,9 +635,8 @@ const dispatcher = {
       return createErrorResponse(request, 404, 'Not Found', { 'Cache-Control': 'no-store' });
     }
 
-    // Access normally rejects unauthenticated traffic before dispatch. This
-    // independent assertion check makes an accidentally deleted or drifted
-    // Access application fail closed instead of publishing the project.
+    // Decision: Access normally rejects unauthenticated traffic before dispatch. This separate assertion check
+    // makes a deleted or drifted Access application fail closed instead of publishing the project.
     if (
       routing.zeroTrust &&
       !(await projectAccessVerifier.verify(
@@ -695,7 +676,6 @@ const dispatcher = {
         },
       );
 
-    // Check if project is suspended
     if (routing.suspended === 'requests_exceeded') {
       return limitResponse('requests');
     }
@@ -706,11 +686,8 @@ const dispatcher = {
       );
     }
 
-    // Strip any client-supplied X-Platform-Original-URL on entry. Dispatch owns this
-    // header: the only legitimate source is a dispatch-side rewrite below, which
-    // sets it on `workerRequest` with the true original URL. Allowing a client
-    // value to flow through would let callers spoof the "original URL" seen by
-    // user workers that trust the header.
+    // Decision: Dispatch owns X-Platform-Original-URL: only a dispatch-side rewrite sets it. A client value
+    // passed through would let callers spoof the original URL that user workers trust.
     if (request.headers.has('X-Platform-Original-URL')) {
       request = rebuildRequest(request, request.url, (headers) =>
         headers.delete('X-Platform-Original-URL'),
@@ -749,8 +726,8 @@ const dispatcher = {
       }
       const res = new Response(response.body, response);
       res.headers.delete('X-Platform-No-Match');
-      // Cache API and upstream responses have immutable headers. Strip the
-      // internal cache marker only from this writable client response.
+      // Decision: Cache API and upstream responses have immutable headers, so the internal cache marker is only
+      // stripped from this writable client response.
       res.headers.delete(SHARED_CACHE_POLICY_HEADER);
       res.headers.set('X-Hosted-By', 'void.cloud');
       return res;
@@ -758,11 +735,9 @@ const dispatcher = {
     const meterStaticAssetFailure = (kind: FailureKind) =>
       meter(staticAssetFailureResponse(kind), kind);
 
-    // The user's worker blew the dispatch budget. It returned nothing, so it
-    // logged nothing, and its own tail event records only `canceled` — which a
-    // real client hang-up produces too. Dispatch is the only party that knows
-    // it was the one that hung up, so it says so in the project's log stream.
-    // Metering is unchanged; this only adds the explanation.
+    // Decision: The user's worker went past the dispatch budget. It returned nothing, so it logged nothing, and
+    // its tail event only says `canceled`, which a client hang-up also produces. Only dispatch knows it
+    // hung up, so it says so in the project's log stream. Metering doesn't change.
     const meterWorkerTimeout = () => {
       recordPlatformLog(env, {
         workerName: routing.workerName,
@@ -774,9 +749,6 @@ const dispatcher = {
       return meter(timeoutResponse(503, 'dispatch'));
     };
 
-    // Routing rules — redirects short-circuit, rewrites modify pathname.
-    // `originalUrlHeader` is the X-Platform-Original-URL surfaced to user workers
-    // for `c.originalUrl()`: the full URL the client sent.
     let originalUrlHeader: string | undefined;
     if (routing.redirectRules?.length) {
       const result = applyRoutingRules(pathname, routing.redirectRules, url.hostname);
@@ -787,18 +759,15 @@ const dispatcher = {
         );
       }
       if (result?.type === 'rewrite') {
-        // Destination shape (path-absolute, no `//`, no `?`) is enforced by
-        // the framework validator and re-checked by the API on manifest ingest
-        // (see `packages/api/src/routes/deploy.ts`). Dispatch trusts those two
-        // gates and does not re-validate here.
+        // Decision: Destination shape (path-absolute, no `//`, no `?`) is enforced by the framework validator and
+        // checked again by the API on manifest ingest (packages/api/src/routes/deploy.ts), so dispatch
+        // doesn't validate it again.
         originalUrlHeader = request.url;
         pathname = result.destination;
         url.pathname = pathname;
       }
     }
 
-    // If rewritten, build the request the worker should see (rewritten
-    // URL + original-URL header).
     let workerRequest = request;
     if (originalUrlHeader) {
       workerRequest = rebuildRequest(request, url.toString(), (headers) =>
@@ -806,55 +775,36 @@ const dispatcher = {
       );
     }
 
-    // Shared asset caches must not skip middleware on worker-first paths, even
-    // when an older deployment or an allowed request already populated them.
+    // Decision: Shared asset caches mustn't skip middleware on worker-first paths, even when an older
+    // deployment or an allowed request already filled them.
     const workerFirst = workerRunsBeforeAssets(routing, pathname);
-    // Edge-cache hashed static assets (immutable, content-addressed URLs)
     if (!workerFirst && routing.hashedAssetsPrefix && isSharedStaticCacheRequestEligible(request)) {
       const prefix = '/' + routing.hashedAssetsPrefix + '/';
       if (pathname.startsWith(prefix)) {
-        // Cache key tracks the post-rewrite (hash-bearing) URL, not the
-        // request URL: hashed entries are stored with a 1-year immutable
-        // Cache-Control, so a redirect rule that maps a stable path like
-        // /logo to /assets/logo-<hash>.png must not cache content under
-        // /logo — a future deploy that points /logo at a different hash
-        // would keep serving the stale entry. Strip query: hashed
-        // filenames are already content-addressed by their pathname.
+        // Decision: The cache key uses the post-rewrite (hash-bearing) URL. Hashed entries get a 1-year immutable
+        // Cache-Control, so caching under a stable path like /logo would keep serving stale content after
+        // a deploy points it at a new hash. The query is dropped: hashed names are content-addressed.
         const cacheUrl = new URL(url.toString());
         cacheUrl.search = '';
-        // A host can move to another project; immutable entries must not carry over.
+        // Decision: A host can move to another project, and immutable entries mustn't carry over.
         cacheUrl.searchParams.set('_p', routing.projectId);
         const cacheKey = new Request(cacheUrl.toString());
 
-        // Hashed assets are served straight from the immutable edge cache. Apply
-        // routing.headerRules on the way OUT — on both cache HIT and MISS — instead
-        // of baking them into the cached body. This is what lets a cross-origin
-        // isolated app put COOP/COEP/CORP on its hashed worker/wasm assets: browsers
-        // fetch those over GET, and without per-serve header application the GET
-        // response (unlike a HEAD, which falls through to the worker and is handled
-        // by the dispatch path's applyHeaderRules) would ship with no COEP, so a
-        // module worker spawned from a require-corp document would be blocked.
-        // Applying per-serve rather than at cache-write also means a header-rule
-        // change in a later deploy takes effect even when the content hash — and
-        // thus the unversioned, immutable cache key — is unchanged.
+        // Decision: routing.headerRules apply on the way out, on cache hit and miss, not baked into the cached body.
+        // That lets a cross-origin isolated app add COOP/COEP/CORP to hashed worker/wasm assets fetched
+        // over GET, and lets a later header-rule change apply when the content hash is unchanged.
         //
-        // Tenant rules apply ADDITIVELY only. The platform/origin owns how a
-        // content-addressed asset is cached, represented, and framed on the wire;
-        // tenants may ADD headers (COOP/COEP/CORP, security) but must not rewrite
-        // the headers below, so each is restored from the pre-rule response after
-        // the rules run. The set is exactly the headers whose forgery would corrupt
-        // the asset or break the immutable-cache / usage-metering contract:
-        //   cache-control     immutable contract; the cache-HIT check above keys on it
-        //   content-type      wrong MIME breaks ES-module / WebAssembly loading
-        //   content-encoding  a false `gzip` makes the browser mis-decode the bytes
-        //   content-length    meter() bills from it; clients frame the body by it
-        //   content-range     } forging range/framing semantics truncates or
-        //   accept-ranges     } mis-reads a body the platform did not range-encode
-        //   transfer-encoding hop-by-hop framing; must never come from a tenant rule
-        // Cosmetic metadata (Vary, ETag, ...) is left overridable — on an immutable
-        // URL-keyed asset it is neither a corruption nor a security risk. This
-        // mirrors how the static-asset paths force their own Cache-Control after
-        // applyHeaderRules via clientRevalidateResponse.
+        // Tenant rules can only add headers. The headers below are restored from the pre-rule response,
+        // because forging them corrupts the asset or breaks the immutable-cache or metering contract:
+        //   cache-control      immutable contract; the cache-hit check keys on it
+        //   content-type       a wrong MIME breaks ES module and WebAssembly loading
+        //   content-encoding   a false `gzip` makes the browser mis-decode the bytes
+        //   content-length     meter() bills from it; clients frame the body by it
+        //   content-range,
+        //   accept-ranges      forged range semantics truncate or misread the body
+        //   transfer-encoding  hop-by-hop framing; never from a tenant rule
+        // Cosmetic metadata (Vary, ETag) stays overridable. The static-asset paths do the same by forcing
+        // their own Cache-Control after applyHeaderRules (clientRevalidateResponse).
         const MANAGED_ASSET_HEADERS = [
           'cache-control',
           'content-type',
@@ -866,8 +816,6 @@ const dispatcher = {
         ] as const;
         const finalizeAsset = (assetResponse: Response, failureKind?: FailureKind): Response => {
           const ruled = applyHeaderRules(assetResponse, pathname, routing.headerRules);
-          // applyHeaderRules returns the same object when nothing matched — then
-          // there is no override to undo and we can skip the header restore.
           if (ruled !== assetResponse) {
             for (const name of MANAGED_ASSET_HEADERS) {
               const managed = assetResponse.headers.get(name);
@@ -916,7 +864,6 @@ const dispatcher = {
         if (cached) {
           await cache.delete(cacheKey);
         }
-        // Cache miss — fetch from KV/R2 for static deployments, or invoke worker
         if (routing.staticDeploymentId) {
           const staticAssetStartedAt = Date.now();
           let assetManifest: Record<string, string> | null;
@@ -939,9 +886,8 @@ const dispatcher = {
           if (!assetManifest) {
             return meterStaticAssetFailure(PLATFORM_STATIC_ASSET_MISSING);
           }
-          // Manifest keys are decoded on-disk paths, but `pathname` stays
-          // percent-encoded. Try the raw key, then the decoded key (e.g. a
-          // hashed file named `oxc masthead.riv` requested as `oxc%20masthead.riv`).
+          // Decision: Manifest keys are decoded on-disk paths, but `pathname` stays percent-encoded. The raw key is
+          // tried first, then the decoded one (`oxc masthead.riv` requested as `oxc%20masthead.riv`).
           let assetPath = pathname;
           let hash = assetManifest[pathname];
           if (!hash) {
@@ -968,8 +914,8 @@ const dispatcher = {
               }
               response = assetResponse;
             } catch (err) {
-              // No `resolved.notFound` in scope on this hashed-asset branch — a
-              // storage failure is always a real asset read, so fast 503.
+              // Decision: This hashed-asset branch has no `resolved.notFound`: a storage failure is a real asset read, so
+              // it returns a fast 503.
               if (err instanceof DispatchTimeoutError) {
                 return meterStaticAssetFailure(PLATFORM_STATIC_ASSET_TIMEOUT);
               }
@@ -998,9 +944,8 @@ const dispatcher = {
             remainingTimeoutBudget(wfpAssetStartedAt, timeoutMs),
             'static-asset',
           );
-          // Safety net for CF asset dedupe poisoning (WC-4511). See
-          // meta/design-docs/0066. Detection only triggers on the CF
-          // stub's fingerprint; all other responses stream through.
+          // Decision: Safety net for Cloudflare asset dedupe poisoning (WC-4511, meta/design-docs/0066). It only
+          // triggers on the stub's fingerprint; other responses stream through.
           const fallbackResult = await maybeServeWfpAssetFallback({
             env,
             routing,
@@ -1031,13 +976,12 @@ const dispatcher = {
       }
     }
 
-    // Edge-cache non-hashed static assets using deploy-versioned cache keys.
-    // The same request gate feeds both cache reads and writes. Credentialed,
-    // and Range requests must reach the worker instead of a shared representation. For SSR deployments, a dotted path is only a
-    // candidate when the emitted asset manifest positively identifies it.
+    // Decision: Non-hashed static assets use deploy-versioned cache keys, with one request gate for cache reads
+    // and writes. Credentialed and Range requests have to reach the worker, not a shared copy. For SSR
+    // deployments, a dotted path is a candidate only when the asset manifest names it.
     const staticCachePathname = pathname;
-    // `false` only when this SSR deploy's asset manifest was read and no asset
-    // answers the path. Metering reuses it to label app routes.
+    // Decision: `false` only when this SSR deploy's asset manifest was read and no asset answers the path.
+    // Metering reuses it to label app routes.
     const knownStaticAsset = isStaticCacheRequestEligible(request, staticCachePathname, routing)
       ? await isKnownStaticAssetPath(env, staticCachePathname, routing, timeoutMs)
       : undefined;
@@ -1045,7 +989,7 @@ const dispatcher = {
 
     let staticCacheKey: Request | undefined;
     if (isStaticCandidate) {
-      // A deployed file's body does not depend on the query, so key on the path.
+      // Decision: A deployed file's body doesn't depend on the query, so the key uses the path.
       const cacheUrl = new URL(request.url);
       cacheUrl.search = '';
       cacheUrl.searchParams.set('_v', String(routing.version));
@@ -1093,13 +1037,12 @@ const dispatcher = {
         return meter(clientRevalidateResponse(cached));
       }
       if (cached) {
-        // Entries written by older dispatch versions may contain an unverified
-        // dynamic response. Do not serve it, and remove it opportunistically.
+        // Decision: Entries written by older dispatch versions may hold an unverified dynamic response, so they
+        // aren't served and are removed when found.
         await staticCache.delete(candidateCacheKey);
       }
     }
 
-    // KV/R2-backed static serving — no WfP worker needed
     if (routing.staticDeploymentId) {
       const staticAssetStartedAt = Date.now();
       let assetManifest: Record<string, string> | null;
@@ -1124,22 +1067,16 @@ const dispatcher = {
       }
       const assetConfig: AssetConfig = routing.assetConfig ?? {};
 
-      // Capture pathname before the fallback rewrite potentially mutates it.
-      // The edge cache must be keyed on the path seen here (what the client
-      // requested, post any pre-asset rewrites), not the rewrite target —
-      // otherwise future requests to this path miss the cache entry.
+      // Decision: The pathname is captured before the fallback rewrite. The edge cache is keyed on the path the
+      // client asked for (after pre-asset rewrites), not the rewrite target, or later requests miss.
       const fallbackOriginPathname = pathname;
       let resolved = resolveStaticPath(pathname, assetManifest, assetConfig);
 
-      // Fallback rules run on an asset miss, before serving a custom 404 page.
-      // Single-pass: re-resolve with rewritten path, no further fallbacks.
-      // `fallbackRules` are status-200-only (enforced at API ingest), so
-      // `applyRoutingRules` only ever yields `type: 'rewrite'` here.
+      // Decision: Fallback rules run on an asset miss, before a custom 404 page, in a single pass. They're
+      // status-200-only (enforced at API ingest), so applyRoutingRules only yields `rewrite` here.
       if ((!resolved || resolved.notFound) && routing.fallbackRules?.length) {
         const fallback = applyRoutingRules(pathname, routing.fallbackRules, url.hostname);
         if (fallback?.type === 'rewrite') {
-          // Same trust model as the redirectRules rewrite above — framework +
-          // API both validate destination shape before the manifest lands here.
           pathname = fallback.destination;
           url.pathname = pathname;
           resolved = resolveStaticPath(pathname, assetManifest, assetConfig);
@@ -1170,9 +1107,8 @@ const dispatcher = {
           remainingTimeoutBudget(staticAssetStartedAt, timeoutMs),
         );
       } catch (err) {
-        // A stalled read of the not-found asset was always going to 404, so
-        // return a fast 404 (must not trip the 5xx alert); a real asset read
-        // that stalled → fast 503.
+        // Decision: A stalled read of the not-found asset would have been a 404 anyway, so it returns a fast 404
+        // (which mustn't trip the 5xx alert). A real asset read that stalled returns a fast 503.
         if (err instanceof DispatchTimeoutError) {
           return meter(
             timeoutResponse(resolved.notFound ? 404 : 503, 'static-asset'),
@@ -1204,9 +1140,8 @@ const dispatcher = {
       });
       const finalRes = applyHeaderRules(response, pathname, routing.headerRules);
 
-      // Populate edge cache (same pattern as existing deploy-versioned static cache).
-      // Key on the ORIGINAL pathname the client requested, not the post-fallback
-      // rewrite target — otherwise future requests to the original path miss.
+      // Decision: The edge cache is keyed on the original pathname the client asked for, not the post-fallback
+      // rewrite target, or later requests to that path miss.
       const edgeCacheKey =
         staticCacheKey ??
         (isSharedStaticCacheRequestEligible(request)
@@ -1225,20 +1160,16 @@ const dispatcher = {
       return meter(clientRevalidateResponse(finalRes));
     }
 
-    // Dispatch to user worker — CF handles static assets transparently
     const worker = getWorker(env, routing);
     try {
       let dispatchReq = workerRequest;
       if (dispatchReq.bodyUsed) {
         dispatchReq = rebuildRequest(dispatchReq, dispatchReq.url, () => {});
       }
-      // If a worker-backed fallbackRule could fire on a 404, the inner
-      // re-dispatch needs the original body — but `worker.fetch` consumes
-      // the body stream and `rebuildRequest` on a `bodyUsed` request drops
-      // it (silently). Clone here so the fallback path has a replayable
-      // copy. `Request.clone()` tees the stream on CF Workers. Skip the
-      // clone when there are no fallback rules or the method has no body
-      // (GET/HEAD) — the common case stays free.
+      // Decision: A worker-backed fallbackRule on a 404 needs the original body for its re-dispatch, but
+      // worker.fetch consumes the stream and rebuildRequest drops the body of a `bodyUsed` request. So
+      // it's cloned here (clone() tees the stream on Workers), only when there are fallback rules and the
+      // method has a body.
       const hasBodyMethod = dispatchReq.method !== 'GET' && dispatchReq.method !== 'HEAD';
       const dispatchReqForFallback =
         hasBodyMethod && routing.fallbackRules?.length ? dispatchReq.clone() : dispatchReq;
@@ -1255,9 +1186,6 @@ const dispatcher = {
       let isEventStream = isEventStreamResponse(response);
       let responseFailureKind: FailureKind | undefined;
 
-      // Safety net for CF asset dedupe poisoning (WC-4511). See
-      // meta/design-docs/0066. Pre-check gates body read so non-asset
-      // responses stream through untouched.
       if (!isEventStream) {
         const assetFallbackResult = await maybeServeWfpAssetFallback({
           env,
@@ -1272,10 +1200,9 @@ const dispatcher = {
         isEventStream = isEventStreamResponse(response);
       }
 
-      // routing.fallbackRules — for static deployments these fire post-asset.
-      // The user worker is the equivalent path resolver here, so
-      // a 404 is the analogue of a static-asset miss. Single-pass: the
-      // rewrite target's response is returned as-is even if it's also 404.
+      // Decision: For static deployments fallbackRules run after assets. Here the user worker resolves paths, so a
+      // 404 stands in for a static-asset miss. Single pass: the rewrite target's response is returned as
+      // is, even if it's also a 404.
       let writebackFallbackApplied = false;
       if (!isEventStream) {
         const fallbackResult = await applyWorkerFallbackRules({
@@ -1311,9 +1238,8 @@ const dispatcher = {
         }
       }
 
-      // Cache static asset at edge if eligible. Require a full 200 — `.ok` is
-      // 200–299 and would admit a `206 Partial Content`, poisoning the shared
-      // `<path>?_v=` key with a partial body that a later full request could then be served.
+      // Decision: Requires exactly 200: `.ok` admits 206 Partial Content, which would poison the shared
+      // `<path>?_v=` key with a partial body served to later full requests.
       if (staticCacheKey && !writebackFallbackApplied && isStaticCacheResponseEligible(response)) {
         const res = new Response(response.body, response);
         const finalRes = applyHeaderRules(res, pathname, routing.headerRules);
@@ -1327,11 +1253,9 @@ const dispatcher = {
         return meter(clientRevalidateResponse(finalRes), responseFailureKind);
       }
 
-      // Classify for metering. A path with a file extension is the app's only when
-      // the worker, not Cloudflare's asset layer, answered it, and either the
-      // manifest answer for this exact path says it is not a deployed file or the
-      // response is a server error. Platform asset failures carry a failure kind
-      // and keep the default.
+      // Decision: A path with a file extension counts as the app's only when the worker (not the asset layer)
+      // answered it, and either the manifest says it isn't a deployed file or the response is a server
+      // error. Platform asset failures carry a failure kind and keep the default.
       const listedAsset = pathname === staticCachePathname ? knownStaticAsset : undefined;
       const handledByApp =
         !responseFailureKind &&
@@ -1348,8 +1272,8 @@ const dispatcher = {
         if (err.label === 'static-asset') {
           return meterStaticAssetFailure(PLATFORM_STATIC_ASSET_TIMEOUT);
         }
-        // The dispatched request was still running when the budget ran out. It
-        // counts as the app's when the worker, not the asset layer, owns the path.
+        // Decision: The request was still running when the budget ran out. It counts as the app's when the worker,
+        // not the asset layer, owns the path.
         const dynamicType = classifyDynamicRequestType(
           pathname,
           routing.ssr,
@@ -1405,7 +1329,6 @@ const dispatcher = {
       }
     }
 
-    // Look up which user worker handles this queue
     const routingRaw = await env.ROUTING.get(`queue:${batch.queue}`, { cacheTtl: 60 });
     if (!routingRaw) {
       console.error(
@@ -1425,7 +1348,6 @@ const dispatcher = {
       return;
     }
 
-    // Serialize batch for relay
     const messages = Array.from(batch.messages, (message) => ({
       id: message.id,
       timestamp: message.timestamp.toISOString(),
@@ -1447,8 +1369,6 @@ const dispatcher = {
           body,
         }),
       );
-      // Legacy: fall back for workers deployed before the /__platform/ migration.
-      // TODO: remove once all deployed workers use /__platform/* paths.
       if (res.status === 404) {
         res = await worker.fetch(
           new Request('https://internal/__queue', {
@@ -1460,21 +1380,17 @@ const dispatcher = {
       }
 
       if (!res.ok) {
-        // Preserve observability: dispatch tail ingests this under the
-        // __platform-dispatch project key so operators can query who is
-        // rejecting relays and why.
+        // Decision: Dispatch tail ingests this under the __platform-dispatch project key, so operators can see who
+        // rejects relays and why.
         let snippet = '';
         try {
           snippet = (await res.clone().text()).slice(0, 200);
-        } catch {
-          /* body may be unreadable — status alone is still useful */
-        }
+        } catch {}
         console.error(
           `[queue-relay] relay failed queue="${queueName}" worker="${workerName}" status=${res.status} body=${JSON.stringify(snippet)}`,
         );
-        // Never relayed again with another token: the Worker's own middleware
-        // has already run for this request. A later delivery runs it again, as
-        // any queue retry does.
+        // Decision: The batch isn't relayed again with another token, because the Worker's own middleware already
+        // ran for this request. A later delivery runs it again, as any queue retry does.
         if (res.status === 401 || res.status === 403) {
           batch.retryAll({ delaySeconds: QUEUE_TOKEN_REJECTED_RETRY_DELAY_SECONDS });
         } else {
@@ -1490,13 +1406,13 @@ const dispatcher = {
       try {
         result = await res.json();
       } catch {
-        // Non-JSON 2xx = legacy framework, treat as success
+        // Decision: A non-JSON 2xx comes from a legacy framework and counts as success.
         batch.ackAll();
         return;
       }
 
       if (!result.decisions) {
-        // No decisions = legacy protocol, batch fallback
+        // Decision: No decisions means the legacy protocol, so the whole batch is acked or retried.
         if (result.ok !== false) {
           batch.ackAll();
         } else {
@@ -1505,7 +1421,6 @@ const dispatcher = {
         return;
       }
 
-      // Apply per-message decisions
       const messageMap = new Map(batch.messages.map((message) => [message.id, message]));
       for (const [id, decision] of Object.entries(result.decisions)) {
         const cfMessage = messageMap.get(id);
@@ -1521,11 +1436,13 @@ const dispatcher = {
         }
       }
 
-      // Undecided messages: if handler failed, retry all (individual decisions survive per CF)
+      // Decision: When the handler failed, undecided messages are retried; per-message decisions still hold on
+      // Cloudflare.
       if (result.ok === false) {
         batch.retryAll();
       }
-      // If ok=true, undecided messages get implicit ack (CF default on successful consumer return)
+      // Decision: When ok is true, undecided messages are acked implicitly (Cloudflare's default when the consumer
+      // returns successfully).
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(
@@ -1671,7 +1588,6 @@ async function fetchStaticAssetOnce(
   const legacyKey = `assets/${cleanHash}`;
 
   if (isLarge) {
-    // Try scoped key first, then legacy
     const obj = scopedKey
       ? ((await env.STATIC_ASSETS_R2.get(scopedKey)) ?? (await env.STATIC_ASSETS_R2.get(legacyKey)))
       : await env.STATIC_ASSETS_R2.get(legacyKey);
@@ -1707,11 +1623,9 @@ async function fetchStaticAssetOnce(
     return new Response(value, { headers });
   };
 
-  // Try scoped key first, then legacy
   return (scopedKey ? await readKvAsset(scopedKey) : null) ?? readKvAsset(legacyKey);
 }
 
-/** Get a dispatch worker, applying custom limits if configured. */
 function getWorker(env: Env, routing: RoutingEntry): Fetcher {
   if (routing.limits) {
     return env.DISPATCH.get(routing.workerName, {}, { limits: routing.limits });
@@ -1751,7 +1665,6 @@ function isSharedStaticCacheRequestEligible(request: Request): boolean {
   );
 }
 
-/** Shared request-side eligibility for the deploy-versioned static cache. */
 function isStaticCacheRequestEligible(
   request: Request,
   pathname: string,
@@ -1809,8 +1722,8 @@ async function isKnownStaticAssetPath(
     if (decoded !== pathname && Object.hasOwn(manifest, decoded)) {
       return true;
     }
-    // Not a listed file, but Cloudflare's asset layer may still serve or
-    // redirect it from an HTML file, so it is not known to be the worker's.
+    // Decision: Not a listed file, but Cloudflare's asset layer may still serve or redirect it from an HTML file,
+    // so it isn't known to be the worker's.
     const htmlHandling = routing.assetConfig?.html_handling ?? 'auto-trailing-slash';
     if (
       htmlHandling !== 'none' &&
@@ -1820,8 +1733,8 @@ async function isKnownStaticAssetPath(
     }
     return false;
   } catch {
-    // Asset identity is an optimization gate. If the manifest is unavailable,
-    // dispatch the request live instead of guessing from the URL or response.
+    // Decision: Asset identity only gates an optimization. With no manifest, the request is dispatched live
+    // instead of guessing from the URL or response.
     return undefined;
   }
 }

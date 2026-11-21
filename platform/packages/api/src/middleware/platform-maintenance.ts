@@ -41,6 +41,6 @@ export async function isAdministratorCallback(context: Context<ApiEnv>): Promise
       ),
     )
     .limit(1);
-  // The callback still verifies browser proof, identity, role and session.
+  // Decision: The callback still verifies browser proof, identity, role and session.
   return attempt?.purpose === 'admin';
 }

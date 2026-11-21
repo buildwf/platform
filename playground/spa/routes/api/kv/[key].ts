@@ -1,7 +1,6 @@
 import { defineHandler } from '@builtbyfriends/bwf';
 import * as v from 'valibot';
 
-// PUT /api/kv/:key — store the raw request body in KV under an e2e-namespaced key.
 export const PUT = defineHandler.withValidator({
   params: v.object({ key: v.string() }),
 })(async (c, { params }) => {
@@ -9,7 +8,6 @@ export const PUT = defineHandler.withValidator({
   return { ok: true };
 });
 
-// GET /api/kv/:key — read the value back (404 when the key is absent).
 export const GET = defineHandler.withValidator({
   params: v.object({ key: v.string() }),
 })(async (c, { params }) => {

@@ -4,7 +4,6 @@ import app from '../../src/index.ts';
 import { SHARED_CACHE_POLICY_VERSION } from '../../src/shared-cache.ts';
 import type { AssetConfig } from '../../src/static.ts';
 
-// Mock caches.default (same pattern as index.test.ts).
 const edgeCacheStore = new Map<string, Response>();
 vi.stubGlobal('caches', {
   default: {
@@ -47,19 +46,13 @@ type WorkerRoutingEntry = {
   queryAllowlist?: Record<string, Array<string>>;
 };
 
-/**
- * Build an Env for static-deployment tests. Assets are identified by their path;
- * the KV store keys off `assets/{projectId}/{path}` → an ArrayBuffer of the body.
- */
 function createStaticEnv(opts: {
   routing: StaticRoutingEntry;
   manifest: Record<string, string>;
-  assetBodies: Record<string, string>; // pathname → body
+  assetBodies: Record<string, string>;
 }): { env: Env } {
   const { routing, manifest, assetBodies } = opts;
 
-  // Seed the KV asset store using the exact key format dispatch expects:
-  // `assets/{projectId}/{hash}` for scoped, or `assets/{hash}` as legacy fallback.
   const assetStore = new Map<string, ArrayBuffer>();
   for (const [path, hash] of Object.entries(manifest)) {
     const body = assetBodies[path];
@@ -146,10 +139,8 @@ describe('SPA app — no user fallbacks (zero-overhead common case)', () => {
 });
 
 describe('SPA app — user fallbacks with not_found_handling: none', () => {
-  // Shape emitted by the CLI when the user defines `routing.fallbacks` on an SPA:
-  // user rules come first, synthetic catch-all `/*` → `/index.html` is APPENDED.
-  // Under dispatch's first-match-wins semantics the more-specific user rule wins
-  // when it matches, and the synthetic rule catches everything else.
+  // Decision: The CLI emits this shape for an SPA with `routing.fallbacks`: user rules first, then a synthetic
+  // `/*` -> `/index.html`. With first-match-wins, the specific user rule wins when it matches.
   const makeEnv = () =>
     createStaticEnv({
       routing: {
@@ -274,16 +265,14 @@ describe('redirectRules entries (pre-asset phase)', () => {
         staticDeploymentId: 'dep_1',
         projectId: 'proj_1',
         assetConfig: { not_found_handling: 'none', html_handling: 'none' },
-        // Status-200 entries in redirectRules come from `routing.rewrites` in
-        // bwf.json or `200!` in _redirects. Pre-asset phase is implicit in the
-        // list identity — dispatch does not inspect any flag on the rule.
+        // Decision: Status-200 entries in redirectRules come from `routing.rewrites` or `200!` in _redirects. The
+        // list they're in sets the pre-asset phase; dispatch reads no flag on the rule.
         redirectRules: [{ source: '/legacy/*', destination: '/new.html', status: 200 }],
       },
       manifest: { '/new.html': 'h_new', '/legacy/asset.txt': 'h_legacy' },
       assetBodies: { '/new.html': '<html>new</html>', '/legacy/asset.txt': 'legacy-body' },
     });
 
-    // Even though /legacy/asset.txt is a real asset, the pre-asset rewrite wins.
     const res = await app.fetch(
       new Request('https://test.void.app/legacy/asset.txt'),
       env,
@@ -312,10 +301,6 @@ describe('redirectRules entries (pre-asset phase)', () => {
 });
 
 describe('edge cache keying under fallback rewrites', () => {
-  // Regression: when `version` is absent, `staticCacheKey` is undefined and the
-  // fallback branch builds its own edge cache key. That key must use the path
-  // the client requested, not the rewritten target — otherwise future requests
-  // to the original path miss the cache entry.
   it('keys fallback-rewrite edge cache on the original (pre-rewrite) pathname', async () => {
     const { env } = createStaticEnv({
       routing: {
@@ -333,18 +318,14 @@ describe('edge cache keying under fallback rewrites', () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('<html>proxied</html>');
 
-    // Flush background cache.put
     await Promise.all((ctx.waitUntil as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]));
 
-    // Cache must be keyed under the ORIGINAL path, not the rewrite target.
     expect(edgeCacheStore.has('https://test.void.app/proxy/foo?_v=dep_1')).toBe(true);
     expect(edgeCacheStore.has('https://test.void.app/proxied.html?_v=dep_1')).toBe(false);
   });
 });
 
 describe('_redirects 200 entries emitted into fallbackRules', () => {
-  // Framework CLI now emits `_redirects` status-200 entries into fallbackRules (post-asset)
-  // rather than redirectRules (pre-asset). Confirm they fire only on asset miss.
   it('does not intercept when an asset exists', async () => {
     const { env } = createStaticEnv({
       routing: {
@@ -413,12 +394,6 @@ describe('fallbackRules rewrite — static-only path', () => {
   });
 });
 
-/**
- * Build an Env where dispatch routes to a user worker (no `staticDeploymentId`).
- * The worker handler is provided by the caller — typical use is to 404 most
- * paths and 200 the SPA shell, mirroring SvelteKit/Nuxt/Astro framework
- * projects authored with `routing.fallbacks`.
- */
 function createWorkerEnv(opts: {
   routing: WorkerRoutingEntry;
   workerHandler: (req: Request) => Response | Promise<Response>;
@@ -491,13 +466,9 @@ function createWorkerEnv(opts: {
   return { env, workerFetch, kvStore };
 }
 
-/**
- * `routing.fallbackRules` are evaluated post-asset for static deployments.
- * For WfP/framework projects (SvelteKit/Nuxt/Astro), the user worker IS the
- * router — its 404 is the equivalent of a static-asset miss. Without this
- * branch, framework users author `routing: { fallbacks: { "/*": "/index.html" } }`,
- * see it work in `vite dev`, and watch it silently 404 in production.
- */
+// Decision: For WfP and framework projects the user worker is the router, so its 404 stands in for a
+// static-asset miss. Without this branch, `routing.fallbacks` works in `vite dev` and 404s in
+// production.
 describe('fallbackRules rewrite — WfP/framework branch', () => {
   it('re-dispatches to the rewrite target when the worker 404s', async () => {
     const { env, workerFetch } = createWorkerEnv({
@@ -588,12 +559,6 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
   });
 
   it('preserves the request body across worker fallback re-dispatch on POST', async () => {
-    // Regression: the first `worker.fetch(dispatchReq)` consumes the body
-    // stream. Without cloning, the fallback re-dispatch would receive an
-    // empty body — silent payload loss for any user fallback rule that
-    // covers a POST endpoint (e.g. `"/api/*": "/api/handler"` BFF pattern).
-    // The fix clones `dispatchReq` before the first fetch so the fallback
-    // path has a replayable copy.
     const seenBodies: Array<string> = [];
     const { env, workerFetch } = createWorkerEnv({
       routing: {
@@ -629,7 +594,6 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('handler-saw:{"x":1}');
     expect(workerFetch).toHaveBeenCalledTimes(2);
-    // Both worker invocations saw the same body.
     expect(seenBodies).toEqual(['{"x":1}', '{"x":1}']);
   });
 
@@ -664,7 +628,6 @@ describe('fallbackRules rewrite — WfP/framework branch', () => {
   });
 
   it('does not loop: a fallback rewrite that itself 404s returns the second response', async () => {
-    // Single-pass — rewrite target's 404 is returned as-is, not re-fallback'd.
     const { env, workerFetch } = createWorkerEnv({
       routing: {
         workerName: 'spa-worker',

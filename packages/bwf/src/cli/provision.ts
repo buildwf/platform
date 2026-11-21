@@ -218,16 +218,16 @@ const D1_MIGRATIONS_DIR = './db/migrations';
 /** UTF-8 byte-order mark. Node's utf-8 read preserves a leading one. */
 const UTF8_BOM = '﻿';
 
-// Placeholders `syncWranglerBindings` writes for a not-yet-provisioned binding. Each belongs
+// Decision: Placeholders `syncWranglerBindings` writes for a not-yet-provisioned binding. Each belongs
 // to its own field only: `local` is a valid R2 bucket name.
 const D1_ID_PLACEHOLDER = 'local';
 const KV_ID_PLACEHOLDER = 'local';
 const R2_BUCKET_NAME_PLACEHOLDER = 'default';
 
-// Cloudflare id formats; a placeholder or malformed id never counts as provisioned.
-//   - D1 `database_id`: a hyphenated UUID.
-//   - KV namespace and Hyperdrive `id`: 32 hex chars, no hyphens.
-//   - R2 identity is the `bucket_name`.
+// Decision: Cloudflare id formats; a placeholder or malformed id never counts as provisioned.
+// - D1 `database_id`: a hyphenated UUID.
+// - KV namespace and Hyperdrive `id`: 32 hex chars, no hyphens.
+// - R2 identity is the `bucket_name`.
 const D1_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HEX32_ID_RE = /^[0-9a-f]{32}$/i;
 /** R2 bucket-name grammar (wrangler's `isValidR2BucketName`). */
@@ -406,9 +406,9 @@ export function assertNoTransportRedirectInProjectDotenv(
   root: string,
   platform: NodeJS.Platform = process.platform,
 ): void {
-  // Scan the project dotenv and dev-vars files with these case rules:
-  //   - all four dotenv files; keys fold case only on win32;
-  //   - `.dev.vars.` if present, else `.dev.vars`; keys are always case-sensitive.
+  // Decision: Scan the project dotenv and dev-vars files with these case rules:
+  // - all four dotenv files; keys fold case only on win32;
+  // - `.dev.vars.` if present, else `.dev.vars`; keys are always case-sensitive.
   const dotenvCaseInsensitive = platform === 'win32';
   const devVarsFile = existsSync(join(root, '.dev.vars.')) ? '.dev.vars.' : '.dev.vars';
   const files: Array<{ file: string; caseInsensitive: boolean }> = [
@@ -438,7 +438,6 @@ export function assertNoTransportRedirectInProjectDotenv(
           `Cloudflare operations and the existence check.`,
       );
     }
-    // Session output files are not allowed while provisioning.
     const outputOffenders = OUTPUT_FILE_ENV_VARS.filter(declares);
     if (outputOffenders.length > 0) {
       throw new Error(
@@ -494,17 +493,17 @@ export function provisionEnv(ctx?: {
   for (const name of TRANSPORT_REDIRECT_ENV_VARS) {
     scrub(name);
   }
-  // Scrub output sinks and pin sanitized logging (a truthy value survives the dotenv reload).
+  // Decision: Scrub output sinks and pin sanitized logging (a truthy value survives the dotenv reload).
   for (const name of OUTPUT_FILE_ENV_VARS) {
     scrub(name);
   }
   scrub('WRANGLER_LOG_SANITIZE');
   env.WRANGLER_LOG_SANITIZE = 'true';
-  // Pinned by presence: an empty base stays empty, so wrangler fails the same way.
+  // Decision: Pinned by presence: an empty base stays empty, so wrangler fails the same way.
   if (ctx?.apiBaseUrl !== undefined) {
     env.CLOUDFLARE_API_BASE_URL = ctx.apiBaseUrl;
   }
-  // Pin the account so wrangler never prompts or falls back to an ambient account.
+  // Decision: Pin the account so wrangler never prompts or falls back to an ambient account.
   if (ctx?.accountId) {
     scrub('CLOUDFLARE_ACCOUNT_ID');
     env.CLOUDFLARE_ACCOUNT_ID = ctx.accountId;
@@ -573,7 +572,7 @@ interface QuarantineInfo {
   reason: string;
 }
 
-// At most one provision runs per process, so the signal coordinator manages at most one
+// Decision: At most one provision runs per process, so the signal coordinator manages at most one
 // {child group, provision lock} pair. Other processes are serialized by the on-disk lock.
 let activeProvisionSlot: symbol | undefined;
 
@@ -586,7 +585,7 @@ function acquireProcessProvisionSlot(): () => void {
         'by the on-disk provision lock instead.',
     );
   }
-  // A previous provision's watchdog still holds a lock that is not durably quarantined.
+  // Decision: A previous provision's watchdog still holds a lock that is not durably quarantined.
   if (retentionWatchdog !== undefined) {
     throw new Error(
       'provision: a previous provision in this process is still retaining its lock — an ' +
@@ -620,7 +619,7 @@ function isQuarantineError(error: unknown): error is WranglerQuarantineError {
   );
 }
 
-// Process-wide signal coordinator. On the first SIGINT/SIGTERM it forwards the signal to the
+// Decision: Process-wide signal coordinator. On the first SIGINT/SIGTERM it forwards the signal to the
 // registered child group, waits (bounded) for confirmed termination, quarantines the lock if
 // that fails, then re-raises once. Repeated signals are coalesced and new spawns are rejected.
 
@@ -701,7 +700,7 @@ function canRegisterRunner(parallelWorkerUpload: boolean): boolean {
 }
 
 function registerRunner(registrant: TerminationRegistrant, parallelWorkerUpload: boolean): void {
-  // The pre-spawn check and registration run in one synchronous block.
+  // Decision: The pre-spawn check and registration run in one synchronous block.
   if (!canRegisterRunner(parallelWorkerUpload)) {
     throw new Error(
       'provision: internal invariant violated — a Cloudflare child tried to register outside its concurrency limit',
@@ -709,7 +708,7 @@ function registerRunner(registrant: TerminationRegistrant, parallelWorkerUpload:
   }
   activeRegistrations.set(registrant, {
     registrant,
-    // Undefined outside a provision: there is no lock to retain.
+    // Decision: Undefined outside a provision: there is no lock to retain.
     lockQuarantine: activeProvisionQuarantineHook,
     parallelWorkerUpload,
   });
@@ -718,7 +717,7 @@ function registerRunner(registrant: TerminationRegistrant, parallelWorkerUpload:
 
 function deregisterRunner(registrant: TerminationRegistrant): void {
   activeRegistrations.delete(registrant);
-  // Keep listeners during a teardown (to coalesce signals) and while a watchdog holds a lock.
+  // Decision: Keep listeners during a teardown (to coalesce signals) and while a watchdog holds a lock.
   if (
     activeRegistrations.size === 0 &&
     activeTeardown === undefined &&
@@ -729,11 +728,11 @@ function deregisterRunner(registrant: TerminationRegistrant): void {
 }
 
 function coordinatorHandleSignal(signal: NodeJS.Signals): void {
-  // Coalesce repeated signals during a teardown.
+  // Decision: Coalesce repeated signals during a teardown.
   if (activeTeardown !== undefined) {
     return;
   }
-  // Dying now would let the exit sweep release a lock the watchdog must keep.
+  // Decision: Dying now would let the exit sweep release a lock the watchdog must keep.
   if (retentionWatchdog !== undefined && activeRegistrations.size === 0) {
     process.stderr.write(
       `provision: ignoring ${signal} — a provision lock is retained while an unconfirmed ` +
@@ -752,11 +751,11 @@ function coordinatorHandleSignal(signal: NodeJS.Signals): void {
     expirePendingPairs: [],
   };
   activeTeardown = teardown;
-  // Count every registrant before dispatch, so a synchronous settle cannot finish early.
+  // Decision: Count every registrant before dispatch, so a synchronous settle cannot finish early.
   const snapshot = [...activeRegistrations.values()];
   teardown.pending = snapshot.length;
   if (snapshot.length > 0) {
-    // Backstop: quarantine any pair still unconfirmed at the deadline. Referenced on purpose.
+    // Decision: Backstop: quarantine any pair still unconfirmed at the deadline. Referenced on purpose.
     const deadlineMs = Math.max(...snapshot.map((r) => r.registrant.teardownDeadlineMs));
     teardown.deadlineTimer = setTimeout(() => {
       for (const expire of teardown.expirePendingPairs) {
@@ -799,7 +798,7 @@ function coordinatorTearDownRegistrant(
     if (done) {
       return;
     }
-    // Synchronous: the sidecar must persist before a re-raise can end the process.
+    // Decision: Synchronous: the sidecar must persist before a re-raise can end the process.
     if (lockQuarantine !== undefined) {
       try {
         lockQuarantine({
@@ -809,7 +808,7 @@ function coordinatorTearDownRegistrant(
             `${teardown.signal} — ${detail}`,
         });
       } catch (failure) {
-        // Not durable: the watchdog now owns the lock, so the finish must not re-raise.
+        // Decision: Not durable: the watchdog now owns the lock, so the finish must not re-raise.
         teardown.persistFailed = true;
         process.stderr.write(`provision: ${(failure as Error).message}\n`);
       }
@@ -824,7 +823,7 @@ function coordinatorTearDownRegistrant(
     registrant.quarantine(detail);
     complete();
   };
-  // The coordinator-wide deadline expires the pair through the same idempotent path.
+  // Decision: The coordinator-wide deadline expires the pair through the same idempotent path.
   teardown.expirePendingPairs.push(quarantinePair);
   const outcome = registrant.signalGroup(teardown.signal);
   if (typeof outcome === 'object') {
@@ -851,10 +850,10 @@ function finishCoordinatorTeardown(teardown: CoordinatorTeardown): void {
   if (teardown.deadlineTimer !== undefined) {
     clearTimeout(teardown.deadlineTimer);
   }
-  // Remove the listeners so the re-raise takes Node's default action.
+  // Decision: Remove the listeners so the re-raise takes Node's default action.
   removeCoordinatorListeners();
   if (teardown.persistFailed || retentionWatchdog !== undefined) {
-    // A lock is not durably quarantined; re-raising would let the exit sweep release it.
+    // Decision: A lock is not durably quarantined; re-raising would let the exit sweep release it.
     activeTeardown = undefined;
     installCoordinatorListeners();
     process.stderr.write(
@@ -865,17 +864,16 @@ function finishCoordinatorTeardown(teardown: CoordinatorTeardown): void {
     );
     return;
   }
-  // Re-raise exactly once.
   if (reRaisedOnce) {
     return;
   }
   reRaisedOnce = true;
   process.kill(process.pid, teardown.signal);
-  // Signals arrive asynchronously; keep the loop alive so the process cannot exit 0 first.
+  // Decision: Signals arrive asynchronously; keep the loop alive so the process cannot exit 0 first.
   setTimeout(() => {}, 2_000);
 }
 
-// Retention watchdog for a quarantine that could not be persisted. The lock stays tracked,
+// Decision: Retention watchdog for a quarantine that could not be persisted. The lock stays tracked,
 // but proper-lockfile's exit sweep would remove it, so a referenced timer keeps the process
 // alive. Each tick releases normally if the group is gone, else retries persisting the sidecar.
 
@@ -901,11 +899,10 @@ function retainQuarantinedLock(lock: ProvisionLock, info: QuarantineInfo): void 
 }
 
 function armRetentionWatchdog(lock: ProvisionLock, info: QuarantineInfo): void {
-  // At most one provision per process → at most one retention; re-arming is a no-op.
+  // Decision: At most one provision per process → at most one retention; re-arming is a no-op.
   if (retentionWatchdog !== undefined) {
     return;
   }
-  // Surface the retained state LOUDLY, once, naming the pid and the lock path.
   process.stderr.write(
     `provision: warning — quarantine metadata for the unconfirmed Cloudflare operation process` +
       `${info.pid !== undefined ? ` (pid ${info.pid})` : ''} could not be persisted, so the ` +
@@ -924,7 +921,6 @@ function armRetentionWatchdog(lock: ProvisionLock, info: QuarantineInfo): void {
     }
   };
   const tick = (): void => {
-    // A dead group needs no quarantine: release normally.
     if (info.pid !== undefined) {
       let dead = false;
       try {
@@ -947,18 +943,18 @@ function armRetentionWatchdog(lock: ProvisionLock, info: QuarantineInfo): void {
         return;
       }
     }
-    // Retry durable persistence.
     try {
       lock.quarantine(info);
       resolveWatchdog();
       return;
-    } catch {
-      // Still failing — keep holding the process open and retry with backoff.
-    }
+    } catch {}
     attempt += 1;
     const delay = Math.min(RETENTION_RETRY_MIN_MS * 2 ** attempt, RETENTION_RETRY_MAX_MS);
     if (retentionWatchdog !== undefined) {
-      retentionWatchdog.timer = setTimeout(tick, delay); // REFERENCED — holds the process
+      retentionWatchdog.timer = setTimeout(
+        tick,
+        delay,
+      ); /* Decision: The timer is referenced on purpose: it keeps the process alive while the lock is retained. */
     }
   };
   retentionWatchdog = { lock, info, timer: setTimeout(tick, RETENTION_RETRY_MIN_MS) };
@@ -994,7 +990,7 @@ export function createDefaultRunWrangler(
     options?.killProcessGroup ??
     ((target: number, signal: NodeJS.Signals) => process.kill(target, signal));
   const [command, ...prefix] = launcher;
-  // POSIX: the child leads its own process group, so a group kill also reaches grandchildren.
+  // Decision: POSIX: the child leads its own process group, so a group kill also reaches grandchildren.
   const isWindows = process.platform === 'win32';
   const teardownDeadlineMs =
     options?.signalTeardownDeadlineMs ?? confirmGraceMs + SIGNAL_TEARDOWN_DEADLINE_MARGIN_MS;
@@ -1002,11 +998,10 @@ export function createDefaultRunWrangler(
     new Promise<RunWranglerResult>((resolvePromise, rejectPromise) => {
       const parallelWorkerUpload =
         options?.parallelWorkerUpload === true && args.type === 'versions.upload';
-      // The Cloudflare CLI asks only when both its input and output are a terminal.
+      // Decision: The Cloudflare CLI asks only when both its input and output are a terminal.
       const interactive =
         (args.type === 'versions.upload' || args.type === 'worker.deploy') &&
         args.interactive === true;
-      // A fatal-signal teardown is in progress: start no new work.
       if (activeTeardown !== undefined) {
         rejectPromise(
           new Error(
@@ -1017,7 +1012,7 @@ export function createDefaultRunWrangler(
         );
         return;
       }
-      // Only two immutable Worker uploads may overlap. This check, the spawn and the
+      // Decision: Only two immutable Worker uploads may overlap. This check, the spawn and the
       // registration run in one synchronous block.
       if (!canRegisterRunner(parallelWorkerUpload)) {
         rejectPromise(
@@ -1052,7 +1047,7 @@ export function createDefaultRunWrangler(
       let settled = false;
       let spawned = false;
       let postSpawnError: Error | undefined;
-      // Every outcome settles only after two facts: `closed` (the close event fired) and
+      // Decision: Every outcome settles only after two facts: `closed` (the close event fired) and
       // `groupGone` (the whole process group is gone). Otherwise the runner quarantines.
       let closed = false;
       let groupGone = false;
@@ -1068,27 +1063,26 @@ export function createDefaultRunWrangler(
         stderr += chunk;
       });
 
-      // Signal the whole process group; ESRCH counts as already gone.
       const signalGroup = (signal: NodeJS.Signals): 'signaled' | 'gone' | { error: Error } => {
         try {
           if (!isWindows && typeof child.pid === 'number') {
-            killProcessGroup(-child.pid, signal); // negative pid → the whole group
+            killProcessGroup(-child.pid, signal);
             return 'signaled';
           }
           if (isWindows && typeof child.pid === 'number') {
-            // Windows has no process groups. Check Node's exit bookkeeping first: until it is
+            // Decision: Windows has no process groups. Check Node's exit bookkeeping first: until it is
             // set, libuv still holds the process handle, so the pid cannot have been reused.
             if (child.exitCode !== null || child.signalCode !== null) {
               return 'gone';
             }
-            // `process.kill` reports ESRCH and EPERM separately; `child.kill()` returns false for both.
+            // Decision: `process.kill` reports ESRCH and EPERM separately; `child.kill()` returns false for both.
             killProcessGroup(child.pid, signal);
             return 'signaled';
           }
           if (child.kill(signal)) {
             return 'signaled';
           }
-          // `false` means the signal was not delivered, unless the child already exited.
+          // Decision: `false` means the signal was not delivered, unless the child already exited.
           if (child.exitCode !== null || child.signalCode !== null) {
             return 'gone';
           }
@@ -1110,7 +1104,7 @@ export function createDefaultRunWrangler(
           return true;
         }
         if (isWindows) {
-          // libuv's `kill(pid, 0)` is a real liveness check on Windows, and descendants die
+          // Decision: libuv's `kill(pid, 0)` is a real liveness check on Windows, and descendants die
           // with libuv's job object. Prefer Node's exit bookkeeping when it is set.
           if (child.exitCode !== null || child.signalCode !== null) {
             groupGone = true;
@@ -1126,7 +1120,7 @@ export function createDefaultRunWrangler(
         try {
           process.kill(-child.pid, 0);
         } catch (error) {
-          // EPERM: a member exists but cannot be signalled, so it counts as alive.
+          // Decision: EPERM: a member exists but cannot be signalled, so it counts as alive.
           groupGone = isAlreadyGoneKillError(error);
         }
         return groupGone;
@@ -1150,11 +1144,10 @@ export function createDefaultRunWrangler(
         settled = true;
         clearTimeout(commandTimer);
         deregisterSelf();
-        // An interactive process writes to the terminal, so it has no result envelope.
+        // Decision: An interactive process writes to the terminal, so it has no result envelope.
         resolvePromise(interactive ? result : decodeCloudflareOperationResult(result));
       };
 
-      // Reject with a quarantine error: the child could not be confirmed dead.
       const quarantine = (detail: string): void => {
         if (settled) {
           return;
@@ -1165,11 +1158,11 @@ export function createDefaultRunWrangler(
         rejectPromise(new WranglerQuarantineError(child.pid, detail));
       };
 
-      // Bounded confirmation loop shared by the settle side and the signal side. Poll timers
+      // Decision: Bounded confirmation loop shared by the settle side and the signal side. Poll timers
       // are referenced so the process cannot exit mid-confirmation.
       const confirmPollNudges: Array<() => void> = [];
       const nudgeConfirmPolls = (): void => {
-        // A poll never registers new waiters while running, so direct iteration is safe.
+        // Decision: A poll never registers new waiters while running, so direct iteration is safe.
         for (const poll of confirmPollNudges) {
           poll();
         }
@@ -1182,7 +1175,7 @@ export function createDefaultRunWrangler(
         const deadline = Date.now() + confirmGraceMs;
         let pollTimer: ReturnType<typeof setTimeout> | undefined;
         const poll = (): void => {
-          clearTimeout(pollTimer); // idempotent under an external nudge
+          clearTimeout(pollTimer);
           if (handlers.stopWhenSettled && settled) {
             return;
           }
@@ -1200,7 +1193,6 @@ export function createDefaultRunWrangler(
         poll();
       };
 
-      // Confirm both facts, then resolve; quarantine when the window expires.
       const confirmThenSettle = (makeResult: () => RunWranglerResult, what: string): void => {
         awaitConfirmedDead({
           stopWhenSettled: true,
@@ -1213,13 +1205,12 @@ export function createDefaultRunWrangler(
         });
       };
 
-      // The signal coordinator forwards parent signals to the group through this registrant.
       const registrant: TerminationRegistrant = {
         pid: () => child.pid,
         signalGroup,
         teardownDeadlineMs,
         markGroupGone: () => {
-          // ESRCH ⇒ the whole group already exited — only `close` remains to be seen.
+          // Decision: ESRCH ⇒ the whole group already exited — only `close` remains to be seen.
           groupGone = true;
         },
         awaitConfirmedDead: (onDone) => {
@@ -1238,12 +1229,10 @@ export function createDefaultRunWrangler(
         quarantine,
       };
 
-      // Hard timeout: SIGKILL the group, then confirm termination before settling.
       const commandTimer = setTimeout(() => {
         timedOut = true;
         const outcome = signalGroup('SIGKILL');
         if (typeof outcome === 'object') {
-          // A real kill failure: the child may still be running.
           quarantine(`the process group could not be killed: ${outcome.error.message}`);
           return;
         }
@@ -1261,9 +1250,9 @@ export function createDefaultRunWrangler(
           `the timeout SIGKILL (${timeoutStderr()})`,
         );
       }, timeoutMs);
-      // The timer stays referenced, so the process cannot exit 0 mid-command.
+      // Decision: The timer stays referenced, so the process cannot exit 0 mid-command.
 
-      // Node can emit `error` after a successful spawn. Only a genuine pre-spawn failure (no
+      // Decision: Node can emit `error` after a successful spawn. Only a genuine pre-spawn failure (no
       // pid, `spawn` never fired) settles directly; any other error goes through confirmation.
       const handleProcessError = (error: Error): void => {
         if (!spawned && typeof child.pid !== 'number') {
@@ -1271,7 +1260,6 @@ export function createDefaultRunWrangler(
           return;
         }
         if (settled || timedOut || postSpawnError !== undefined) {
-          // Already settling through another path.
           return;
         }
         postSpawnError = error;
@@ -1308,7 +1296,7 @@ export function createDefaultRunWrangler(
       child.stdin?.on('error', handleProcessError);
       child.on('close', (code, signal) => {
         closed = true;
-        // Node destroys stdin on child exit without necessarily emitting an
+        // Decision: Node destroys stdin on child exit without necessarily emitting an
         // error. Exit 0 cannot confirm success while input remains unwritten.
         if (code === 0 && child.stdin && !child.stdin.writableFinished) {
           handleProcessError(
@@ -1316,12 +1304,12 @@ export function createDefaultRunWrangler(
           );
         }
         if (timedOut || postSpawnError !== undefined) {
-          // That path settles once the group is also gone; nudge its poll.
+          // Decision: That path settles once the group is also gone; nudge its poll.
           nudgeConfirmPolls();
           return;
         }
         clearTimeout(commandTimer);
-        // `close` alone is not enough: a grandchild with its own stdio can outlive the leader.
+        // Decision: `close` alone is not enough: a grandchild with its own stdio can outlive the leader.
         // Settle only once the group is gone, killing any survivors first.
         const makeResult = (): RunWranglerResult =>
           normalizeRunWranglerResult({ stdout, stderr, status: code, signal });
@@ -1345,11 +1333,11 @@ export function createDefaultRunWrangler(
           `the child's exit (status ${String(code)}; surviving process-group members were ` +
             `SIGKILLed)`,
         );
-        // Let the signal-side poll (if any) observe `closed` promptly too.
+        // Decision: Let the signal-side poll (if any) observe `closed` promptly too.
         nudgeConfirmPolls();
       });
 
-      // Register last, in the same synchronous block as the pre-spawn checks.
+      // Decision: Register last, in the same synchronous block as the pre-spawn checks.
       registerRunner(registrant, parallelWorkerUpload);
       options?.onSpawnedChild?.(child);
       if (opts.input !== undefined) {
@@ -1382,7 +1370,7 @@ export function normalizeRunWranglerResult(result: {
     );
   }
   const failed = typeof result.status !== 'number' || result.signal != null || result.error != null;
-  // A failure must be non-zero. Keep a genuine non-zero exit code when present;
+  // Decision: A failure must be non-zero. Keep a genuine non-zero exit code when present;
   // otherwise synthesize `1` (a null/absent status under a signal/spawn error).
   const status = failed
     ? typeof result.status === 'number' && result.status !== 0
@@ -1391,7 +1379,7 @@ export function normalizeRunWranglerResult(result: {
     : (result.status as number);
   const baseStderr = result.stderr ?? '';
   const stderr = notes.length > 0 ? [baseStderr, ...notes].filter(Boolean).join('\n') : baseStderr;
-  // Keep provenance structured so classifiers can tell a clean failure from a kill.
+  // Decision: Keep provenance structured so classifiers can tell a clean failure from a kill.
   return {
     stdout,
     stderr,
@@ -1427,7 +1415,7 @@ function withListerDeadline<T>(start: (signal: AbortSignal) => Promise<T>, ms: n
       controller.abort();
       reject(new Error(`the existence check exceeded the ${ms}ms deadline`));
     }, ms);
-    // Referenced until settled: the lock heartbeat is unref'd, so an unref'd timer could let
+    // Decision: Referenced until settled: the lock heartbeat is unref'd, so an unref'd timer could let
     // the process exit 0 while a lister never settles.
     // Defer `start` into the promise chain so a synchronous throw is captured as a rejection.
     Promise.resolve()
@@ -1464,11 +1452,11 @@ function createDefaultListHyperdriveConfigs(apiToken?: string): ListHyperdriveCo
     return undefined;
   }
   return async ({ accountId, apiBaseUrl, signal }) => {
-    // Concatenate exactly like wrangler (no trimming, no encoding), so both hit the same URL.
+    // Decision: Concatenate exactly like wrangler (no trimming, no encoding), so both hit the same URL.
     const perPage = 100;
     const listUrl = (page: number): string =>
       `${apiBaseUrl}/accounts/${accountId}/hyperdrive/configs?page=${page}&per_page=${perPage}`;
-    // Read every page and prove the list is complete against `result_info.total_count`. A
+    // Decision: Read every page and prove the list is complete against `result_info.total_count`. A
     // malformed payload, missing metadata, duplicate id or early empty page fails closed.
     const byId = new Map<string, HyperdriveConfig>();
     let expectedTotal: number | undefined;
@@ -1537,7 +1525,7 @@ function createDefaultListHyperdriveConfigs(apiToken?: string): ListHyperdriveCo
             'cannot prove the list is complete',
         );
       }
-      // Each page adds at least one new id, so the loop ends.
+      // Decision: Each page adds at least one new id, so the loop ends.
       if (byId.size === expectedTotal) {
         break;
       }
@@ -1601,7 +1589,7 @@ function selectHyperdriveMatch(
   return named[0];
 }
 
-// Cross-process lock held for the whole provision. It serializes account reconciliation and
+// Decision: Cross-process lock held for the whole provision. It serializes account reconciliation and
 // Hyperdrive list→create (names are not unique), so a second run sees the first run's writes.
 
 interface ProvisionLock {
@@ -1617,7 +1605,6 @@ interface ProvisionLock {
   quarantine: (info: QuarantineInfo) => void;
 }
 
-/** The quarantine sidecar path for a lock target. */
 function quarantineSidecarPath(lockTarget: string): string {
   return `${lockTarget}.quarantine.json`;
 }
@@ -1638,7 +1625,7 @@ function writeQuarantineSidecar(
       reason: info.reason,
       quarantinedAt: new Date().toISOString(),
       quarantinedBy: process.pid,
-      // A recovery may only clear the exact generation it inspected.
+      // Decision: A recovery may only clear the exact generation it inspected.
       generation: `${randomUUID()}.${process.hrtime.bigint().toString()}`,
     },
     null,
@@ -1658,11 +1645,11 @@ function writeQuarantineSidecar(
     try {
       unlinkSync(tmpPath);
     } catch {
-      // Best-effort temp cleanup — the write failure below is the real signal.
+      // Decision: Best-effort temp cleanup — the write failure below is the real signal.
     }
     throw error;
   }
-  // Fsync the directory so the rename survives a crash. Errors that mean "directory fsync is
+  // Decision: Fsync the directory so the rename survives a crash. Errors that mean "directory fsync is
   // unsupported here" (Windows, some mounts) are ignored; any other error rolls back and throws.
   const dirOpen = dirDurability?.openSync ?? openSync;
   const dirFsync = dirDurability?.fsyncSync ?? fsyncSync;
@@ -1680,13 +1667,12 @@ function writeQuarantineSidecar(
       try {
         unlinkSync(sidecarPath);
       } catch {
-        // Best-effort rollback; a leftover sidecar only makes the gate stricter.
+        // Decision: Best-effort rollback; a leftover sidecar only makes the gate stricter.
       }
       throw error;
     }
-    // Platform-unsupported directory fsync — the read-back below is still required.
+    // Decision: Platform-unsupported directory fsync — the read-back below is still required.
   }
-  // VERIFY: the durable marker must be present and carry the recorded owner.
   const readBack: unknown = JSON.parse(readFileSync(sidecarPath, 'utf-8'));
   if (
     !isRecord(readBack) ||
@@ -1725,17 +1711,17 @@ function assertQuarantineClearedOrClear(lockTarget: string, onBeforeClear?: () =
   const reason = typeof recorded?.reason === 'string' ? recorded.reason : undefined;
   const quarantinedAt =
     typeof recorded?.quarantinedAt === 'string' ? recorded.quarantinedAt : undefined;
-  // Probe the group (negative pid) on POSIX only: on win32 a negative pid reports ESRCH for
+  // Decision: Probe the group (negative pid) on POSIX only: on win32 a negative pid reports ESRCH for
   // any process, which would clear a live quarantine.
   const probeTarget = pgid !== undefined && process.platform !== 'win32' ? -pgid : (pid ?? pgid);
   let confirmedDead = false;
   if (probeTarget !== undefined) {
     try {
       process.kill(probeTarget, 0);
-      // Signal 0 succeeded — some member of the recorded group still exists → alive.
+      // Decision: Signal 0 succeeded — some member of the recorded group still exists → alive.
     } catch (error) {
       confirmedDead = isAlreadyGoneKillError(error);
-      // EPERM/other — the probe could not be performed → treat as possibly alive.
+      // Decision: EPERM/other — the probe could not be performed → treat as possibly alive.
     }
   }
   if (!confirmedDead) {
@@ -1754,7 +1740,7 @@ function assertQuarantineClearedOrClear(lockTarget: string, onBeforeClear?: () =
         `"${lockTarget}.lock" directory manually, then retry.`,
     );
   }
-  // Clear only if the sidecar still has the generation inspected above: the current lock
+  // Decision: Clear only if the sidecar still has the generation inspected above: the current lock
   // holder may have written a newer one meanwhile.
   const inspectedGeneration =
     typeof recorded?.generation === 'string' ? recorded.generation : undefined;
@@ -1765,10 +1751,10 @@ function assertQuarantineClearedOrClear(lockTarget: string, onBeforeClear?: () =
     current = isRecord(reread) ? reread : undefined;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      // Concurrently cleared — nothing left to remove; proceed to normal acquisition.
+      // Decision: Concurrently cleared — nothing left to remove; proceed to normal acquisition.
       return;
     }
-    // Unreadable at the re-read → the generation cannot be verified → fail closed below.
+    // Decision: Unreadable at the re-read → the generation cannot be verified → fail closed below.
     current = undefined;
   }
   const currentGeneration =
@@ -1786,7 +1772,7 @@ function assertQuarantineClearedOrClear(lockTarget: string, onBeforeClear?: () =
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw error;
     }
-    // Another acquirer cleared it concurrently — proceed to normal acquisition.
+    // Decision: Another acquirer cleared it concurrently — proceed to normal acquisition.
   }
 }
 
@@ -1824,7 +1810,6 @@ function canonicalizeConfigPath(absoluteConfigPath: string, depth = 0): string {
   try {
     return toPosixConfigPath(realpathSync(absoluteConfigPath));
   } catch (error) {
-    // Only ENOENT means "not created yet"; other errors are real.
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw error;
     }
@@ -1948,7 +1933,7 @@ export async function acquireProvisionLock(
         throw error;
       },
     });
-  // The recovery mutex always uses the default fs, never the test seam.
+  // Decision: The recovery mutex always uses the default fs, never the test seam.
   const acquireRecoveryOnce = (): ReturnType<typeof lockfile.lock> =>
     lockfile.lock(recoveryTarget, {
       stale: RECOVERY_LOCK_STALE_MS,
@@ -1960,7 +1945,6 @@ export async function acquireProvisionLock(
     });
   let release: Awaited<ReturnType<typeof lockfile.lock>> | undefined;
   for (let attempt = 0; ; attempt++) {
-    // (0) Recovery mutex; back off while another process holds it.
     let releaseRecovery: Awaited<ReturnType<typeof lockfile.lock>>;
     try {
       releaseRecovery = await acquireRecoveryOnce();
@@ -1973,20 +1957,18 @@ export async function acquireProvisionLock(
     }
     let mainHeldByOther = false;
     try {
-      // (1) Quarantine gate.
       assertQuarantineClearedOrClear(lockTarget, lockOptions?.onBeforeQuarantineClear);
-      // (2) One acquisition attempt; a held mutex backs off and loops.
       try {
         release = await acquireOnce();
       } catch (error) {
         if (isElocked(error) && attempt < retryCfg.retries) {
-          mainHeldByOther = true; // back off AFTER releasing the recovery mutex
+          mainHeldByOther = true; /* Decision: back off AFTER releasing the recovery mutex */
         } else {
           throw error;
         }
       }
       if (!mainHeldByOther) {
-        // (3) Revalidate under ownership: the previous holder may have quarantined after
+        // Decision: (3) Revalidate under ownership: the previous holder may have quarantined after
         // the gate ran.
         try {
           assertQuarantineClearedOrClear(lockTarget, lockOptions?.onBeforeQuarantineClear);
@@ -2015,7 +1997,7 @@ export async function acquireProvisionLock(
       try {
         await releaseRecovery();
       } catch {
-        // The recovery mutex goes stale within seconds; never fail on its release.
+        // Decision: The recovery mutex goes stale within seconds; never fail on its release.
       }
     }
     if (!mainHeldByOther) {
@@ -2023,7 +2005,7 @@ export async function acquireProvisionLock(
     }
     await backoffDelay(attempt);
   }
-  // One shared release promise. A real unlock failure is surfaced, because the mutex
+  // Decision: One shared release promise. A real unlock failure is surfaced, because the mutex
   // directory may remain; ERELEASED means it was already dropped and counts as success.
   const acquiredRelease = release!;
   let releasePromise: Promise<void> | undefined;
@@ -2045,14 +2027,13 @@ export async function acquireProvisionLock(
   return {
     lockTargetPath: lockTarget,
     release: () => (releasePromise ??= doRelease()),
-    // Detach the lock from proper-lockfile's tracking but keep the mutex directory, so the
+    // Decision: Detach the lock from proper-lockfile's tracking but keep the mutex directory, so the
     // exit sweep leaves it and the heartbeat stops; the sidecar then guards it.
     quarantine: (info: QuarantineInfo) => {
-      // A no-op after a successful release (nothing to retain).
       if (releasePromise !== undefined) {
         return;
       }
-      // The sidecar must be durable before detaching; otherwise the lock stays tracked.
+      // Decision: The sidecar must be durable before detaching; otherwise the lock stays tracked.
       try {
         writeQuarantineSidecar(quarantineSidecarPath(lockTarget), info, lockOptions?.dirDurability);
       } catch (error) {
@@ -2069,17 +2050,17 @@ export async function acquireProvisionLock(
             `"${lockTarget}.lock" directory if it persists, then re-run.`,
         );
       }
-      releasePromise = Promise.resolve(); // any later release() is a settled no-op
+      releasePromise = Promise.resolve(); /* Decision: any later release() is a settled no-op */
       const internals = loadProperLockfileInternals();
       const locks = internals?.getLocks?.();
       if (!locks) {
-        return; // degraded: retained only until process exit (internals unavailable)
+        return; /* Decision: degraded: retained only until process exit (internals unavailable) */
       }
-      // Use the native key spelling proper-lockfile stores.
+      // Decision: Use the native key spelling proper-lockfile stores.
       const key = resolveProperLockfileKey(lockTarget);
       const tracked = locks[key];
       if (tracked) {
-        // Mark it released first: an in-flight heartbeat callback then skips it instead of
+        // Decision: Mark it released first: an in-flight heartbeat callback then skips it instead of
         // reporting the retained lock as compromised (our onCompromised throws).
         tracked.released = true;
         if (tracked.updateTimeout !== undefined) {
@@ -2288,13 +2269,10 @@ interface CreatePostcondition {
   field: string;
   /** The member key that must hold a REAL (non-placeholder) id afterward. */
   idField: string;
-  /** Resource-specific id format check. */
   idValidator: (value: unknown) => value is string;
   /** Field that must equal the requested name (R2 `bucket_name`, D1 `database_name`). */
   nameField?: string;
-  /** Human resource name for the message. */
   resource: string;
-  /** Operation label for the message. */
   command: string;
 }
 
@@ -2322,10 +2300,10 @@ function assertCreateWroteRealId(
   }
 }
 
-// Two separate name checks:
-//   1. An option-injection guard for every argv positional: no empty value, leading `-` or
-//      control character (queue names come from filenames).
-//   2. Each resource's own Cloudflare naming grammar.
+// Decision: Two separate name checks:
+// 1. An option-injection guard for every argv positional: no empty value, leading `-` or
+// control character (queue names come from filenames).
+// 2. Each resource's own Cloudflare naming grammar.
 
 /** True when `value` contains an ASCII control character (0x00–0x1F or 0x7F). */
 function hasControlChar(value: string): boolean {
@@ -2368,7 +2346,7 @@ const RESOURCE_NAME_GRAMMARS: Record<
     rule: 'be 3–63 characters, contain only lowercase letters, digits and "-", and begin and end with a letter or digit',
   },
   kvTitle: {
-    // Control characters and a leading "-" are rejected by assertNoOptionInjection.
+    // Decision: Control characters and a leading "-" are rejected by assertNoOptionInjection.
     re: /^[\s\S]{1,512}$/,
     label: 'KV namespace',
     rule: 'be 1–512 characters and contain no control characters (spaces are allowed)',
@@ -2437,7 +2415,7 @@ export async function provisionCloudflareResources(
   desired: DesiredResourceSet,
   opts?: ProvisionOptions,
 ): Promise<ProvisionResult> {
-  // Taken synchronously, so two same-tick calls cannot both pass.
+  // Decision: Taken synchronously, so two same-tick calls cannot both pass.
   const releaseProvisionSlot = acquireProcessProvisionSlot();
   try {
     return await provisionWithProcessSlot(root, rootWranglerPath, desired, opts);
@@ -2453,17 +2431,17 @@ async function provisionWithProcessSlot(
   desired: DesiredResourceSet,
   opts?: ProvisionOptions,
 ): Promise<ProvisionResult> {
-  // One absolute, canonical path for reads, writes, `-c` and the lock, resolved against
+  // Decision: One absolute, canonical path for reads, writes, `-c` and the lock, resolved against
   // `root` (wrangler runs there) so symlink aliases share one lock.
   const configPath = canonicalizeConfigPath(resolve(root, rootWranglerPath));
 
-  // One lock for the whole provision, keyed on the local config path. It does not
+  // Decision: One lock for the whole provision, keyed on the local config path. It does not
   // coordinate across machines; provisioning is a single-operator action.
   const lock = await acquireProvisionLock(configPath, opts?.lockOptions);
-  // A fatal signal with an unconfirmed child quarantines this lock through the hook.
+  // Decision: A fatal signal with an unconfirmed child quarantines this lock through the hook.
   const quarantineHook = (info: QuarantineInfo): void => retainQuarantinedLock(lock, info);
   activeProvisionQuarantineHook = quarantineHook;
-  // Always release, and never hide a release failure; with a body error, keep both.
+  // Decision: Always release, and never hide a release failure; with a body error, keep both.
   let result: ProvisionResult | undefined;
   let threw = false;
   let bodyError: unknown;
@@ -2473,12 +2451,12 @@ async function provisionWithProcessSlot(
     threw = true;
     bodyError = error;
   }
-  // Every call has settled, so the hook is no longer needed.
+  // Decision: Every call has settled, so the hook is no longer needed.
   if (activeProvisionQuarantineHook === quarantineHook) {
     activeProvisionQuarantineHook = undefined;
   }
   if (threw) {
-    // An unconfirmed child may still be running, so keep the lock.
+    // Decision: An unconfirmed child may still be running, so keep the lock.
     if (isQuarantineError(bodyError)) {
       try {
         retainQuarantinedLock(lock, {
@@ -2486,7 +2464,7 @@ async function provisionWithProcessSlot(
           reason: typeof bodyError.message === 'string' ? bodyError.message : String(bodyError),
         });
       } catch (quarantineError) {
-        // Not persisted: the watchdog keeps the lock held. Surface both errors.
+        // Decision: Not persisted: the watchdog keeps the lock held. Surface both errors.
         throw new AggregateError(
           [bodyError, quarantineError],
           `provision failed with an unconfirmed Cloudflare operation process AND its quarantine metadata ` +
@@ -2501,7 +2479,7 @@ async function provisionWithProcessSlot(
       }
       throw bodyError;
     }
-    // A release failure is surfaced together with the body error.
+    // Decision: A release failure is surfaced together with the body error.
     let releaseError: unknown;
     try {
       await lock.release();
@@ -2520,7 +2498,7 @@ async function provisionWithProcessSlot(
     }
     throw bodyError;
   }
-  // Body succeeded: a genuine unlock failure (leaked mutex) rejects the provision.
+  // Decision: Body succeeded: a genuine unlock failure (leaked mutex) rejects the provision.
   await lock.release();
   return result as ProvisionResult;
 }
@@ -2589,7 +2567,7 @@ async function reconcileD1(
     const migrationsDir = desired.d1.migrationsDir ?? D1_MIGRATIONS_DIR;
     const entry = readBindingEntry(configPath, 'd1_databases', binding);
     if (entry && isRealD1Id(entry.database_id)) {
-      // A stored name that differs from the desired one points at another database.
+      // Decision: A stored name that differs from the desired one points at another database.
       const storedName = entry.database_name;
       if (storedName !== undefined && storedName !== name) {
         throw new Error(
@@ -2601,7 +2579,7 @@ async function reconcileD1(
             `desired database, then retry.`,
         );
       }
-      // A crash after create may have skipped migrations_dir, so set it on every run.
+      // Decision: A crash after create may have skipped migrations_dir, so set it on every run.
       const res = write({ d1MigrationsDir: { binding, dir: migrationsDir } });
       assertD1MigrationsDirApplied(res, binding, configPath);
       resources.push({ kind: 'd1', binding, name, action: 'reused', id: entry.database_id });
@@ -2624,7 +2602,7 @@ async function reconcileD1(
         nameField: 'name',
         nameLabel: 'named',
       });
-      // Adopt a single valid claimant; several or an ambiguous one fail closed; none creates.
+      // Decision: Adopt a single valid claimant; several or an ambiguous one fail closed; none creates.
       const claimants = databases
         .map((db) => normalizeD1(db, name))
         .filter((m): m is Exclude<D1Match, { kind: 'other' }> => m.kind !== 'other');
@@ -2644,7 +2622,7 @@ async function reconcileD1(
             `account and retry.`,
         );
       }
-      // After the guards above, a lone claimant is necessarily a valid `match`.
+      // Decision: After the guards above, a lone claimant is necessarily a valid `match`.
       const existing =
         claimants.length === 1 && claimants[0].kind === 'match' ? claimants[0] : undefined;
       if (existing) {
@@ -2658,7 +2636,6 @@ async function reconcileD1(
       } else {
         const created = await runWrangler({ type: 'd1.create', name: name, binding, configPath });
         if (isCleanSuccess(created)) {
-          // Verify the id landed, then set migrations_dir.
           assertCreateWroteRealId(
             configPath,
             {
@@ -2677,7 +2654,7 @@ async function reconcileD1(
           assertD1MigrationsDirApplied(res, binding, configPath);
           resources.push({ kind: 'd1', binding, name, action: 'created' });
         } else if (isCleanFailure(created) && isAlreadyExistsError(created)) {
-          // Created between list and create (code 7502): adopt only an exact `d1 info` match.
+          // Decision: Created between list and create (code 7502): adopt only an exact `d1 info` match.
           const infoResult = await runWrangler({ type: 'd1.info', name: name, configPath }, {});
           assertDiscoverySucceeded(infoResult, `Cloudflare d1 info ${name}`);
           const info = normalizeD1(isRecord(infoResult.data) ? infoResult.data : undefined, name);
@@ -2703,11 +2680,11 @@ async function reconcileD1(
       }
     }
 
-    // Omitted never changes existing replication or acquires an API bearer.
+    // Decision: Omitted never changes existing replication or acquires an API bearer.
     if (desired.d1.readReplication === undefined) {
       return;
     }
-    // The database-level setting is separate from the Worker binding.
+    // Decision: The database-level setting is separate from the Worker binding.
     const databaseId = readBindingEntry(configPath, 'd1_databases', binding)?.database_id;
     if (!isRealD1Id(databaseId)) {
       throw new Error(`provision: D1 binding ${binding} has no real database id after setup.`);
@@ -2758,7 +2735,7 @@ async function reconcileKv(
       resources.push({ kind: 'kv', binding, name: title, action: 'reused', id: entry.id });
       continue;
     }
-    // KV titles are not unique and create never dedupes, so this list is the only orphan guard.
+    // Decision: KV titles are not unique and create never dedupes, so this list is the only orphan guard.
     const listResult = await runWrangler({ type: 'kv.namespace.list', configPath }, {});
     assertDiscoverySucceeded(listResult, 'Cloudflare kv namespace list');
     const rawList = listResult.data;
@@ -2776,12 +2753,12 @@ async function reconcileKv(
       nameField: 'title',
       nameLabel: 'titled',
     });
-    // validateResourceList already required a real KV id on every member.
+    // Decision: validateResourceList already required a real KV id on every member.
     const matches = namespaces
       .filter((ns) => ns.title === title)
       .map((ns) => ({ id: ns.id as string }));
     if (matches.length > 0) {
-      // Pick the smallest id so re-runs adopt the same namespace.
+      // Decision: Pick the smallest id so re-runs adopt the same namespace.
       const chosen = matches.reduce((min, ns) => (ns.id < min.id ? ns : min));
       if (matches.length > 1) {
         log.warn(
@@ -2835,7 +2812,7 @@ async function reconcileR2(
   if (desired.r2) {
     const { binding, bucketName } = desired.r2;
     const entry = readBindingEntry(configPath, 'r2_buckets', binding);
-    // `bucket_name` is the identity: a stored real name that differs is a contradiction.
+    // Decision: `bucket_name` is the identity: a stored real name that differs is a contradiction.
     const storedBucketName = entry?.bucket_name;
     if (entry && isRealStoredR2BucketName(storedBucketName, bucketName)) {
       if (storedBucketName !== bucketName) {
@@ -2850,10 +2827,9 @@ async function reconcileR2(
       }
       resources.push({ kind: 'r2', binding, name: bucketName, action: 'reused' });
     } else {
-      // Bucket names are account-unique, so probe by name.
+      // Decision: Bucket names are account-unique, so probe by name.
       const info = await runWrangler({ type: 'r2.bucket.info', name: bucketName, configPath }, {});
       if (isCleanSuccess(info)) {
-        // Adopt only when the payload names this bucket.
         const payload = info.data;
         if (!isRecord(payload) || payload.name !== bucketName) {
           throw new Error(
@@ -2878,7 +2854,7 @@ async function reconcileR2(
             `provision: Cloudflare r2 bucket create ${bucketName} failed: ${created.stderr || created.stdout}`,
           );
         }
-        // No placeholder rule here: a bucket really named `default` is valid.
+        // Decision: No placeholder rule here: a bucket really named `default` is valid.
         assertCreateWroteRealId(
           configPath,
           {
@@ -2892,7 +2868,7 @@ async function reconcileR2(
           binding,
           bucketName,
         );
-        // For a bucket named `default`, the config cannot tell a real create from the
+        // Decision: For a bucket named `default`, the config cannot tell a real create from the
         // placeholder, so confirm remotely.
         if (bucketName === R2_BUCKET_NAME_PLACEHOLDER) {
           const verify = await runWrangler(
@@ -2916,7 +2892,7 @@ async function reconcileR2(
         persistCreatedConfig();
         resources.push({ kind: 'r2', binding, name: bucketName, action: 'created' });
       } else {
-        // Any other failure: the bucket may exist, so do not create.
+        // Decision: Any other failure: the bucket may exist, so do not create.
         throw new Error(
           `provision: Cloudflare r2 bucket info ${bucketName} failed: ${info.stderr || info.stdout}. ` +
             `Cannot determine whether the bucket exists; refusing to create a possible duplicate.`,
@@ -2939,7 +2915,7 @@ async function reconcileHyperdrive(
   redactSecrets: (value: string) => string,
   opts?: ProvisionOptions,
 ): Promise<void> {
-  // Hyperdrive create duplicates same-named configs and there is no machine-readable list, so
+  // Decision: Hyperdrive create duplicates same-named configs and there is no machine-readable list, so
   // existence is checked through the REST lister. Adoption needs no connection string.
   if (desired.hyperdrive) {
     const { binding, name, connectionString } = desired.hyperdrive;
@@ -2949,7 +2925,7 @@ async function reconcileHyperdrive(
     } else {
       const lister =
         opts?.listHyperdriveConfigs ?? createDefaultListHyperdriveConfigs(opts?.apiToken);
-      // Existence stays unknown until the lister returns a real array.
+      // Decision: Existence stays unknown until the lister returns a real array.
       let validatedConfigs: Array<unknown> | undefined;
       let existenceUnknown = true;
       if (lister) {
@@ -2972,7 +2948,7 @@ async function reconcileHyperdrive(
           validatedConfigs = result;
           existenceUnknown = false;
         } catch (error) {
-          // A network error can echo a URL carrying userinfo credentials.
+          // Decision: A network error can echo a URL carrying userinfo credentials.
           log.warn(
             `Hyperdrive existence check for ${name} failed: ` +
               redactSecrets(error instanceof Error ? error.message : String(error)),
@@ -2981,7 +2957,7 @@ async function reconcileHyperdrive(
           validatedConfigs = undefined;
         }
       }
-      // Validate outside the try, so a malformed list is a hard failure, not "unknown".
+      // Decision: Validate outside the try, so a malformed list is a hard failure, not "unknown".
       const existing =
         validatedConfigs !== undefined
           ? selectHyperdriveMatch(validatedConfigs, name, configPath)
@@ -2991,12 +2967,11 @@ async function reconcileHyperdrive(
         write({ hyperdrive: { binding, id: existing.id } });
         resources.push({ kind: 'hyperdrive', binding, name, action: 'adopted', id: existing.id });
       } else if (!connectionString) {
-        // Without a connection string we can never create, so skip.
+        // Decision: Without a connection string we can never create, so skip.
         const reason = 'no connection string provided';
         log.warn(`skipping Hyperdrive config ${name}: ${reason}`);
         resources.push({ kind: 'hyperdrive', binding, name, action: 'skipped', reason });
       } else if (existenceUnknown) {
-        // We would create but cannot check for a duplicate.
         throw new Error(
           `provision: could not check whether Hyperdrive config ${JSON.stringify(name)} already ` +
             `exists (see the warning above). A create would duplicate a config with the same ` +
@@ -3038,15 +3013,15 @@ async function reconcileQueues(
   runWrangler: PinnedRunWrangler,
   resources: Array<ProvisionOutcome>,
 ): Promise<void> {
-  // Only ensures each queue exists; the deploy orchestrator writes the queue bindings.
+  // Decision: Only ensures each queue exists; the deploy orchestrator writes the queue bindings.
   for (const name of desired.queues) {
     const info = await runWrangler({ type: 'queues.info', name: name, configPath });
-    // Reuse only when the probe names this queue; a bare exit 0 is not trusted.
+    // Decision: Reuse only when the probe names this queue; a bare exit 0 is not trusted.
     if (queueInfoConfirmsExists(info, name)) {
       resources.push({ kind: 'queue', name, action: 'reused' });
       continue;
     }
-    // Create only on a typed not-found; anything else fails closed.
+    // Decision: Create only on a typed not-found; anything else fails closed.
     if (!isConfirmedAbsent(info, 'queue')) {
       throw new Error(
         `provision: Cloudflare queues info ${name} failed or did not confirm the queue exists: ` +
@@ -3059,7 +3034,7 @@ async function reconcileQueues(
         `provision: Cloudflare queues create ${name} failed: ${created.stderr || created.stdout}`,
       );
     }
-    // Queue creates write no config, so re-probe to confirm.
+    // Decision: Queue creates write no config, so re-probe to confirm.
     const verify = await runWrangler({ type: 'queues.info', name: name, configPath });
     if (!queueInfoConfirmsExists(verify, name)) {
       throw new Error(
@@ -3079,14 +3054,14 @@ async function provisionCloudflareResourcesLocked(
   desired: DesiredResourceSet,
   opts?: ProvisionOptions,
 ): Promise<ProvisionResult> {
-  // jsonc-parser accepts duplicate members, so reject them before any remote work.
+  // Decision: jsonc-parser accepts duplicate members, so reject them before any remote work.
   if (existsSync(configPath)) {
     const raw = readFileSync(configPath, 'utf-8');
     const content = raw.startsWith(UTF8_BOM) ? raw.slice(UTF8_BOM.length) : raw;
     assertNoDuplicateMembers(content, configPath);
   }
 
-  // Validate every argv name before any remote work.
+  // Decision: Validate every argv name before any remote work.
   if (desired.d1) {
     assertValidResourceName('d1', desired.d1.name);
   }
@@ -3103,7 +3078,7 @@ async function provisionCloudflareResourcesLocked(
     assertValidResourceName('queue', queueName);
   }
 
-  // Effective account: config `account_id`, then `opts.accountId`, then CLOUDFLARE_ACCOUNT_ID.
+  // Decision: Effective account: config `account_id`, then `opts.accountId`, then CLOUDFLARE_ACCOUNT_ID.
   // Wrangler prefers the config value, so a config/option mismatch fails closed.
   const rootConfig = readRootConfig(configPath);
   const rawConfigAccountId = rootConfig.account_id;
@@ -3111,7 +3086,7 @@ async function provisionCloudflareResourcesLocked(
     typeof rawConfigAccountId === 'string' && rawConfigAccountId.length > 0
       ? rawConfigAccountId
       : undefined;
-  // `compliance_region` selects the public or FedRAMP API base.
+  // Decision: `compliance_region` selects the public or FedRAMP API base.
   const rawComplianceRegion = rootConfig.compliance_region;
   if (rawComplianceRegion !== undefined && typeof rawComplianceRegion !== 'string') {
     throw new Error(
@@ -3119,7 +3094,7 @@ async function provisionCloudflareResourcesLocked(
         `"fedramp_high". Fix the config and retry.`,
     );
   }
-  // Passed through as-is so an invalid value fails like it does in wrangler.
+  // Decision: Passed through as-is so an invalid value fails like it does in wrangler.
   const configComplianceRegion =
     typeof rawComplianceRegion === 'string' ? rawComplianceRegion : undefined;
   if (configAccountId && opts?.accountId && configAccountId !== opts.accountId) {
@@ -3144,7 +3119,6 @@ async function provisionCloudflareResourcesLocked(
   ): WriteProvisionedWranglerResult => writeProvisionedWranglerConfig(root, patch, { configPath });
   const persistCreatedConfig = (): void => persistMaterializedWranglerConfig(configPath);
 
-  // Any resource to ensure implies remote work (list/info/create/REST).
   const hasRemoteWork =
     !!desired.d1 ||
     desired.kvNamespaces.length > 0 ||
@@ -3152,7 +3126,7 @@ async function provisionCloudflareResourcesLocked(
     !!desired.hyperdrive ||
     desired.queues.length > 0;
 
-  // Remote work needs a pinned account; otherwise a retry under another account could
+  // Decision: Remote work needs a pinned account; otherwise a retry under another account could
   // rebind these resources.
   if (hasRemoteWork && !effectiveAccountId) {
     throw new Error(
@@ -3162,19 +3136,19 @@ async function provisionCloudflareResourcesLocked(
     );
   }
 
-  // Cloudflare tooling reads project dotenv files; reject transport redirects first.
+  // Decision: Cloudflare tooling reads project dotenv files; reject transport redirects first.
   if (hasRemoteWork) {
     assertNoTransportRedirectInProjectDotenv(root);
   }
 
-  // The Hyperdrive existence check needs an API token (browser OAuth cannot call it). Stop
+  // Decision: The Hyperdrive existence check needs an API token (browser OAuth cannot call it). Stop
   // before the account pin and any create when no route can reach a real Hyperdrive id: a
   // connection string without a token, or neither a string nor a way to look it up.
   if (desired.hyperdrive && !opts?.listHyperdriveConfigs) {
     const { binding, name, connectionString } = desired.hyperdrive;
     const entry = readBindingEntry(configPath, 'hyperdrive', binding);
     const alreadyProvisioned = entry !== undefined && isRealHyperdriveId(entry.id);
-    // An already-provisioned Hyperdrive needs no token.
+    // Decision: An already-provisioned Hyperdrive needs no token.
     if (!alreadyProvisioned && !resolveHyperdriveApiToken(opts?.apiToken)) {
       if (connectionString) {
         throw new Error(
@@ -3189,7 +3163,7 @@ async function provisionCloudflareResourcesLocked(
             `Hyperdrive needs no token.`,
         );
       }
-      // This run could only skip, which deploy treats as fatal. DATABASE_URL must come from
+      // Decision: This run could only skip, which deploy treats as fatal. DATABASE_URL must come from
       // the shell: project dotenv is read only inside the credential-scrubbed build.
       throw new Error(
         `provision: Hyperdrive config ${JSON.stringify(name)} has no ID yet, and ` +
@@ -3204,7 +3178,7 @@ async function provisionCloudflareResourcesLocked(
     }
   }
 
-  // Persist account_id before any create, so a retry under another account fails the
+  // Decision: Persist account_id before any create, so a retry under another account fails the
   // reconciliation above instead of rebinding these ids.
   let accountIdWritten = false;
   if (effectiveAccountId && configAccountId !== effectiveAccountId) {
@@ -3212,13 +3186,13 @@ async function provisionCloudflareResourcesLocked(
     accountIdWritten = true;
   }
 
-  // The account fence above guarantees a value whenever a runner is called.
+  // Decision: The account fence above guarantees a value whenever a runner is called.
   const transportAccountId = effectiveAccountId!;
-  // One API base for the runner and the Hyperdrive REST lister.
+  // Decision: One API base for the runner and the Hyperdrive REST lister.
   const transportApiBaseUrl = resolvePinnedApiBaseUrl(process.env, configComplianceRegion);
 
   const selectedRunWrangler = opts?.runWrangler ?? createDefaultRunWrangler(root);
-  // Every result and rejection is redacted here, so no error or log carries the connection
+  // Decision: Every result and rejection is redacted here, so no error or log carries the connection
   // string.
   const redactSecrets = createSecretRedactor(desired.hyperdrive?.connectionString);
   const redactResult = (result: RunWranglerResult): RunWranglerResult => ({
@@ -3227,7 +3201,7 @@ async function provisionCloudflareResourcesLocked(
     stderr: redactSecrets(result.stderr),
     error: result.error != null ? redactSecrets(result.error) : result.error,
   });
-  // Every call gets the pinned account and API base.
+  // Decision: Every call gets the pinned account and API base.
   const runWrangler = (
     args: CloudflareOperation,
     callOpts?: { cwd?: string; suppressLogs?: boolean; input?: string },

@@ -13,7 +13,7 @@ const other = '33333333-3333-4333-8333-333333333333';
 function setup(
   data: unknown,
   failure?: 'activation' | 'triggers',
-  // How Cloudflare answers a deploy of the previous version without force.
+  // Decision: How Cloudflare answers a deploy of the previous version without force.
   rollback?: 'secret-changed' | 'deployed-elsewhere' | 'error',
 ) {
   const calls: Array<CloudflareOperation> = [];
@@ -194,7 +194,6 @@ it.each(recoveries)(
       expect.not.objectContaining({ bypassDeploymentChecks: true }),
       expect.objectContaining({ bypassDeploymentChecks: true }),
     ]);
-    // bwf checks that it still owns traffic between the refusal and the forced retry.
     const refused = calls.indexOf(rollbacks[0]!);
     expect(
       calls.slice(refused, calls.indexOf(rollbacks[1]!)).map((operation) => operation.type),

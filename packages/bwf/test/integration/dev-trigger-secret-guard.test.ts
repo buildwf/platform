@@ -10,7 +10,7 @@ import { devTriggerSecretGuardPlugin } from '../../src/plugin-dev-config.ts';
 const TOKEN = 'dev-trigger-secret-0f3c9a';
 const DATABASE_URL = 'postgresql://app:db-secret-7e21b4@db.example.com/app';
 
-// node:http sends the path exactly as written; fetch would normalize dot segments.
+// Decision: node:http sends the path exactly as written; fetch would normalize dot segments.
 function get(port: number, path: string): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const req = request({ host: '127.0.0.1', port, path, method: 'GET' }, (res) => {
@@ -32,14 +32,14 @@ describe('dev server with the dev-trigger secret guard', () => {
   let port: number;
 
   beforeAll(async () => {
-    // `.native` expands Windows 8.3 names such as `RUNNER~1` in the CI temp dir;
+    // Decision: `.native` expands Windows 8.3 names such as `RUNNER~1` in the CI temp dir;
     // Vite refuses to serve any file under a short-name path.
     root = realpathSync.native(mkdtempSync(join(tmpdir(), 'platform-dev-secret-')));
     mkdirSync(join(root, '.bwf'), { recursive: true });
     writeFileSync(join(root, 'index.html'), '<!doctype html><title>app</title>');
     writeFileSync(join(root, '.bwf', 'dev-trigger-token'), TOKEN);
     writeFileSync(join(root, '.bwf', 'routes.d.ts'), 'export {};\n');
-    // Older CLI versions left the database URL of `bwf db push` / `db studio` here.
+    // Decision: Older CLI versions left the database URL of `bwf db push` / `db studio` here.
     writeFileSync(
       join(root, '.bwf', 'drizzle.config.json'),
       JSON.stringify({ dialect: 'postgresql', dbCredentials: { url: DATABASE_URL } }),
@@ -68,7 +68,7 @@ describe('dev server with the dev-trigger secret guard', () => {
     return posix.startsWith('/') ? posix : `/${posix}`;
   };
 
-  // One path each for the static, /@fs/ and transform middlewares the guard must precede.
+  // Decision: One path each for the static, /@fs/ and transform middlewares the guard must precede.
   it.each([
     '/.bwf/dev-trigger-token',
     '/@fs<root>/.bwf/dev-trigger-token',

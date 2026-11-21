@@ -162,8 +162,8 @@ describe('Zero Trust routing read retries', () => {
       const platform = bindings();
       await configurePlatformZeroTrust(platform, env.db, configurationInput());
       await setProjectZeroTrustProtection(platform, env.db, publicProject.id, false);
-      // The first project consumes 299 shared routing slots, leaving just the
-      // protected project's slug to be cleared before its domain page yields.
+      // Decision: The first project uses 299 shared routing slots, which leaves only the protected project's slug to
+      // clear before its domain page yields.
       await env.db.insert(domains).values(
         Array.from({ length: 298 }, (_, index) => ({
           id: `disable-pending-${index}`,
@@ -200,8 +200,6 @@ describe('Zero Trust routing read retries', () => {
       expect(JSON.parse((await env.ROUTING.get(domainKey))!).zeroTrust).toBeDefined();
 
       if (status === 'error') {
-        // An operation-wide failure, such as a revoked token, stops the
-        // disable between routing pages and records it on the operation.
         const saved = (await readZeroTrustConfigurationStrict(env.db))!;
         await env.db
           .update(platformSettings)
@@ -231,8 +229,6 @@ describe('Zero Trust routing read retries', () => {
         } finally {
           vi.stubGlobal('fetch', cloudflare.fetcher);
         }
-        // Routing finished before provider deletion failed. Retain the intent
-        // and cleanup handle even though the completed cursor is now null.
         expect(await getProjectZeroTrustState(env.db, protectedProject.id)).toMatchObject({
           desired_protected: false,
           effective_protected: true,
@@ -260,8 +256,8 @@ describe('Zero Trust routing read retries', () => {
       ).resolves.toEqual({ teamDomain: '', audiences: [] });
 
       if (status === 'legacy cursor') {
-        // An older binary could persist progress without changing desired
-        // intent. Its readers may then protect a previously cleared slug.
+        // Decision: An older binary could save progress without changing desired intent. Its readers may then protect
+        // a slug that was already cleared.
         await env.db
           .update(projectZeroTrust)
           .set({ desired_protected: true, routing_cursor: '' })
@@ -406,7 +402,6 @@ describe('Zero Trust routing read retries', () => {
           if (operation === 'public') {
             await expect(cleanup).rejects.toThrow('Live routing');
           } else {
-            // One project's stale read does not hold the installation disable.
             await expect(cleanup).resolves.toMatchObject({
               enabled: false,
               status: 'ready',
@@ -568,7 +563,6 @@ describe('Zero Trust routing read retries', () => {
         bypass_application_id: expect.any(String),
       });
       if (state === 'error') {
-        // A failed subsequent page retains the same durable bypass and cursor.
         const originalGet = env.ROUTING.get.bind(env.ROUTING);
         const getSpy = vi
           .spyOn(env.ROUTING, 'get')

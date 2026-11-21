@@ -88,11 +88,11 @@ export async function runLogsCommand(
   outro(dim(formatCount(entries.length, 'log entry', 'log entries')));
 }
 
-// Logs carry data from app visitors, so terminal control sequences are dropped before printing.
+// Decision: Logs carry data from app visitors, so terminal control sequences are dropped before printing.
 function printEntry(entry: LogEntry, minimal: boolean): void {
   const time = formatTime(entry.timestamp);
   const method = sanitizeTerminalLogText(entry.method || '-');
-  // Minimal runtime logs record no URL or messages; their lines skip them.
+  // Decision: Minimal runtime logs record no URL or messages; their lines skip them.
   const url = minimal ? '' : sanitizeTerminalLogText(entry.url || '-');
   const status = sanitizeTerminalLogText(entry.status || '-');
 
@@ -197,8 +197,8 @@ export function filterLogEntries(
         if (entry.exceptions.length > 0) {
           return true;
         }
-        // A 5xx response is an error even when the worker neither threw nor
-        // logged (mirrors the server-side `blob6 LIKE '5%'` predicate).
+        // Decision: A 5xx response is an error even when the worker neither threw nor logged (matching the
+        // server-side `blob6 LIKE '5%'` predicate).
         if (parseInt(entry.status, 10) >= 500) {
           return true;
         }
@@ -210,8 +210,8 @@ export function filterLogEntries(
         return false;
       }
       for (const l of entry.logs) {
-        // Normalize a missing level to `log` so the filter matches what
-        // `printEntry` shows (it falls back to `[log]` for nullish levels).
+        // Decision: Normalize a missing level to `log` so the filter matches what `printEntry` shows (it falls back to
+        // `[log]` for nullish levels).
         if ((l.level ?? 'log') === level) {
           return true;
         }

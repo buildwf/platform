@@ -52,7 +52,6 @@ it('upgrades the OAuth schema without elevating existing grants or changing prod
         preview_expires_at: null,
       },
     ]);
-    // The previous runtime can still create ordinary projects and identity grants.
     await db.exec(
       "INSERT INTO projects (id, user_id, slug) VALUES ('older-runtime', 'migration-user', 'older-runtime'); INSERT INTO oauth_grants (id, client_id, user_id, session, token_hash, expires_at) VALUES ('older-grant', 'client', 'migration-user', '{}', 'older-token-hash', now() + interval '1 hour');",
     );
@@ -110,8 +109,8 @@ it('normalizes worker project modes without changing deployment pointers and ret
   }
 }, 30_000);
 
-// 0.10.14 and 0.20.1 can write GitHub connections without an authorizer and
-// delete users without removing the connections they authorized.
+// Decision: 0.10.14 and 0.20.1 can write GitHub connections without an authorizer and delete users without
+// removing the connections they authorized.
 it('requires 0.10.14 and 0.20.1 to upgrade through a release that enforces GitHub authority', () => {
   const compatibility = JSON.parse(
     readFileSync(resolve(import.meta.dirname, '../../drizzle/compatibility.json'), 'utf8'),
@@ -244,7 +243,7 @@ it('allows upgrading the 0.21.3 through 0.21.9 schema after adding project Zero 
   }
 });
 
-// 0.25.0 and 0.26.0 ignore projects.proxy_token_gen, so they can run on the 0058 schema.
+// Decision: 0.25.0 and 0.26.0 ignore projects.proxy_token_gen, so they can run on the 0058 schema.
 it('allows upgrading the 0.25.0 and 0.26.0 schema after adding the proxy token generation', () => {
   const root = resolve(import.meta.dirname, '../../drizzle');
   const journal = JSON.parse(readFileSync(resolve(root, 'meta/_journal.json'), 'utf8')) as {
@@ -277,7 +276,7 @@ it('allows upgrading the 0.25.0 and 0.26.0 schema after adding the proxy token g
   ]);
 });
 
-// 0.27.0 ignores OAuth tables and rejects the new deployment token audience.
+// Decision: 0.27.0 ignores OAuth tables and rejects the new deployment token audience.
 it('retains rollback to 0.27.0 after adding registered OAuth clients', () => {
   const root = resolve(import.meta.dirname, '../../drizzle');
   const journal = JSON.parse(readFileSync(resolve(root, 'meta/_journal.json'), 'utf8'));
@@ -304,7 +303,7 @@ it('retains rollback to 0.27.0 after adding registered OAuth clients', () => {
   });
 });
 
-// 1.1.11 through 1.2.1 ignore email_domain_routes.inbound_mode and insert managed routes.
+// Decision: 1.1.11 through 1.2.1 ignore email_domain_routes.inbound_mode and insert managed routes.
 it('upgrades the 1.1.11 through 1.2.1 schema to outbound-only email routes', async () => {
   const root = resolve(import.meta.dirname, '../../drizzle');
   const journal = JSON.parse(readFileSync(resolve(root, 'meta/_journal.json'), 'utf8')) as {
@@ -339,7 +338,6 @@ it('upgrades the 1.1.11 through 1.2.1 schema to outbound-only email routes', asy
         route('existing', 'example.com', 'custom', 'project'),
     );
     await db.exec(readFileSync(resolve(root, '0061_email_inbound_mode.sql'), 'utf8'));
-    // The previous runtime can still insert routes; they stay managed.
     await db.exec(route('older-runtime', 'shared.example.com', 'shared', null));
     expect(
       (await db.query('SELECT id, inbound_mode FROM email_domain_routes ORDER BY id')).rows,
@@ -348,7 +346,6 @@ it('upgrades the 1.1.11 through 1.2.1 schema to outbound-only email routes', asy
       { id: 'older-runtime', inbound_mode: 'managed' },
     ]);
     await db.exec("UPDATE email_domain_routes SET inbound_mode = 'none' WHERE id = 'existing'");
-    // Only custom routes can be outbound-only, and the mode has two values.
     await expect(
       db.exec("UPDATE email_domain_routes SET inbound_mode = 'none' WHERE id = 'older-runtime'"),
     ).rejects.toThrow('email_domain_routes_inbound_mode_check');
@@ -384,9 +381,7 @@ it('upgrades the 1.1.11 through 1.2.1 schema to project email aliases', async ()
       { slug: 'brand-feedback', email_alias: null },
     ]);
     await db.exec("UPDATE projects SET email_alias = 'bfb' WHERE id = 'brand'");
-    // The previous runtime still creates projects and previews without the column.
     await db.exec(project('older-runtime', 'older-runtime') + project('preview', 'preview-1'));
-    // A slug and an alias may not share a name, in either direction or on one project.
     await expect(db.exec(project('taken', 'bfb'))).rejects.toThrow(
       'A project slug or email alias already uses this name',
     );
@@ -404,8 +399,8 @@ it('upgrades the 1.1.11 through 1.2.1 schema to project email aliases', async ()
   }
 }, 30_000);
 
-// 1.3.0 through 1.5.0 ignore oauth_refresh_tokens. Their grant writes keep working,
-// and deleting a grant removes its refresh tokens, so they fail closed after a rollback.
+// Decision: 1.3.0 through 1.5.0 ignore oauth_refresh_tokens. Their grant writes keep working, and deleting a
+// grant removes its refresh tokens, so they fail closed after a rollback.
 it('upgrades the 1.3.0 through 1.5.0 schema to OAuth refresh tokens', async () => {
   const root = resolve(import.meta.dirname, '../../drizzle');
   const journal = JSON.parse(readFileSync(resolve(root, 'meta/_journal.json'), 'utf8')) as {
@@ -443,7 +438,6 @@ it('upgrades the 1.3.0 through 1.5.0 schema to OAuth refresh tokens', async () =
         grant('existing', 'kept', "now() + interval '1 hour'"),
     );
     await db.exec(readFileSync(resolve(root, '0063_oauth_refresh_tokens.sql'), 'utf8'));
-    // The new runtime issues refresh tokens; one grant's access token expired days ago.
     await db.exec(
       grant('stale', 'kept', "now() - interval '2 days'") +
         grant('owned', 'deleted', "now() + interval '1 hour'") +
@@ -451,10 +445,8 @@ it('upgrades the 1.3.0 through 1.5.0 schema to OAuth refresh tokens', async () =
         refreshToken('stale-refresh', 'stale') +
         refreshToken('owned-refresh', 'owned'),
     );
-    // The previous runtime still creates and revokes grants without the new table.
     await db.exec(grant('older-runtime', 'kept', "now() + interval '1 hour'"));
     await db.exec("UPDATE oauth_grants SET revoked_at = now() WHERE id = 'existing'");
-    // Its hourly purge and user deletion remove refresh tokens with their grants.
     await db.exec(
       "DELETE FROM oauth_grants WHERE id IN (SELECT id FROM oauth_grants WHERE expires_at < now() - interval '1 day' ORDER BY expires_at LIMIT 1000)",
     );

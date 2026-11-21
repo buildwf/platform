@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 
-// Run after build:all, so integration shards do not rebuild these playgrounds.
-// Each React SPA playground builds a Worker in dist/ssr and its client in dist/client.
+// Decision: Runs after build:all, so integration shards don't rebuild these playgrounds. Each React SPA
+// playground builds a Worker in dist/ssr and its client in dist/client.
 const playgrounds = ['spa', 'websockets', 'kitchen-sink'];
 
 function artifactUrl(playground, path) {

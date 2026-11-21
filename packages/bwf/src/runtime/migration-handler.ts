@@ -234,7 +234,7 @@ async function runD1AppMigrations(
   const now = new Date().toISOString();
   const plannedNames = migrations.map((migration) => migration.name);
   const planHashes = verified.plans.map((plan) => plan.planHash);
-  // Raw legacy exec cannot share a transaction with an ownership check. Such
+  // Decision: Raw legacy exec cannot share a transaction with an ownership check. Such
   // attempts retain their lock until their executor finishes.
   const fenced = verified.plans.every((plan) => plan.kind !== 'legacy-unsplit-multi-statement');
   const lock = await acquireAttemptLock(db, attempt.attemptId, now, [
@@ -274,7 +274,7 @@ async function runD1AppMigrations(
     await createTrackingTable(db);
     await upgradeTrackingTable(db, fenced ? attempt.attemptId : undefined);
     const applied = await readAppliedSet(db);
-    // A migration applied earlier never runs again, so its warning cannot be acted on.
+    // Decision: A migration applied earlier never runs again, so its warning cannot be acted on.
     warnings = verified.plans.flatMap((plan, index) =>
       applied.has(migrations[index]!.name) ? [] : (plan.warnings ?? []),
     );
@@ -374,7 +374,7 @@ async function acquireAttemptLock(
 ): Promise<'acquired' | MigrationResponse> {
   for (let tries = 0; tries < 2; tries++) {
     try {
-      // Publish the attempt and its lock together. A missing attempt row must
+      // Decision: Publish the attempt and its lock together. A missing attempt row must
       // never be mistaken for an orphan in between these writes.
       await db.batch([
         db
@@ -552,7 +552,7 @@ async function reconcileAttempt(
     .bind(attemptId)
     .first();
   if (recover && fenced) {
-    // Revocation and status move together. Any already submitted migration is
+    // Decision: Revocation and status move together. Any already submitted migration is
     // ordered before this transaction or fails its fence after it; read the
     // confirmed prefix only AFTER revocation. Never revoke older executors or
     // raw exec attempts, which cannot enforce a fence in their SQL transaction.

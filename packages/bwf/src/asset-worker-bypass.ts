@@ -158,7 +158,7 @@ export function resolveAssetWorkerBypass(facts: AssetWorkerBypassFacts): AssetWo
     return null;
   }
   const assetsDir = normalizeAssetsDir(facts.assetsDir);
-  // The Worker gives the immutable policy only to hashed files in the assets folder.
+  // Decision: The Worker gives the immutable policy only to hashed files in the assets folder.
   const files =
     assetsDir === null
       ? []
@@ -179,7 +179,7 @@ function resolveHashedFileBypass(
   }
   const patterns = [
     ...facts.patterns,
-    // bwf's own Worker paths. They are not in the route scan.
+    // Decision: bwf's own Worker paths. They aren't in the route scan.
     ...BWF_INTERNAL_WORKER_FIRST,
     ...(facts.authEnabled ? AUTH_PATTERNS : []),
   ];

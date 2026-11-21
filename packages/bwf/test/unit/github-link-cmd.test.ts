@@ -4,7 +4,6 @@ import { PlatformApiError, type PlatformClient } from '../../src/cli/client.ts';
 import { runGithubLink } from '../../src/cli/github-cmd.ts';
 import { browserCallback, throwOnProcessExit } from '../helpers/github-cli.ts';
 
-// Keep openBrowser from launching a real browser.
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
 
 type FakeClient = Pick<PlatformClient, 'getGithubLinkUrl' | 'completeGithubLink'>;
@@ -20,7 +19,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Runs runGithubLink and sends the callback redirect that `callbackQuery` builds. */
 function drive(opts: {
   completeGithubLink: FakeClient['completeGithubLink'];
   callbackQuery: (callbackUrl: URL) => URL;
@@ -40,7 +38,7 @@ describe('runGithubLink', () => {
     await drive({
       completeGithubLink,
       callbackQuery: (cb) => {
-        const hit = new URL(cb); // already carries the command's state
+        const hit = new URL(cb);
         hit.searchParams.set('link_code', 'lc-123');
         return hit;
       },
@@ -96,8 +94,6 @@ describe('runGithubLink', () => {
     ).rejects.toThrow('process.exit(1)');
 
     expect(exitSpy).toHaveBeenCalledWith(1);
-    // The new code maps to the "your account, different GitHub" message —
-    // distinct from the other-user github_identity_conflict wording.
     expect(errorSpy).toHaveBeenCalledWith(
       'Your bwf account is already linked to a different GitHub account.',
     );
@@ -110,7 +106,6 @@ describe('runGithubLink', () => {
     await expect(
       drive({
         completeGithubLink,
-        // valid state, but no link_code in the query
         callbackQuery: (cb) => new URL(cb),
       }),
     ).rejects.toThrow('did not return a link code');

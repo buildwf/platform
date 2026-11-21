@@ -38,10 +38,8 @@ afterEach(() => {
   }
 });
 
-/**
- * Load bwf/db with drizzle's own driver. Each request ends the pools built during it, as
- * workerd does when a request finishes: nothing may reuse a request's connection afterwards.
- */
+// Decision: Each request ends the pools built during it, as workerd does when a request finishes:
+// nothing may reuse a request's connection afterwards.
 async function loadDb(dialect: Dialect, url: string) {
   const root = mkdtempSync(join(tmpdir(), 'platform-db-request-'));
   roots.push(root);
@@ -66,7 +64,6 @@ export const users = mysqlTable('users', { id: int('id').primaryKey(), name: var
   const state = { pools: [] as Array<Pool>, checkouts: 0 };
   (globalThis as Record<string, unknown>)[stateKey] = state;
   stateKeys.push(stateKey);
-  // Both drivers check a connection out of the pool for each query and each transaction.
   const checkout = dialect === 'postgresql' ? 'connect' : 'getConnection';
   const code = load
     .call({}, '\0virtual:platform-db')
@@ -136,8 +133,8 @@ describe.each(['postgresql', 'mysql'] as const)(
       async () => {
         if (dialect === 'postgresql') {
           pglite = new PGlite();
-          // Cold WASM startup can exceed 10s on Windows CI. Pay that cost in this hook,
-          // with its own budget; query and test deadlines stay unchanged.
+          // Decision: Cold WASM startup can take over 10s on Windows CI. Pay that cost in this hook, with its own
+          // budget; query and test deadlines stay unchanged.
           await pglite.waitReady;
           await pglite.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);');
           await pglite.exec("INSERT INTO users VALUES (1, 'Ada'), (2, 'Linus');");
@@ -165,7 +162,6 @@ describe.each(['postgresql', 'mysql'] as const)(
     it('runs a query built or prepared in one request on the pool of a later request', async () => {
       const { db, users, state, request } = await loadDb(dialect, url);
 
-      // Module-level queries: built once, run by every request.
       const { built, prepared, relational } = await request(async () => {
         const built = db.select().from(users);
         const prepared = db.select().from(users).prepare('platform_users');
@@ -189,14 +185,14 @@ describe.each(['postgresql', 'mysql'] as const)(
       const rows = await request(() => db.transaction(async (tx) => tx.select().from(users)));
 
       expect(rows).toEqual(USERS);
-      // One checkout holds the connection for the whole transaction; drizzle only does that for
-      // a pool, so a stand-in client must still look like one.
+      // Decision: One checkout holds the connection for the whole transaction; drizzle only does that for
+      // a pool, so a stand-in client still has to look like one.
       expect(state.checkouts).toBe(1);
     });
 
     it('builds one pool for a transaction outside a request scope', async () => {
       const { db, users, state, endPools } = await loadDb(dialect, url);
-      // A framework entry that bwf does not wrap runs without its request scope.
+      // Decision: A framework entry that bwf doesn't wrap runs without its request scope.
       const previousEnv = (globalThis as Record<string, unknown>).__env__;
       (globalThis as Record<string, unknown>).__env__ = { DATABASE_URL: url };
       try {
@@ -206,7 +202,7 @@ describe.each(['postgresql', 'mysql'] as const)(
         const rows = await db.transaction(async (tx) => tx.select().from(users));
 
         expect(rows).toEqual(USERS);
-        // Each use builds a pool here, so drizzle's pool checks must not build more.
+        // Decision: Each use builds a pool here, so drizzle's pool checks must not build more.
         expect(state.pools.length - before).toBe(1);
       } finally {
         if (previousEnv === undefined) {

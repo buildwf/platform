@@ -59,7 +59,7 @@ export async function prepareCfBuildOutput(
     options.mode,
     options.projectRoot,
   );
-  // A fresh object keeps internal deploy state off the public result.
+  // Decision: A fresh object keeps internal deploy state off the public result.
   return (
     prepared && {
       directory: prepared.directory,

@@ -18,12 +18,10 @@ app.delete('/:id', async (context) => {
   }
   const project = access.project;
 
-  // `teardownProject` handles the FOR UPDATE lock, status='deleting' flip,
-  // bulk deployment cancellation, critical CF cleanup (container apps from
-  // `resources` rows + per-deploy container orphan recovery by deterministic
-  // name — fatal on failure), durable retries for failed external cleanup,
-  // and the DB cascade. A failed reusable-name cleanup keeps the project row
-  // reserved and surfaces a 5xx so the delete can be retried safely.
+  // Decision: `teardownProject` handles the FOR UPDATE lock, the status='deleting' flip, deployment cancellation,
+  // critical CF cleanup (fatal on failure), durable retries for failed external cleanup and the DB
+  // cascade. A failed reusable-name cleanup keeps the project row reserved and returns a 5xx so the
+  // delete can be retried safely.
   let warnings: ReadonlyArray<string>;
   try {
     ({ warnings } = await teardownProject(context, projectId, project, {

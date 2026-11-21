@@ -21,7 +21,7 @@ const USERS = [
   { id: 2, name: 'Linus', email: 'linus@example.com' },
 ];
 
-// No db/migrations and no auth: no other bwf module imports pg, so bwf/db's own import
+// Decision: No db/migrations and no auth: no other bwf module imports pg, so bwf/db's own import
 // must reach workerd prebundled.
 describe('playground/pg-api-test', () => {
   let pglite: PGlite;
@@ -57,9 +57,7 @@ describe('playground/pg-api-test', () => {
     await pglite?.close();
     try {
       unlinkSync(ENV_PATH);
-    } catch {
-      // Ignore missing cleanup files between test runs.
-    }
+    } catch {}
   });
 
   function start(script: 'dev' | 'preview'): Promise<StartedServer> {

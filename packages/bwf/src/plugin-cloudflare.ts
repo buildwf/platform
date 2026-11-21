@@ -91,7 +91,7 @@ export function cloudflare(options: {
       native = toNativeCloudflareConfig(workerConfig, root);
       pluginNative = structuredClone(native);
       if (environment.command === 'build' && (native.containers?.length ?? 0) > 0) {
-        // bwf builds images during deployment preparation. Managed builds consume
+        // Decision: bwf builds images during deployment preparation. Managed builds consume
         // the Worker bundle and must not acquire a local Docker prerequisite.
         pluginNative.containers = [];
         for (const declaration of Object.values(pluginNative.worker?.exports ?? {})) {
@@ -133,7 +133,7 @@ export function cloudflare(options: {
         if (this.environment?.name !== 'client') {
           return;
         }
-        // Frameworks such as React Router read the completed client manifest while
+        // Decision: Frameworks such as React Router read the completed client manifest while
         // building their server, before the final Build Output hook runs.
         const source = resolve(root, this.environment.config.build.outDir);
         const destination = outputDirectories.get('client');
@@ -147,7 +147,7 @@ export function cloudflare(options: {
       order: 'post',
       async handler(builder) {
         if (Object.values(native.worker?.env ?? {}).some((binding) => binding.type === 'assets')) {
-          // API-only apps still expose ASSETS. Keep an empty asset service so
+          // Decision: API-only apps still expose ASSETS. Keep an empty asset service so
           // native preview can resolve that binding even without a client build.
           mkdirSync(getWorkerAssetsDir(root), { recursive: true });
         }
@@ -160,7 +160,7 @@ export function cloudflare(options: {
           throw new Error('bwf requires a built Cloudflare Worker.');
         }
         for (const directory of [destination, client]) {
-          // Match Vite's default cleanup for output inside the project. Never erase the
+          // Decision: Match Vite's default cleanup for output inside the project. Never erase the
           // project itself, an external directory, or the native output being copied.
           if (
             directory !== root &&
@@ -197,7 +197,7 @@ export function cloudflare(options: {
           const finalized: WorkerConfig = JSON.parse(
             readFileSync(join(destination, 'wrangler.json'), 'utf8'),
           );
-          // Preview and prebuilt uploads must use the same asset routing and cache
+          // Decision: Preview and prebuilt uploads must use the same asset routing and cache
           // headers as the validated dist output, including free static requests.
           if (worker.config.assets && finalized.assets) {
             worker.config.assets.runWorkerFirst = finalized.assets.run_worker_first;
@@ -213,7 +213,7 @@ export function cloudflare(options: {
             JSON.stringify({ workerDirectory: relative(root, destination) }),
           );
         }
-        // Existing framework tooling still locates its built Worker through this pointer.
+        // Decision: Existing framework tooling still locates its built Worker through this pointer.
         const pointer = join(root, '.wrangler/deploy/config.json');
         const pointerDestination =
           existsSync(join(root, 'bwf.config.ts')) &&
@@ -248,7 +248,7 @@ export function cloudflare(options: {
         auxiliaryWorkers: nativeAuxiliaryWorkers(options.auxiliaryWorkers, root),
         types: { generate: false },
         config() {
-          // Replace the complete parsed configuration, including account settings
+          // Decision: Replace the complete parsed configuration, including account settings
           // and Containers, without creating a provider-specific config file.
           return pluginNative;
         },

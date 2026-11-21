@@ -9,7 +9,7 @@ export type CodeHighlighter = (
 
 let highlighterLoader: (() => Promise<CodeHighlighter>) | undefined;
 
-// Registered by the browser entry so the server's import graph excludes Shiki entirely.
+// Decision: Registered by the browser entry so the server's import graph excludes Shiki entirely.
 export function configureCodeHighlighting(loader: () => Promise<CodeHighlighter>) {
   highlighterLoader = loader;
 }

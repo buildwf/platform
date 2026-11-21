@@ -62,8 +62,8 @@ export async function cfFetch<T>(url: string, apiToken: string, init?: RequestIn
         ...init?.headers,
       },
     });
-    // Keep the same deadline through the body read: receiving headers does
-    // not prove a stalled provider response has completed. Never replay writes.
+    // Decision: Keep the same deadline through the body read: receiving headers doesn't prove a stalled provider
+    // response finished. Don't replay writes.
     const json = (await response.json()) as CfApiResult<T>;
     if (!json.success) {
       const message = json.errors.map((error) => error.message).join(', ');
@@ -225,8 +225,6 @@ export async function deleteR2Bucket(
   });
 }
 
-// --- Queues ---
-
 export type QueueInfo = Readonly<{
   queue_id: string;
   queue_name: string;
@@ -253,10 +251,9 @@ export type QueueConsumerSettings = Readonly<{
 
 export type QueueConsumerInfo = Readonly<{
   consumer_id: string;
-  // CF Queues API asymmetry: POST/PUT bodies use `script_name`, but
-  // GET /queues/{id}/consumers returns the subscribed worker under
-  // `script`. Reading `script_name` would return `undefined` for every
-  // consumer and misreport a same-script re-deploy as an ownership conflict.
+  // Decision: CF Queues API asymmetry: POST/PUT bodies use `script_name`, but GET /queues/{id}/consumers returns
+  // the worker under `script`. Reading `script_name` would give `undefined` for each consumer and
+  // misreport a same-script redeploy as an ownership conflict.
   script: string;
   type: string;
   settings: QueueConsumerSettings;
@@ -368,14 +365,12 @@ export async function addQueueConsumer(
     }
   }
 
-  // Consumer exists — find ours and update settings
   const consumers = await cfFetch<ReadonlyArray<QueueConsumerInfo>>(consumersUrl, apiToken);
   const existingConsumer = consumers.find((consumer) => consumer.script === scriptName);
 
   if (!existingConsumer) {
-    // A different script owns this consumer. Surface the owner so the
-    // caller can emit a deploy warning; do not throw — the deploy should
-    // still complete so other queues in the same manifest can succeed.
+    // Decision: A different script owns this consumer. Return the owner so the caller can warn; don't throw, so the
+    // deploy still completes and other queues in the manifest can succeed.
     const ownerScript = consumers[0]?.script ?? 'unknown';
     return { status: 'conflict', ownerScript };
   }
@@ -450,8 +445,6 @@ export async function getDispatchWorkerProxyToken(
   return { kind: 'found', token };
 }
 
-// --- Custom Hostnames (CF for SaaS) ---
-
 export type CustomHostnameInfo = Readonly<{
   id: string;
   hostname: string;
@@ -476,11 +469,9 @@ export type CustomHostnameInfo = Readonly<{
     name: string;
     value: string;
   }>;
-  // CF's HTTP-based ownership challenge. Returned alongside (or instead of)
-  // the TXT `ownership_verification` depending on the hostname's state. The
-  // activation gate must treat the presence of EITHER as "ownership not yet
-  // settled" — keying on the TXT field alone would let an HTTP-satisfiable
-  // (wildcard-routable) ownership slip through.
+  // Decision: CF's HTTP-based ownership challenge, returned with or instead of the TXT `ownership_verification`
+  // depending on the hostname's state. The activation gate treats either as "ownership not settled";
+  // keying on TXT alone would let an HTTP-satisfiable (wildcard-routable) ownership slip through.
   ownership_verification_http?: Readonly<{
     http_url: string;
     http_body: string;
@@ -489,11 +480,9 @@ export type CustomHostnameInfo = Readonly<{
   verification_errors?: ReadonlyArray<string>;
 }>;
 
-// Do NOT add `custom_metadata` here — it's a paid Enterprise SSL-for-SaaS
-// add-on that our CF account is not provisioned for. Sending the field
-// makes CF reject every create with "No custom metadata access has been
-// allocated for this zone or account", breaking `bwf domain add`.
-// Forensic attribution is already persisted server-side in the `domains`
+// Decision: Don't add `custom_metadata` here: it's a paid Enterprise SSL-for-SaaS add-on our CF account isn't
+// provisioned for, and CF rejects each create with "No custom metadata access has been allocated for
+// this zone or account", breaking `bwf domain add`. Attribution is already stored in the `domains`
 // table (project_id, user_id, created_at) keyed by cf_hostname_id.
 export async function createCustomHostname(
   zoneId: string,
@@ -536,16 +525,12 @@ export async function getCustomHostname(
   );
 }
 
-// Re-send the SSL block via PATCH to re-trigger HTTP DCV. Platform's flow is
-// add-domain-first: `bwf domain add` creates the custom hostname with
-// `ssl.method:'http'` BEFORE the user points the CNAME at `cname.void.app`.
-// Per CF's Create Custom Hostname API docs, "If `http` is used and the domain
-// is not already pointing to the Managed CNAME host, the PATCH method must be
-// used once it is" to complete validation. Our cron/status path otherwise only
-// GETs the hostname, so an add-first domain that the user later fixes can stay
-// pending forever (or get CF-deleted after 7 days). A no-change PATCH re-sends
-// the same `ssl` block, which both re-triggers HTTP DCV and resets CF's decaying
-// validation-retry backoff (per CF's realtime-validation behavior).
+// Decision: Re-send the SSL block through PATCH to re-trigger HTTP DCV. `bwf domain add` creates the hostname
+// with `ssl.method:'http'` before the user points the CNAME at `cname.void.app`. CF's docs say: "If
+// `http` is used and the domain is not already pointing to the Managed CNAME host, the PATCH method
+// must be used once it is." The cron and status path only GET the hostname, so an add-first domain
+// could stay pending forever (or be deleted by CF after 7 days). A no-change PATCH re-triggers HTTP
+// DCV and resets CF's decaying validation backoff.
 export async function patchCustomHostname(
   zoneId: string,
   apiToken: string,
@@ -570,8 +555,6 @@ export async function deleteCustomHostname(
     method: 'DELETE',
   });
 }
-
-// --- Hyperdrive ---
 
 export type HyperdriveInfo = Readonly<{
   id: string;
@@ -652,9 +635,9 @@ export function parseHyperdriveConnectionString(connectionString: string): Hyper
       'Unsupported sslmode. Cloudflare Hyperdrive supports "require", "verify-ca", or "verify-full".',
     );
   }
-  // No `mtls` is sent. A new Hyperdrive gets Cloudflare's default `require` mode, and a PUT
-  // keeps the TLS settings already on the Hyperdrive. The verify modes need a CA certificate
-  // uploaded to Cloudflare, which a URL cannot carry; `sslrootcert` names a file on the client.
+  // Decision: No `mtls` is sent. A new Hyperdrive gets Cloudflare's default `require` mode, and a PUT keeps the
+  // TLS settings already on it. The verify modes need a CA certificate uploaded to Cloudflare, which a
+  // URL can't carry; `sslrootcert` names a file on the client.
 
   return {
     origin: {
@@ -756,5 +739,3 @@ export async function getHyperdriveByName(
   }
   return match;
 }
-
-// --- Cache Purge ---

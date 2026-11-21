@@ -87,9 +87,9 @@ function writeEnvFile(contents) {
 const devVarsContents = existsSync(ENV_FILE) ? readFileSync(ENV_FILE, 'utf8') : '';
 const devVars = parseDotenv(devVarsContents);
 const apiUrl = process.env.API_URL ?? devVars.API_URL;
-// A persisted token belongs only to the API origin for which cloudflared
-// returned it. Discard stale/unattributed file credentials before even the
-// unprotected-host early exit: the dashboard reads this file after we finish.
+// Decision: A persisted token belongs only to the API origin cloudflared returned it for. Stale or
+// unattributed file credentials are dropped before the unprotected-host early exit, because the
+// dashboard reads this file afterwards.
 let selectedOrigin;
 try {
   selectedOrigin = new URL(apiUrl).origin;
@@ -104,8 +104,8 @@ if (devVars.CF_ACCESS_TOKEN && devVars.CF_ACCESS_TOKEN_ORIGIN !== selectedOrigin
   delete devVars.CF_ACCESS_TOKEN_ORIGIN;
 }
 
-// Explicit opt-in for self-hosted APIs protected by Cloudflare Access. Keep
-// the established Platform staging behavior for existing local checkouts.
+// Decision: Self-hosted APIs behind Cloudflare Access opt in explicitly. Existing local checkouts keep the
+// Platform staging behavior.
 const accessAppUrl = process.env.CF_ACCESS_APP_URL ?? devVars.CF_ACCESS_APP_URL;
 
 if (!apiUrl || (!accessAppUrl && !isStagingApi(apiUrl))) {

@@ -26,7 +26,7 @@ describe('splitMySqlMigrationSql', () => {
   it('keeps semicolons inside strings, quoted names and comments', () => {
     const statements = [
       "INSERT INTO t (s) VALUES ('a;b', 'it''s;', 'it\\'s; \\\\', \"x;y\");",
-      // A backslash does not escape in a quoted name.
+      // Decision: A backslash doesn't escape in a MySQL quoted name.
       'CREATE TABLE `dir\\` (id int);',
       'CREATE TABLE `odd;name` (`a``;b` int); # trailing; comment',
       'UPDATE t SET n = 5--3; -- 5 minus -3; then a comment',
@@ -41,7 +41,7 @@ describe('splitMySqlMigrationSql', () => {
     ]);
   });
 
-  // MySQL runs `/*! ... */`, so it is a statement, not a comment to drop.
+  // Decision: MySQL runs `/*! ... */`, so it's a statement, not a comment to drop.
   it('keeps an executable comment as a statement', () => {
     expect(splitMySqlMigrationSql('SELECT 1;\n/*!40101 SET @x = 1 */;\n-- end')).toEqual([
       'SELECT 1;',
@@ -56,7 +56,7 @@ describe('splitMySqlMigrationSql', () => {
       'CREATE TABLE c (v int);',
       trigger,
     ]);
-    // Without a parser, the end of the body is unknown, so what follows in the part stays with it.
+    // Decision: Without a parser, the end of the body is unknown, so what follows in the part stays with it.
     expect(
       splitMySqlMigrationSql(
         `${trigger}\nINSERT INTO c VALUES (1);\n--> statement-breakpoint\nSELECT 1;`,
@@ -70,7 +70,7 @@ describe('splitMySqlMigrationSql', () => {
     expect(splitMySqlMigrationSql(event)).toEqual([event]);
   });
 
-  // MariaDB also runs compound statements outside a stored program.
+  // Decision: MariaDB also runs compound statements outside a stored program.
   it('keeps a compound statement outside a stored program together with the rest of its part', () => {
     for (const statement of [
       'BEGIN NOT ATOMIC INSERT INTO a VALUES (1); INSERT INTO a VALUES (2); END;',
@@ -82,7 +82,7 @@ describe('splitMySqlMigrationSql', () => {
     }
   });
 
-  // A whole part with several statements cannot run where one query takes one statement.
+  // Decision: A whole part with several statements can't run where one query takes one statement.
   it('splits statements that only use those keywords as names or transactions', () => {
     expect(
       splitMySqlMigrationSql(

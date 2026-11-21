@@ -157,7 +157,7 @@ export async function assertAiLoggingPlatform(origin: string): Promise<void> {
   }
   if (probe.kind === 'version') {
     const { isOlderPlatformVersion } = await import('./client.ts');
-    // "hosted" and development builds are not release versions and pass.
+    // Decision: "hosted" and development builds aren't release versions, so they pass.
     if (isOlderPlatformVersion(probe.version, AI_LOGGING_PLATFORM_VERSION) !== true) {
       return;
     }

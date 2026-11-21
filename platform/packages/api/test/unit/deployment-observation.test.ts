@@ -11,8 +11,8 @@ it('lets staging smoke tests observe deployment recovery and retain diagnostics'
   const deployStep =
     workflow.split('- name: Deploy kitchen-sink')[1]?.split('- run: vp exec playwright')[0] ?? '';
   const deployMinutes = Number(deployStep.match(/timeout-minutes: (\d+)/)?.[1]);
-  // Recovery cannot claim a live invocation. Allow its lease, the two-minute
-  // outbox tick, and five minutes to reconcile before the deploy step expires.
+  // Decision: Recovery can't claim a live invocation, so the deploy step allows for its lease, the two-minute
+  // outbox tick and five minutes to reconcile.
   expect(deployMinutes * 60_000).toBeGreaterThanOrEqual(DEPLOYMENT_EXECUTION_LEASE_MS + 7 * 60_000);
   expect(jobMinutes).toBeGreaterThanOrEqual(deployMinutes + 5);
   expect(workflow).toMatch(

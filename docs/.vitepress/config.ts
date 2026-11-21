@@ -15,8 +15,8 @@ function hasDocumentLink(items: Array<SidebarItem>): boolean {
   });
 }
 
-// The same platform sidebar is registered on several paths, and some reference
-// groups only contain in-page anchors. Normalize that for the llms.txt index.
+// Decision: The same platform sidebar is registered on several paths, and some reference groups only hold
+// in-page anchors. Normalize that for the llms.txt index.
 function llmsSidebarItems(items: Array<SidebarItem>): Array<SidebarItem> {
   const prepared: Array<SidebarItem> = [];
   for (const item of items) {
@@ -220,7 +220,7 @@ export default extendConfig(
     head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' }]],
     appearance: 'dark',
 
-    // ./index.server imports in code blocks are false positives
+    // Decision: ./index.server imports in code blocks are false positives.
     ignoreDeadLinks: [/\/index$/],
 
     markdown: {

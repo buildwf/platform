@@ -465,7 +465,7 @@ it('reports an absent cf session as authentication failure', async () => {
       USERPROFILE: directory,
       XDG_CONFIG_HOME: directory,
       APPDATA: directory,
-      // Test absent credentials independently of host keyring support.
+      // Decision: Turn off the keyring so the absent-credentials case doesn't depend on the host's keyring support.
       CLOUDFLARE_AUTH_USE_KEYRING: 'false',
       CI: 'true',
     },
@@ -653,7 +653,6 @@ it.each([
       tokenEnv(api, 'CF_API_TOKEN'),
     );
     expect(output.status, output.stderr).toBe(0);
-    // Without a complete list the field is left out; only queue naming needs it.
     expect(JSON.parse(output.stdout).data).toEqual({
       id: 'queue-id',
       name: 'jobs',
@@ -1190,7 +1189,7 @@ child.spawnSync = (binary, args, options) => {
   writeFileSync(${JSON.stringify(join(directory, 'upload-environment.json'))}, JSON.stringify({version:options.env.CLI_VERSION,telemetry:options.env.CF_SEND_TELEMETRY}));
   return ${
     uploadType === 'worker.deploy'
-      ? // cf 1.0.0-beta.21 and later print the uploaded version on stderr.
+      ? /* Decision: cf 1.0.0-beta.21 and later print the uploaded version on stderr. */
         "{ status:0, stdout:'', stderr:'│  Current Version ID: 11111111-1111-4111-8111-111111111111\\n' }"
       : "{ status:0, stdout:JSON.stringify({id:'11111111-1111-4111-8111-111111111111'}), stderr:'' }"
   };
@@ -1245,8 +1244,8 @@ it.each([
     let proxied = 0;
     let inspected = 0;
     const proxyAuthorizations: Array<string | undefined> = [];
-    // Node passes only one case variant of each environment key on Windows.
-    // Clear inherited variants so the lowercase case does not lose to an empty uppercase value.
+    // Decision: Node passes only one case variant of each environment key on Windows.
+    // Clear inherited variants so the lowercase case doesn't lose to an empty uppercase value.
     const proxyEnvironment = Object.fromEntries(
       Object.entries(process.env).filter(
         ([key]) =>
@@ -1665,7 +1664,7 @@ it('renders binary and text frames from a real Node WebSocket in order and remov
     socket.on('data', started);
   });
   const api = await listen(server);
-  // Upgraded sockets keep the server open until they are destroyed.
+  // Decision: Upgraded sockets keep the server open until they're destroyed.
   cleanups.push(() => {
     for (const socket of sockets) {
       socket.destroy();
@@ -1771,7 +1770,6 @@ syncBuiltinESMExports();`,
     ]);
     if (interactive) {
       expect(called.stdio).toBe('inherit');
-      // The terminal shows cf's own output; no result envelope follows it.
       expect(output.stdout).toBe('');
     } else {
       expect(called.stdio).toEqual(['ignore', 'pipe', 'pipe']);

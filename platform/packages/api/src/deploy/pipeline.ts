@@ -135,7 +135,6 @@ export async function runDeploymentPipeline(input: {
   } = input;
   const planLimits = await resolvePlanLimits(context.get('db'), owner.plan);
 
-  // NDJSON response stream: heartbeats, progress events, `done`/`error`.
   const encoder = new TextEncoder();
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -162,9 +161,8 @@ export async function runDeploymentPipeline(input: {
         return;
       }
       persistedEvents = persistedEvents.then(async () => {
-        // Intermediate progress is best effort. Retry a transient database
-        // failure once, but never let it poison later events or prevent the
-        // authoritative terminal result from being committed after execution.
+        // Decision: Intermediate progress is best effort. Retry a transient database failure once, but don't let it
+        // spoil later events or block the authoritative terminal result from being committed.
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
             await appendDeploymentEvent(context.get('db'), preDeployment.id, cutoverOwnerId, event);
@@ -212,9 +210,8 @@ export async function runDeploymentPipeline(input: {
     };
     const putTrackedRouting = async (key: string, value: string): Promise<void> => {
       await snapshotRoutingValue(key);
-      // Record the intended mutation before awaiting KV. A write can commit at
-      // Cloudflare and still reject locally when its acknowledgement is lost;
-      // compensation must then inspect and undo that possibly-landed value.
+      // Decision: Record the intended mutation before awaiting KV. A write can commit at Cloudflare and still reject
+      // locally when its acknowledgement is lost; compensation must then inspect and undo that value.
       routingValuesWritten.set(key, value);
       await context.env.ROUTING.put(key, value);
     };
@@ -262,13 +259,11 @@ export async function runDeploymentPipeline(input: {
         return await mutate(tx, currentAccess.owner);
       });
     };
-    // Compensation must serialize with every project cutover, not only
-    // teardown. Once a newer deploy or rollback owns the project, restoring
-    // this attempt's snapshots would overwrite its routing, cron, and queue
-    // state while PostgreSQL points at the newer deployment. Under the shared
-    // project lock, require both the original active deployment provenance and
-    // the absence of a competing in-flight operation. Teardown's `deleting`
-    // state and a missing row likewise make absence authoritative.
+    // Decision: Compensation must serialize with each project cutover, not only teardown. Once a newer deploy or
+    // rollback owns the project, restoring this attempt's snapshots would overwrite its routing, cron
+    // and queue state while PostgreSQL points at the newer deployment. Under the shared project lock,
+    // require the original active deployment provenance and no competing in-flight operation.
+    // Teardown's `deleting` state and a missing row also make absence authoritative.
     const withProjectCompensationFence = async (
       restore: (txDb: Db) => Promise<void>,
     ): Promise<void> => {
@@ -311,14 +306,13 @@ export async function runDeploymentPipeline(input: {
           return null;
         }
 
-        // Retention selection happens after go-live, so another deployment or
-        // rollback can become authoritative before external GC begins. Rebuild
-        // the protected hash set under the same lock used by final cutover and
-        // keep that lock through R2 deletion. A following static deploy performs
-        // its last R2 existence check under this lock before committing live.
+        // Decision: Retention is chosen after go-live, so another deployment or rollback can become authoritative
+        // before external GC starts. Rebuild the protected hash set under the lock final cutover uses and
+        // hold it through R2 deletion. A following static deploy does its last R2 existence check under this
+        // lock before going live.
         const protectedHashes = new Set(knownRetainedHashes);
-        // Migrated stored bundles still reference their asset copies even when
-        // their historical deployment failed or is no longer retained.
+        // Decision: Migrated stored bundles still reference their asset copies even when their deployment failed or
+        // is no longer retained.
         const retained = await tx
           .select()
           .from(deployments)
@@ -337,10 +331,9 @@ export async function runDeploymentPipeline(input: {
             retained.push(active);
           }
         }
-        // A direct upload lands in R2 before its deployment can become live.
-        // Once the row has placement-bearing asset_hashes, protect it through
-        // every nonterminal state (including canceling/compensating). The
-        // recent-upload timestamp guard covers the short pre-persistence gap.
+        // Decision: A direct upload lands in R2 before its deployment can go live. Once the row has placement-bearing
+        // asset_hashes, protect it through each nonterminal state (including canceling and compensating).
+        // The recent-upload timestamp guard covers the short gap before it's persisted.
         for (const inFlight of await getInFlightDeploymentsExcluding(tx, projectId)) {
           if (!retained.some((deployment) => deployment.id === inFlight.id)) {
             retained.push(inFlight);
@@ -362,7 +355,7 @@ export async function runDeploymentPipeline(input: {
               protectedHashes.add(entry.hash);
             }
           } catch {
-            // Corrupt retained metadata cannot prove an object is unreferenced.
+            // Decision: Corrupt retained metadata can't prove an object is unreferenced.
             return null;
           }
         }
@@ -371,8 +364,8 @@ export async function runDeploymentPipeline(input: {
     };
     const evictStoredWorkerBundle = async (deploymentId: string): Promise<void> => {
       await deleteWorkerBundle(context.env.STATIC_ASSETS_R2, projectId, deploymentId);
-      // Stored history protects its migrated asset copy until the bundle is
-      // actually gone. The following orphan sweep can now collect those bytes.
+      // Decision: Stored history protects its migrated asset copy until the bundle is gone. The orphan sweep that
+      // follows can now collect those bytes.
       await context
         .get('db')
         .update(deployments)
@@ -390,8 +383,8 @@ export async function runDeploymentPipeline(input: {
       try {
         context.executionCtx.waitUntil(work);
       } catch {
-        // app.fetch() has no ExecutionContext in integration tests. Await the
-        // same work there so cleanup remains observable and deterministic.
+        // Decision: app.fetch() has no ExecutionContext in integration tests. Await the same work there so cleanup
+        // stays observable and deterministic.
         await work;
       }
     };
@@ -564,11 +557,9 @@ export async function runDeploymentPipeline(input: {
     let deployment: Awaited<ReturnType<typeof createDeployment>> | undefined;
     let projectDomains: Awaited<ReturnType<typeof getDomainsByProjectId>> | undefined;
 
-    // Bytes uploaded directly to R2 by the CLI before this request landed.
-    // For static deploys this map stays empty (the static branch reads
-    // them straight from R2 by hash). For WfP deploys it gets populated
-    // from R2 fetches further down — the CF asset upload session needs
-    // the actual bytes to fan into upload buckets.
+    // Decision: Bytes the CLI uploaded straight to R2 before this request. For static deploys this map stays empty
+    // (the static branch reads from R2 by hash). For WfP deploys it's filled from R2 below, because the
+    // CF asset upload session needs the actual bytes.
     const assetsByHash = new Map<string, AssetEntry>();
     const heartbeat = setInterval(() => {
       emit(
@@ -581,18 +572,16 @@ export async function runDeploymentPipeline(input: {
     let wfpMirroredManifestDeploymentId: string | null = null;
 
     try {
-      // New deployments use only project-scoped R2 assets. Historical KV and
-      // unscoped objects remain readable by their existing deployments, but a
-      // redeploy must upload any bytes not present in the current store.
+      // Decision: New deployments use only project-scoped R2 assets. Historical KV and unscoped objects stay readable
+      // by their existing deployments, but a redeploy must upload any bytes missing from the current store.
       currentStep = 'asset_verify';
       markPhase('asset_verify');
       const declaredHashes = Array.from(
         new Set(Object.values(incomingAssetManifest).map((e) => e.hash)),
       );
-      // The active deployment's placement-bearing manifest is protected from
-      // platform GC. Reusing those exact R2 hashes avoids inventorying the
-      // whole project prefix again on an unchanged Worker redeploy. New or
-      // legacy entries still require the existing object-store verification.
+      // Decision: The active deployment's placement-bearing manifest is protected from platform GC. Reusing those
+      // exact R2 hashes avoids inventorying the whole project prefix on an unchanged Worker redeploy. New
+      // or legacy entries still need the object-store check.
       const activeR2Sizes =
         currentLiveDeployment?.status === 'live' && currentLiveDeployment.project_id === projectId
           ? persistedR2AssetSizes(currentLiveDeployment.asset_hashes)
@@ -605,17 +594,15 @@ export async function runDeploymentPipeline(input: {
           declaredSizeByHash.set(entry.hash, null);
         }
       }
-      // Only scoped placement verified by this runtime (or the migration)
-      // can skip inventory. Legacy store:'r2' alone does not prove scoping.
+      // Decision: Only scoped placement verified by this runtime (or the migration) can skip inventory. Legacy
+      // store:'r2' alone doesn't prove scoping.
       const unverifiedHashes = declaredHashes.filter(
         (hash) => activeR2Sizes.get(hash) !== declaredSizeByHash.get(hash),
       );
       const missingHashes: Array<string> = [];
-      // R2 binding operations count toward a Worker's per-request subrequest
-      // budget. A valid manifest may contain 5,000 assets, so one HEAD per hash
-      // can fail a healthy deployment before validation. Inventory the scoped
-      // project prefix in paginated calls instead; this runs outside every
-      // PostgreSQL transaction and stops as soon as all required hashes appear.
+      // Decision: R2 binding calls count toward a Worker's per-request subrequest budget. A valid manifest can hold
+      // 5,000 assets, so one HEAD per hash can fail a healthy deployment. List the scoped project prefix
+      // in pages instead; this runs outside any PostgreSQL transaction and stops once all hashes appear.
       const foundAssets = await findR2Assets(
         context.env.STATIC_ASSETS_R2,
         projectId,
@@ -642,9 +629,8 @@ export async function runDeploymentPipeline(input: {
       }
 
       if (context.get('oauthApproval')) {
-        // An app's declared digest is a commitment, not proof of the uploaded
-        // bytes. Verify BLAKE3 rather than trusting MD5 or object metadata.
-        // Its signed PUTs are conditional, so it cannot change verified bytes.
+        // Decision: An app's declared digest is a commitment, not proof of the uploaded bytes. Verify BLAKE3 instead of
+        // trusting MD5 or object metadata. The signed PUTs are conditional, so verified bytes can't change.
         for (const hash of declaredHashes) {
           const paths = Object.entries(incomingAssetManifest)
             .filter(([, entry]) => entry.hash === hash)
@@ -671,7 +657,6 @@ export async function runDeploymentPipeline(input: {
 
       await ensureProjectIngress(context.env, project);
 
-      // === MANIFEST VALIDATION & DEDUPE ===
       currentStep = 'validating';
       markPhase('manifest_validate');
 
@@ -692,13 +677,12 @@ export async function runDeploymentPipeline(input: {
         manifest = { ...manifest, sandbox: { ...manifest.sandbox, runtime: { protocol: 2 } } };
       }
       if (hasWorkerFiles && manifest.type === undefined) {
-        // Rollback identifies retained Workers from their manifest, including
-        // older clients that omit type and workerMain but configure asset fallbacks.
+        // Decision: Rollback identifies retained Workers from their manifest, including older clients that omit type
+        // and workerMain but configure asset fallbacks.
         manifest = { ...manifest, type: 'platform' };
       }
       const finalManifestRaw = JSON.stringify(manifest);
 
-      // Host-scoped routing rules.
       const hostScopedRedirects = manifest.redirectRules?.some((r) => r.host) ?? false;
       const hostScopedFallbacks = manifest.fallbackRules?.some((r) => r.host) ?? false;
       if (hostScopedRedirects || hostScopedFallbacks) {
@@ -743,15 +727,13 @@ export async function runDeploymentPipeline(input: {
             assets: 0,
             workers: 0,
           });
-          // Release the placeholder row — verified no-op.
           await context.get('db').delete(deployments).where(eq(deployments.id, preDeployment.id));
           return;
         }
       }
 
-      // Daily deploy-count limit. JSON-mode deploys don't write any KV/R2
-      // bytes during this request (assets pre-existed direct-to-R2), so
-      // we can defer the cap check until AFTER the dedupe short-circuit.
+      // Decision: JSON-mode deploys write no KV or R2 bytes in this request (assets are already in R2), so the daily
+      // deploy cap can be checked after the dedupe short-circuit.
       if (planLimits.deploysPerDay > 0) {
         const todayCount = await countUserDeploymentsToday(context.get('db'), owner.id);
         if (!isWithinLimit(planLimits.deploysPerDay, todayCount)) {
@@ -760,10 +742,8 @@ export async function runDeploymentPipeline(input: {
         }
       }
 
-      // Fill in the deployment record under the project lock. Once this
-      // completes the deployment row is no longer a precheck placeholder —
-      // every subsequent failure must transition it to a terminal status via
-      // the catch path.
+      // Decision: Fill in the deployment record under the project lock. After this the row is no longer a precheck
+      // placeholder, and each later failure must move it to a terminal status through the catch path.
       deployment = await context.get('db').transaction(async (tx) => {
         await tx.execute(drizzleSql`SELECT id FROM projects WHERE id = ${projectId} FOR UPDATE`);
         const lockedProject = await getProject(tx, projectId);
@@ -809,7 +789,6 @@ export async function runDeploymentPipeline(input: {
 
         emit({ event: 'start', deploymentId: deployment.id });
 
-        // === ASSET UPLOAD PHASE ===
         currentStep = 'asset_upload';
         markPhase('asset_upload');
         logger.info('status_transition', 'status_change', {
@@ -822,20 +801,16 @@ export async function runDeploymentPipeline(input: {
         }
         await assertDeploymentCanProceed(context.get('db'), deployment.id, projectId);
 
-        // JSON-mode CLI always sends the full assetManifest including
-        // preflight-skipped paths; no server-side fill-in needed. Clone so
-        // the cache-buster injection below mutates a fresh object rather
-        // than the validated incoming map.
+        // Decision: The JSON-mode CLI sends the full assetManifest, including preflight-skipped paths, so there's no
+        // server-side fill-in. Clone it so the cache-buster injection below doesn't change the validated map.
         const assetManifest: Record<string, AssetManifestEntry> = { ...incomingAssetManifest };
 
         const isStaticOnly = !hasWorkerFiles;
         logger = logger.with({ branch: isStaticOnly ? 'static' : 'wfp' });
 
-        // CF dedupe-poisoning workaround: WfP deploys with non-empty asset
-        // manifests inject a unique cache buster so CF's asset session always
-        // sees at least one novel hash. The buster's bytes still need to reach CF, so we put
-        // them directly into `assetsByHash` (not into our R2 — they're
-        // a deploy-local artifact, not a CLI-uploaded asset).
+        // Decision: Workaround for CF asset dedupe poisoning: WfP deploys with a non-empty asset manifest inject a
+        // unique cache buster so CF's asset session sees at least one new hash. Its bytes still need to
+        // reach CF, so they go straight into `assetsByHash`, not our R2.
         if (!isStaticOnly && Object.keys(assetManifest).length > 0) {
           const bustPath = `/.bwf-deploy/${deployment.id}.txt`;
           const bustContent = `${deployment.id}\n${Date.now()}\n`;
@@ -852,18 +827,16 @@ export async function runDeploymentPipeline(input: {
           });
         }
 
-        // `assetCount` includes the cache-buster and gates Cloudflare asset
-        // work; `deployedAssetCount` is what the user deployed and is reported.
+        // Decision: `assetCount` includes the cache buster and gates Cloudflare asset work; `deployedAssetCount` is
+        // what the user deployed and is what's reported.
         const assetCount = Object.keys(assetManifest).length;
         const deployedAssetCount = Object.keys(incomingAssetManifest).length;
 
         projectDomains ??= await getDomainsByProjectId(context.get('db'), projectId);
 
         if (isStaticOnly) {
-          // Static-only branch: bytes already in R2; build the serving
-          // manifest with `!{hash}` for every entry (direct-to-R2 always
-          // lands in R2). No KV/R2 writes for asset bodies — only the
-          // serving manifest under `manifest:{deploymentId}` and the
+          // Decision: Static-only branch: bytes are already in R2, so each serving-manifest entry is `!{hash}`. No KV or
+          // R2 writes for asset bodies, only the serving manifest under `manifest:{deploymentId}` and the
           // routing entry under `project.slug`.
           return await publishStaticDeployment({
             get currentStep() {
@@ -941,13 +914,9 @@ export async function runDeploymentPipeline(input: {
           });
         }
 
-        // === WfP branch ===
-        // Direct-to-R2 doesn't change anything about CF's asset upload
-        // session: CF still wants the actual bytes to fan into upload
-        // buckets. We fetch the bytes back from OUR R2 (where the CLI
-        // just uploaded them) — server-internal R2-to-CF traffic that
-        // doesn't go through the user's pipe. The fetch concurrency
-        // matches the existing R2 head verify pool.
+        // Decision: WfP branch: CF's asset upload session still wants the actual bytes. Fetch them back from our R2
+        // (where the CLI uploaded them); that's server-internal traffic that skips the user's connection.
+        // The fetch concurrency matches the R2 head verify pool.
         const uploadDeploymentWorkerResult = await uploadDeploymentWorker({
           get currentStep() {
             return currentStep!;
@@ -1001,7 +970,6 @@ export async function runDeploymentPipeline(input: {
         const workerBindings = uploadDeploymentWorkerResult.workerBindings;
         const assetConfig = uploadDeploymentWorkerResult.assetConfig;
 
-        // Migrations
         const migrateDeploymentWorkerResult = await migrateDeploymentWorker({
           manifest,
           get currentStep() {
@@ -1029,9 +997,8 @@ export async function runDeploymentPipeline(input: {
         });
         const migrationsApplied = migrateDeploymentWorkerResult.migrationsApplied;
 
-        // Queue setup is the first authoritative external mutation for a
-        // Worker deploy. Persist a protected intent before it so no reaper can
-        // terminalize a request whose queue/routing cutover may have landed.
+        // Decision: Queue setup is the first authoritative external change for a Worker deploy. Persist a protected
+        // intent before it so no reaper can end a request whose queue or routing cutover may have landed.
         await publishWorkerDeployment({
           get currentStep() {
             return currentStep!;
@@ -1162,17 +1129,11 @@ export async function runDeploymentPipeline(input: {
       });
     } finally {
       clearInterval(heartbeat);
-      // Reap the placeholder deployment row if it never advanced past the
-      // initial 'pending' + null-manifest state. A row stuck at 'pending'
-      // with a manifest set is the bug class we want surfaced.
-      //
-      // A `canceling` placeholder means a `cancelDeployment` API call
-      // raced an early-return path (asset-verify failure, quota check,
-      // etc.) AFTER the precheck-and-claim insert but BEFORE the manifest
-      // update. The two-phase cancellation flip sets status='canceling'
-      // but the pipeline's catch never reached a force-finalize path.
-      // DELETE alongside `pending` placeholders — both represent no real
-      // deploy attempt (manifest is still null).
+      // Decision: Reap the placeholder row if it never got past 'pending' with a null manifest. A 'pending' row with
+      // a manifest is a bug we want to see.
+      // A `canceling` placeholder means `cancelDeployment` raced an early return (asset-verify failure,
+      // quota check) after the claim insert and before the manifest update; the pipeline's catch never
+      // reached a force-finalize path. Delete it with the `pending` ones: neither is a real deploy attempt.
       try {
         const latest = await getDeployment(context.get('db'), preDeployment.id);
         if (
@@ -1199,7 +1160,7 @@ export async function runDeploymentPipeline(input: {
         });
       }
       if (input.releaseWorkerInput) {
-        // Before the stream closes: closing the response can end the request.
+        // Decision: Do this before the stream closes: closing the response can end the request.
         await input.releaseWorkerInput().catch((err) =>
           logger.warn('worker_input', 'delete_failed', {
             err: err instanceof Error ? err.message : String(err),
@@ -1212,9 +1173,7 @@ export async function runDeploymentPipeline(input: {
         if (!execution) {
           await writer.close();
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
   })();
 
@@ -1236,8 +1195,8 @@ export async function runDeploymentPipeline(input: {
         ) {
           await appendDeploymentEvent(tx, preDeployment.id, cutoverOwnerId, event);
         }
-        // An unresolved cutover/compensation is still an owned operation. The
-        // Queue outbox reconciles it after the invocation's hard lifetime.
+        // Decision: An unresolved cutover or compensation is still an owned operation. The Queue outbox reconciles it
+        // after the invocation's hard lifetime.
       });
     }
     return new Response(null, { status: 204 });

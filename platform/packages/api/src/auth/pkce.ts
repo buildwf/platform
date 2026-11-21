@@ -1,6 +1,6 @@
-// PKCE (RFC 7636) checks shared by the CLI login flow (`routes/auth.ts`)
-// and the GitHub-identity link flow (`routes/github.ts`). oauth4webapi's
-// calculatePKCECodeChallenge makes the S256 challenge.
+// Decision: PKCE (RFC 7636) checks shared by the CLI login flow (`routes/auth.ts`) and the
+// GitHub-identity link flow (`routes/github.ts`). oauth4webapi's calculatePKCECodeChallenge
+// makes the S256 challenge.
 
 /** The only `code_challenge_method` we accept: SHA-256 → base64url. */
 export const CLI_CODE_CHALLENGE_METHOD = 'S256';

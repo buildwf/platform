@@ -174,7 +174,6 @@ describe('Zero Trust disable public bypass lifecycle', () => {
       (await readZeroTrustConfigurationStrict(env.db))!;
     const originalRows = await env.db.select().from(projectZeroTrust);
     expect(originalRows).toHaveLength(101);
-    // 101 public exceptions, the shared application, and the health exception.
     expect(cloudflare.applications.size).toBe(103);
 
     await disablePlatformZeroTrust(platform, env.db);
@@ -228,8 +227,8 @@ describe('Zero Trust disable public bypass lifecycle', () => {
         bypass_application_name: null,
       });
     }
-    // 101 projects take about 1.5s alone but more than 10s while the full
-    // suite shares the machine with other test runs.
+    // Decision: 101 projects take about 1.5s alone but more than 10s while the full suite shares the machine with
+    // other test runs.
   }, 30_000);
 
   it('keeps the public exception usable when wildcard deletion fails', async () => {
@@ -318,7 +317,6 @@ describe('Zero Trust disable public bypass lifecycle', () => {
     });
     const failingRoute = await env.ROUTING.get(failingProject.slug);
     try {
-      // One project's failure does not hold the installation disable.
       await expect(disablePlatformZeroTrust(platform, env.db)).resolves.toMatchObject({
         enabled: false,
         status: 'ready',
@@ -337,8 +335,8 @@ describe('Zero Trust disable public bypass lifecycle', () => {
       status: 'ready',
     });
     expect(JSON.parse((await env.ROUTING.get(unvisitedProject.slug))!).zeroTrust).toBeUndefined();
-    // The skipped project keeps its protected route: without an Access
-    // assertion dispatch denies it rather than serving it publicly.
+    // Decision: The skipped project keeps its protected route. Without an Access assertion, dispatch denies it
+    // instead of serving it publicly.
     expect(await getProjectZeroTrustState(env.db, failingProject.id)).toMatchObject({
       desired_protected: false,
       status: 'error',
@@ -464,7 +462,6 @@ describe('Zero Trust disable public bypass lifecycle', () => {
         }, options),
       );
     try {
-      // The project is skipped; the installation disable still completes.
       await expect(disablePlatformZeroTrust(platform, env.db)).resolves.toMatchObject({
         enabled: false,
         status: 'ready',

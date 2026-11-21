@@ -459,9 +459,7 @@ function parsePreviewCursor(raw: string | undefined): {
     ) {
       return { phase: parsed.phase, cursor: parsed.cursor as SandboxDrainCursor };
     }
-  } catch {
-    // handled below
-  }
+  } catch {}
   throw new OperatorError(400, 'Sandbox drain preview cursor is invalid.', 'invalid_cursor');
 }
 

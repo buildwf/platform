@@ -39,7 +39,6 @@ vi.mock('../../src/cli/client', () => ({
 
 const PRIVATE_CONFIG_PATH = join(tmpdir(), 'platform-drizzle-test', 'drizzle.config.json');
 
-// Mock the drizzle config writers to avoid needing a real schema on disk.
 const mockWriteDrizzleConfig = vi.fn<(root: string, dbPath: string, dialect?: string) => string>(
   (root, _dbPath, _dialect) => join(root, '.bwf', 'drizzle.config.json'),
 );
@@ -55,7 +54,6 @@ vi.mock('../../src/drizzle/config.ts', () => ({
     mockWithPrivateDrizzleConfig(...(args as Parameters<typeof mockWithPrivateDrizzleConfig>)),
 }));
 
-// Mock execFileSync (used by runDrizzleKit) so no child process is spawned.
 const mockExecFileSync = vi.fn<() => void>(() => undefined);
 
 vi.mock('node:child_process', () => ({

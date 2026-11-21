@@ -16,7 +16,6 @@ type FixtureStorage = {
   transaction: <T>(run: (tx: FixtureStorage) => Promise<T>) => Promise<T>;
 };
 
-/** Execute the production counter against the integration database and routing fixture. */
 export function createUsageCounterFixture(
   env: ApiEnv['Bindings'],
   initial: Record<string, Partial<CounterState>> = {},
@@ -80,7 +79,7 @@ export function createUsageCounterFixture(
         };
         const ctx = { storage };
         counter = new UsageCounter(ctx as never, env);
-        // The Workers base-class stub does not install these inherited fields.
+        // Decision: The Workers base-class stub doesn't install these inherited fields.
         Object.assign(counter, { ctx, env });
         counters.set(id, counter);
       }

@@ -74,14 +74,13 @@ export function resolveAssetConfig(inputs: AssetRoutingInputs): AssetConfig {
   return resolveAssetRoutingPolicy(inputs).assetConfig;
 }
 
-// bwf's reserved internal namespace (`/__platform/ready`, `/__platform/migrate/*`,
-// etc.). These must reach the worker before CF Static Assets can serve the SPA
-// shell — otherwise `not_found_handling: 'single-page-application'` returns
-// index.html for GET /__platform/migrate/capabilities and migration capability
-// negotiation fails at deploy time. The worker-first (`/**`) branch already
-// covers it; both SPA-fallback branches must list it explicitly, since a SPA
-// can advertise migrations without API/auth routes (e.g. a cron/queue-only app
-// with D1 migrations still emits manifest.migrations).
+// Decision: bwf's reserved internal namespace (`/__platform/ready`, `/__platform/migrate/*` and so on) has
+// to reach the worker before CF Static Assets can serve the SPA shell. Otherwise
+// `not_found_handling: 'single-page-application'` returns index.html for
+// GET /__platform/migrate/capabilities and migration capability negotiation fails at deploy time.
+// The worker-first (`/**`) branch already covers it. Both SPA-fallback branches have to list it,
+// since a SPA can advertise migrations without API or auth routes (for example a cron or
+// queue-only app with D1 migrations still emits manifest.migrations).
 export const BWF_INTERNAL_WORKER_FIRST: ReadonlyArray<string> = ['/__platform', '/__platform/*'];
 
 export function resolveAssetRoutingPolicy(inputs: AssetRoutingInputs): AssetRoutingPolicy {
@@ -99,9 +98,9 @@ export function resolveAssetRoutingPolicy(inputs: AssetRoutingInputs): AssetRout
           not_found_handling: 'single-page-application',
           run_worker_first: [...BWF_INTERNAL_WORKER_FIRST],
         };
-  // Explicit `routing.notFound` wins over the inferred value. Applied here (on
-  // the inputs) rather than at the call sites so dev, build, and deploy can't
-  // drift apart. `run_worker_first` is deliberately left as inferred.
+  // Decision: An explicit `routing.notFound` wins over the inferred value. It's applied here, on the inputs,
+  // and not at the call sites, so dev, build and deploy can't drift apart. `run_worker_first` is
+  // deliberately left as inferred.
   if (inputs.notFound !== undefined) {
     assetConfig.not_found_handling = inputs.notFound;
   }
@@ -109,12 +108,11 @@ export function resolveAssetRoutingPolicy(inputs: AssetRoutingInputs): AssetRout
     assetConfig,
     apiWorkerFirst,
     workerFirst,
-    // The worker-side SPA fallback replaces the SPA behavior the inferred
-    // `workerFirst` config gives up (`not_found_handling: 'none'` makes
-    // `env.ASSETS.fetch()` return a bare 404 for an unmatched navigation).
-    // `not_found_handling` still applies inside `env.ASSETS.fetch()`, so an
-    // explicit `notFound` other than `single-page-application` must turn the
-    // fallback off, or the shell would answer before that setting is consulted.
+    // Decision: The worker-side SPA fallback replaces the SPA behavior the inferred `workerFirst` config gives up
+    // (`not_found_handling: 'none'` makes `env.ASSETS.fetch()` return a bare 404 for an unmatched
+    // navigation). `not_found_handling` still applies inside `env.ASSETS.fetch()`, so an explicit
+    // `notFound` other than `single-page-application` has to turn the fallback off, or the shell would
+    // answer before that setting is consulted.
     workerSpaFallback:
       workerFirst &&
       (inputs.notFound === undefined || inputs.notFound === 'single-page-application'),

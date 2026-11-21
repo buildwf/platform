@@ -761,7 +761,6 @@ describe('registered OAuth applications', () => {
   it('keeps connected-app Worker modules inside the approved artifact', async () => {
     const { token } = await connect();
     const project = await createTestProject(env.db, user.id, 'static-approved-app');
-    // A static artifact: its approval digest commits to no Worker modules.
     const prepared = createDeployArtifact({ manifest: artifact.manifest, assetManifest: {} });
     const flow = await publishApproval(token.access_token, project.slug, prepared);
     const consent = await approve(flow.id, flow.cookie);
@@ -1042,11 +1041,9 @@ describe('registered OAuth applications', () => {
     const first = await refresh(token.refresh_token);
     expect(first.status).toBe(200);
     const firstBody = (await first.json()) as { access_token: string; refresh_token: string };
-    // Replaying the already-rotated refresh token is treated as theft.
     const replay = await refresh(token.refresh_token);
     expect(replay.status).toBe(400);
     expect((await replay.json()) as { error: string }).toMatchObject({ error: 'invalid_grant' });
-    // The entire grant family is now revoked, including the token issued by the first refresh.
     const second = await refresh(firstBody.refresh_token);
     expect(second.status).toBe(400);
     expect(
@@ -1064,7 +1061,6 @@ describe('registered OAuth applications', () => {
       refresh(token.refresh_token),
     ]);
     expect(responses.map((response) => response.status).sort()).toEqual([200, 400]);
-    // The second redemption is reuse, so the grant it raced is revoked.
     const [grant] = await env.db.select().from(oauthGrants);
     expect(grant!.revoked_at).not.toBeNull();
   });
@@ -1152,7 +1148,6 @@ describe('registered OAuth applications', () => {
     expect(await env.db.select().from(oauthRefreshTokens)).toHaveLength(0);
     expect((await refresh(refreshed.refresh_token)).status).toBe(400);
 
-    // A disconnected grant is removed even while its refresh token is unexpired.
     const disconnected = await connect();
     await env.db.update(oauthGrants).set({ expires_at: longAgo, revoked_at: longAgo });
     await purgeExpiredOAuthRequests(env.db);
@@ -1186,7 +1181,6 @@ describe('registered OAuth applications', () => {
     expect((await refresh(token.refresh_token, {}, otherBasic)).status).toBe(400);
     const rotated = await refresh(token.refresh_token);
     expect(rotated.status).toBe(200);
-    // Another client presenting the rotated-out token does not revoke the grant.
     expect((await refresh(token.refresh_token, {}, otherBasic)).status).toBe(400);
     const { refresh_token } = (await rotated.json()) as { refresh_token: string };
     expect((await refresh(refresh_token)).status).toBe(200);
@@ -1204,7 +1198,6 @@ describe('registered OAuth applications', () => {
     await env.db.update(users).set({ suspended_reason: 'admin' }).where(eq(users.id, user.id));
     expect((await refresh(suspended.token.refresh_token)).status).toBe(400);
     await env.db.update(users).set({ suspended_reason: null }).where(eq(users.id, user.id));
-    // The rejected refresh did not spend the token.
     expect((await refresh(suspended.token.refresh_token)).status).toBe(200);
 
     const disabled = await connect();

@@ -18,30 +18,26 @@ import { GITHUB_API_BASE, GITHUB_API_VERSION } from './installation-token.ts';
  * no fetch), so dev/unconfigured environments stay quiet.
  */
 
-// Same retry shape as compare / check-run: up to 2 extra attempts with a short
-// fixed delay on transient 5xx/network. A 4xx is definitive and stops immediately.
+// Decision: Same retry shape as compare and check-run: up to 2 extra attempts with a short fixed delay on
+// transient 5xx or network failures. A 4xx is definitive and stops at once.
 const WEBHOOK_DELIVERY_RETRY_ATTEMPTS = 2;
 const WEBHOOK_DELIVERY_RETRY_DELAY_MS = 250;
 
-// GitHub caps `per_page` at 100 for this endpoint; use the max so a scan covers
-// the most failures per request.
+// Decision: GitHub caps `per_page` at 100 for this endpoint; use the max so a scan covers the most failures
+// per request.
 const PER_PAGE = 100;
 const DEFAULT_MAX_PAGES = 5;
 
 export type FailedWebhookDelivery = {
-  // String(item.id) — the numeric delivery id, used for the redeliver POST.
   id: string;
-  // item.guid — stable across an event's original + all its redeliveries; the
-  // dedup key so a permanently-failing event is retried at most once.
+  // Decision: item.guid is stable across an event's original delivery and all its redeliveries. It's the dedup
+  // key, so a permanently failing event is retried at most once.
   guid: string;
   event: string | null;
-  // item.status_code — the failed delivery's HTTP status (audit).
   statusCode: number | null;
-  // item.delivered_at (audit).
   deliveredAt: string | null;
 };
 
-// A GitHub delivery-log item (only the fields we read).
 type DeliveryItem = Readonly<{
   id: number | string;
   guid: string;
@@ -59,8 +55,6 @@ function errInfo(err: unknown): { name?: string; message: string } {
   return { message: String(err) };
 }
 
-// area:'github' distinguishes from the deploy-pipeline logger (area:'deploy').
-// `phase` differentiates the list scan from a redeliver POST.
 function logFailure(
   phase: 'webhook-deliveries-list' | 'webhook-redeliver',
   reason: FailureReason,
@@ -111,9 +105,6 @@ function appJwtHeaders(appJwt: string): Record<string, string> {
   };
 }
 
-// Fetch one deliveries page with 5xx/network retry. Returns the page's items +
-// the next-cursor URL on success, or null on a definitive 4xx / exhausted
-// transient failures (the caller stops and returns what it has collected).
 async function fetchDeliveriesPage(
   url: string,
   appJwt: string,
@@ -174,9 +165,9 @@ export async function listFailedWebhookDeliveries(
   const maxPages = opts?.maxPages ?? DEFAULT_MAX_PAGES;
 
   const results: Array<FailedWebhookDelivery> = [];
-  // Presence of the secrets != a valid key: importPKCS8 throws on a malformed
-  // PEM. Mint inside the guarded region so a bad key is the same never-throws
-  // failure as a network error — return what we have (nothing yet).
+  // Decision: Having the secrets doesn't mean the key is valid: importPKCS8 throws on a malformed PEM. Mint
+  // inside
+  // the guarded region so a bad key fails without throwing, like a network error.
   let appJwt: string;
   try {
     appJwt = await createAppJwt(env);
@@ -221,9 +212,9 @@ export async function redeliverWebhookDelivery(
   if (!env.GITHUB_APP_ID || !env.GITHUB_APP_PRIVATE_KEY) {
     return false;
   }
-  // Presence of the secrets != a valid key: importPKCS8 throws on a malformed
-  // PEM. Mint inside the guarded region so a bad key is the same never-throws
-  // failure as a network error.
+  // Decision: Having the secrets doesn't mean the key is valid: importPKCS8 throws on a malformed PEM. Mint
+  // inside
+  // the guarded region so a bad key fails without throwing, like a network error.
   let appJwt: string;
   try {
     appJwt = await createAppJwt(env);

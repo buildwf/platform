@@ -11,8 +11,6 @@ type ExtractInput<V> = {
     : never;
 };
 
-// ─── Output extraction ──────────────────────────────────────────────────────
-
 describe('Awaited<handler.__output>', () => {
   it('extracts plain object return type', () => {
     const handler = defineHandler((_c) => {
@@ -37,8 +35,6 @@ describe('Awaited<handler.__output>', () => {
     expectTypeOf<Output>().toEqualTypeOf<{ greeting: string }>();
   });
 });
-
-// ─── Input extraction ───────────────────────────────────────────────────────
 
 describe('ExtractInput<handler.__validators>', () => {
   it('is empty for plain defineHandler', () => {

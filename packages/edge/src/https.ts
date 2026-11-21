@@ -13,7 +13,7 @@ export function redirectToHttps(request: Request): Response | undefined {
     return undefined;
   }
   url.protocol = 'https:';
-  // Cloudflare's HTTP ports do not accept TLS. Upgrade to the default HTTPS port.
+  // Decision: Cloudflare's HTTP ports don't accept TLS. Upgrade to the default HTTPS port.
   url.port = '';
   return Response.redirect(url.href, 308);
 }

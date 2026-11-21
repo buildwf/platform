@@ -71,7 +71,6 @@ function r2Endpoint(accountId: string, bucket: string, key: string): string {
  * standard alphabet with padding (not the URL-safe variant).
  */
 function hexToBase64(hex: string): string {
-  // Separate checks so the error says which constraint failed.
   if (hex.length !== 32) {
     throw new Error(`md5 must be 32 hex characters, got ${hex.length}`);
   }
@@ -117,11 +116,9 @@ export async function presignAssetPut(
 
   const url = r2Endpoint(opts.accountId, opts.bucket, opts.key);
 
-  // The AwsV4Signer in `signQuery` mode produces a query-presigned URL.
-  // `allHeaders: true` flips Content-Type and any custom headers from
-  // the unsignable list into the signed-headers list, which is what we
-  // want — Content-Type, Content-Md5 and Content-Length must be covered by
-  // the signature so R2 rejects tampered uploads.
+  // Decision: AwsV4Signer in `signQuery` mode produces a query-presigned URL. `allHeaders: true` moves
+  // Content-Type and custom headers from the unsignable list into the signed headers, so Content-Type,
+  // Content-Md5 and Content-Length are covered by the signature and R2 rejects tampered uploads.
   const headers: Record<string, string> = {
     'Content-Type': opts.contentType,
   };

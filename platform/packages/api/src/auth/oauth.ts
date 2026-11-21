@@ -118,7 +118,7 @@ export async function setOAuthPreviewPermission(db: Db, id: string, enabled: boo
         .set({ preview_expires_at: new Date().toISOString() })
         .where(eq(projects.preview_client_id, id));
     }
-    // Changing a client's maximum permission never elevates existing grants.
+    // Decision: Changing a client's maximum permission doesn't elevate existing grants.
     return publicOAuthClient({ ...client, scopes });
   });
 }
@@ -152,8 +152,8 @@ export async function purgeExpiredOAuthRequests(db: Db) {
     SELECT id FROM oauth_requests WHERE expires_at < now() - interval '1 day'
     ORDER BY expires_at LIMIT 1000
   )`);
-  // oauth_grants.expires_at is the access token expiry. Keep a grant while its
-  // refresh token family can still renew it; deleting the grant cascades to it.
+  // Decision: oauth_grants.expires_at is the access token expiry. Keep a grant while its refresh token
+  // family can still renew it; deleting the grant cascades to it.
   await db.execute(sql`DELETE FROM oauth_grants WHERE id IN (
     SELECT g.id FROM oauth_grants g
     WHERE g.expires_at < now() - interval '1 day'
@@ -219,14 +219,14 @@ export async function activeOAuthGrant(
   id: string,
   companyIdentity?: ApiEnv['Variables']['companyIdentity'],
   lock = false,
-  // A refresh may follow an expired access token, so it skips that check. It
-  // locks the grant FOR UPDATE so concurrent refreshes of one grant run in turn.
+  // Decision: A refresh may follow an expired access token, so it skips that check. It locks the grant
+  // FOR UPDATE so concurrent refreshes of one grant run in turn.
   forRefresh = false,
 ) {
   if (!lock) {
     return readActiveOAuthGrant(db, eq(oauthGrants.id, id), companyIdentity);
   }
-  // Fence changes to the upstream login configuration during publish cutover.
+  // Decision: Fence changes to the upstream login configuration during publish cutover.
   if (lock) {
     await db
       .select()
@@ -261,7 +261,7 @@ export async function activeOAuthGrant(
       .from(platformHumanSessions)
       .where(eq(platformHumanSessions.id, grant.session.sid));
     if (session) {
-      // Configuration mutations lock connections before their sessions.
+      // Decision: Configuration mutations lock connections before their sessions.
       await db
         .select()
         .from(platformLoginConnections)
@@ -290,9 +290,9 @@ export async function activeOAuthGrant(
   return { grant, user, client };
 }
 
-// Read the authorization snapshot in one uncached query. Do not cache grants:
-// disabling a client, revoking a grant or suspending an owner must apply to the
-// next asset request as well as to the next page load.
+// Decision: Read the authorization snapshot in one uncached query. Don't cache grants: disabling a
+// client, revoking a grant or suspending an owner has to apply to the next asset request as
+// well as to the next page load.
 async function readActiveOAuthGrant(
   db: DbOrTx,
   condition: SQL,

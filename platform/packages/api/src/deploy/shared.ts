@@ -3,11 +3,9 @@ import type { ApiEnv } from '../env.ts';
 import type { Project } from '../types.ts';
 import { isCfAssetPlainText } from './migrations.ts';
 
-// Cap on the number of presign requests in a single batch. Presigning is
-// CPU-light (one HMAC chain per call) but unbounded fanout still costs
-// memory and lets a malformed CLI burn server CPU without bound. 5000 is
-// well above the largest realistic dist/ asset count. Asset manifests on the
-// JSON-mode deploy share the same cap for symmetry.
+// Decision: Cap on presign requests per batch. Presigning is cheap (one HMAC chain each), but unbounded fanout
+// costs memory and lets a malformed CLI burn server CPU. 5000 is well above a realistic dist/ asset
+// count. JSON-mode asset manifests share the cap.
 export const MAX_UPLOAD_URLS_BATCH = 5000;
 
 export const DEFAULT_TAIL_SERVICE_NAME = 'platform-tail';
@@ -23,21 +21,19 @@ export function projectObservability(env: Pick<ApiEnv['Bindings'], 'PLATFORM_RUN
   return { enabled: true, logs: { invocation_logs: true, head_sampling_rate: 1 } };
 }
 
-// Per-module cap for Worker modules that older CLIs send inline as base64
-// `workerFiles`. It bounds the memory one decoded module holds in the request;
-// it is not a Cloudflare limit. Modules uploaded to R2 (`workerInput`) are
-// checked against CLOUDFLARE_WORKER_SIZE_LIMIT_BYTES instead.
+// Decision: Per-module cap for Worker modules that older CLIs send inline as base64 `workerFiles`. It bounds
+// the memory one decoded module holds; it isn't a Cloudflare limit. Modules uploaded to R2
+// (`workerInput`) are checked against CLOUDFLARE_WORKER_SIZE_LIMIT_BYTES instead.
 export const MAX_WORKER_FILE_BYTES = 32 * 1024 * 1024;
 
-// Mirrors Cloudflare's Worker size limit: 64 MiB uncompressed on every plan,
-// counting every module except source maps. Cloudflare limits source maps
-// separately and enforces that limit itself.
+// Decision: Mirrors Cloudflare's Worker size limit: 64 MiB uncompressed on each plan, counting all modules but
+// source maps. Cloudflare limits source maps separately and enforces that itself.
 // https://developers.cloudflare.com/workers/platform/limits/#worker-size
 const CLOUDFLARE_WORKER_SIZE_LIMIT_BYTES = 64 * 1024 * 1024;
 
-// A finalize accepts direct Worker uploads at most this old. The stale-input
-// sweep (`dispatchPendingDeployments`) removes unclaimed inputs after 24 hours,
-// so an accepted upload cannot be swept while its deploy is admitted or runs.
+// Decision: A finalize accepts direct Worker uploads at most this old. The stale-input sweep
+// (`dispatchPendingDeployments`) removes unclaimed inputs after 24 hours, so an accepted upload
+// can't be swept while its deploy is admitted or running.
 export const WORKER_UPLOAD_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 /**
@@ -81,17 +77,16 @@ export function projectPublicUrls(
 
 export const CF_RETRY = { maxRetries: 3, delayMs: 1000 };
 
-// Readiness probe: confirms the new worker is live in the dispatch namespace
-// before dispatching migrations. Absorbs CF's WfP propagation delay.
-// Backoff: 0 + 1 + 2 + 4 + 8 + 16 + 32 = ~63s max window.
+// Decision: Readiness probe: confirms the new worker is live in the dispatch namespace before migrations run,
+// to absorb CF's WfP propagation delay. Backoff 0+1+2+4+8+16+32 gives about a 63s window.
 export const CF_READINESS_RETRY = { maxRetries: 6, delayMs: 1000 };
 
 export function sanitizeDeployErrorMessage(message: string): string {
   const trimmed = message.trim();
   if (
     isCfAssetPlainText(trimmed) ||
-    // JSON.parse SyntaxError truncates the original text (e.g. `Unexpected token 'A', "Assets hav"...`)
-    // so the full substring won't match — detect the truncated form too
+    // Decision: A JSON.parse SyntaxError truncates the original text (`Unexpected token 'A', "Assets hav"...`), so
+    // the full substring won't match; detect the truncated form too.
     /Unexpected token.*"Assets hav/.test(trimmed)
   ) {
     return 'asset upload returned an unexpected Cloudflare response';
@@ -99,32 +94,25 @@ export function sanitizeDeployErrorMessage(message: string): string {
   return message;
 }
 
-// Bounded concurrency for the R2 head check that verifies declared assets
-// were actually uploaded by the CLI before the JSON-mode deploy proceeds.
-// 20 matches R2's typical head-throughput sweet spot — verifying 5000
-// assets at this concurrency completes in well under the deploy heartbeat
-// interval.
+// Decision: Bounded concurrency for the R2 head check that verifies the CLI uploaded the declared assets. 20
+// suits R2 head throughput: 5000 assets verify well inside the deploy heartbeat interval.
 export const R2_HEAD_VERIFY_CONCURRENCY = 20;
 
-// Keep each project-row-lock tenure bounded while reconciling external asset
-// stores. A fresh retained/in-flight hash snapshot is taken for every batch.
+// Decision: Keep each project-row-lock tenure short while reconciling external asset stores. Each batch takes
+// a fresh snapshot of retained and in-flight hashes.
 export const ASSET_GC_LOCK_BATCH = 100;
 
-// Retention is post-cutover and best effort. Cap the asset hashes one deploy
-// evicts or sweeps (each costs up to a KV delete and an R2 head) so eviction
-// only briefly delays the `done` event, and the orphan sweep that runs in
-// `waitUntil` after the response stays short.
+// Decision: Retention runs after cutover and is best effort. Cap the hashes one deploy evicts or sweeps (each
+// costs up to a KV delete and an R2 head) so eviction only briefly delays `done`, and the orphan
+// sweep in `waitUntil` stays short.
 export const ASSET_GC_MAX_HASHES_PER_DEPLOY = 200;
 
-// Per-blake3 / per-md5 validation: 32 lowercase hex characters.
 export const HEX_32_REGEX = /^[0-9a-f]{32}$/;
 
-// Body cap for JSON-mode deploy POSTs. Older CLIs send Worker modules inline
-// as base64 `workerFiles`, which dominate the body; current CLIs upload them
-// to R2 first (`workerInput`) and send only their names, sizes, and digests.
-// The cap keeps the inline path's parsed body well under the 128 MiB Worker
-// memory limit. Asset bytes never travel in this body — they go direct-to-R2
-// via presigned PUTs.
+// Decision: Body cap for JSON-mode deploy POSTs. Older CLIs send Worker modules inline as base64
+// `workerFiles`, which dominate the body; current CLIs upload them to R2 first (`workerInput`). The
+// cap keeps the inline path's parsed body well under the 128 MiB Worker memory limit. Asset bytes
+// go direct to R2 through presigned PUTs, not in this body.
 export const MAX_JSON_DEPLOY_BODY_BYTES = 64 * 1024 * 1024;
 
 export type UploadUrlsRequestAsset = Readonly<{
@@ -134,13 +122,12 @@ export type UploadUrlsRequestAsset = Readonly<{
   contentType: string;
 }>;
 
-// Main module Cloudflare runs when the manifest does not name `workerMain`.
+// Decision: Main module Cloudflare runs when the manifest doesn't name `workerMain`.
 export const DEFAULT_WORKER_MAIN_MODULE = 'index.js';
 
-// Extensions the CLI collects from the worker build output, plus the JSON
-// modules `moduleContentType` understands.
+// Decision: Extensions the CLI collects from the worker build output, plus the JSON modules
+// `moduleContentType` understands. Keep it in step with the CLI.
 const WORKER_MODULE_EXTENSION_REGEX = /\.(?:js|mjs|cjs|wasm|map|txt|json)$/;
-// C0 controls, DEL, and C1 controls.
 // oxlint-disable-next-line no-control-regex
 const CONTROL_CHARACTER_REGEX = /[\u0000-\u001f\u007f-\u009f]/;
 

@@ -20,7 +20,7 @@ afterEach(() => {
 
 describe('parseHeadersFile', () => {
   it('returns undefined for missing file', () => {
-    setup(); // no _headers written
+    setup();
     expect(parseHeadersFile(tmpDir)).toBeUndefined();
   });
 
@@ -63,7 +63,7 @@ describe('parseHeadersFile', () => {
   });
 
   it('parses Nuxt format and sorts by pattern length (most-specific last)', () => {
-    // Nuxt _headers lists most-specific first — parser should reorder
+    // Decision: Nuxt's _headers lists most-specific first, so the parser reorders.
     setup(
       [
         '/_nuxt/builds/meta/*',

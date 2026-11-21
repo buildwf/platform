@@ -18,12 +18,11 @@ type BundleOutput =
 function injectWorkersTypesReferencePlugin() {
   return {
     name: 'platform:inject-workers-types-reference',
-    // tsdown's declaration emit currently drops source-level triple-slash references.
-    // Our public handler types use Cloudflare global types (D1Database, KVNamespace, etc.),
-    // so we inject the reference into the emitted .d.mts to keep consumer DX zero-config.
+    // Decision: tsdown's declaration emit drops source-level triple-slash references. Our public handler
+    // types use Cloudflare global types (D1Database, KVNamespace and so on), so we inject the
+    // reference into the emitted .d.mts to keep consumer setup zero-config.
     generateBundle(_options: unknown, bundle: Record<string, BundleOutput>) {
       for (const output of Object.values(bundle)) {
-        // Patch declaration entrypoints whose source uses Cloudflare globals.
         const targets = new Set([
           'runtime/handler.d.mts',
           'runtime/db.d.mts',
@@ -127,9 +126,9 @@ export default defineConfig({
       'src/runtime/ws-server.ts',
       'src/runtime/live-server.ts',
       'src/cli/cli.ts',
-      // Stable entry that deploy spawns as an isolated child.
+      // Decision: Stable entry that deploy spawns as an isolated child.
       'src/cli/env-schema-probe.ts',
-      // Private typed Cloudflare transport, spawned by deployment orchestrators.
+      // Decision: Private typed Cloudflare transport, spawned by deployment orchestrators.
       'src/cli/cloudflare-operation-process.ts',
     ],
     format: 'esm',
@@ -152,7 +151,7 @@ export default defineConfig({
     deps: {
       resolveDepSubpath: true,
       neverBundle: [
-        // This module is augmented by users, keep it as external so tsdown does not rewrite it.
+        // Decision: Users augment this module, so keep it external so tsdown doesn't rewrite it.
         '@builtbyfriends/bwf/routes',
         'vite',
         '@cloudflare/vite-plugin',
@@ -179,10 +178,10 @@ export default defineConfig({
         'picocolors',
         'ofetch',
         'pathslash',
-        // Dependency-free; bundled so the CLI interactivity gate (`isWranglerNonInteractiveOrCI`)
+        // Decision: Dependency-free; bundled so the CLI interactivity gate (`isWranglerNonInteractiveOrCI`)
         // adds no runtime dependency.
         'ci-info',
-        // Only vite-plus/package.json, for the versions `bwf init` scaffolds.
+        // Decision: Only vite-plus/package.json, for the versions `bwf init` scaffolds.
         'vite-plus',
       ],
     },

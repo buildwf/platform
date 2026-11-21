@@ -47,12 +47,9 @@ it('rejects a failed statement even when the response envelope succeeds', async 
 
 describe('queryD1 timeout', () => {
   it('aborts the fetch and throws a timed-out error when the request hangs', async () => {
-    // Without a timeout, a hung D1 REST call would hold the
-    // migration row lock indefinitely — every subsequent apply/
-    // rename/rollback on the same project would pile up on the
-    // project's FOR UPDATE row lock. queryD1 must abort the fetch
-    // on its own timeout so the transaction unwinds and releases
-    // the lock.
+    // Decision: Without a timeout, a hung D1 REST call would hold the migration row lock, and later
+    // apply/rename/rollback calls on the project would pile up on its FOR UPDATE lock. queryD1 aborts
+    // the fetch on its own timeout so the transaction unwinds.
     let abortSignal: AbortSignal | undefined;
     const hangingFetch = vi.fn(
       (_url: string, init: RequestInit) =>
@@ -99,17 +96,9 @@ describe('queryD1 timeout', () => {
   });
 
   it('aborts and rejects when headers arrive but the body stalls', async () => {
-    // `fetch()` resolves on response HEADERS, not the full body. A D1
-    // that sends headers and then stalls the chunked body (or sends a
-    // truncated stream that never closes) would hang the `response.json()`
-    // await forever, holding the row lock and pg pool connection. The
-    // abort controller must stay active until AFTER json() completes so
-    // abort propagates into the body stream and rejects the parse.
-    //
-    // The test constructs a Response whose body is a ReadableStream that
-    // never emits a byte. When the timer fires, the abort listener
-    // errors the stream, which propagates through json() as an
-    // AbortError, and queryD1 rethrows it as a timeout.
+    // Decision: fetch() resolves on headers, not the body. A D1 that stalls the body would hang response.json()
+    // and hold the row lock and pool connection, so the abort controller stays active until json()
+    // finishes. The test body is a stream that never emits a byte.
     vi.stubGlobal(
       'fetch',
       vi.fn(async (_url: string, init: RequestInit) => {

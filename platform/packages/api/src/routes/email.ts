@@ -99,11 +99,10 @@ const MAX_ADDRESS_LENGTH = 320;
  * consent view in sync.
  */
 const app = new Hono<ApiEnv>()
-  // Path-scoped, NOT `use('*')` as `domains.ts` does: this router is one of
-  // several mounted at `/projects`, and Hono re-registers a sub-app's
-  // `use('*')` as `ALL /projects/*` on the parent, where it runs for every
-  // sibling mounted after it (`githubProjectRoutes`, `projectUsage`). Pinned
-  // by the sibling-router test in `api-email.test.ts`.
+  // Decision: Path-scoped, not `use('*')` as in `domains.ts`: this router is one of several mounted at
+  // `/projects`, and Hono re-registers a sub-app's `use('*')` as `ALL /projects/*` on the parent, where
+  // it runs for each sibling mounted after it. The sibling-router test in `api-email.test.ts` pins
+  // this.
   .use('/:id/email/*', capabilityMiddleware('email'))
   .get('/:id/email/usage', async (context) => {
     const projectId = context.req.param('id');
@@ -129,13 +128,9 @@ const app = new Hono<ApiEnv>()
     return context.json(await getProjectEmailLogs(context.get('db'), projectId, limit));
   })
 
-  // -------------------------------------------------------------------------
-  // Destinations: per-project verified recipient addresses for outbound mail
-  // via the shared platform sender (`EMAIL_SENDER_DOMAIN`, per environment).
-  // CF Email Routing is the source of truth for verification status; the
-  // platform adds a per-project allowlist on top so projects only see /
-  // send to addresses they declared.
-  // -------------------------------------------------------------------------
+  // Decision: Destinations: per-project verified recipient addresses for outbound mail through the shared
+  // platform sender. CF Email Routing is the source of truth for verification status; the platform adds
+  // a per-project allowlist so projects only see and send to addresses they declared.
   .get('/:id/email/destinations', async (context) => {
     const projectId = context.req.param('id');
     const access = await requireProjectRouteCapability(context, projectId, 'settings');
@@ -145,15 +140,11 @@ const app = new Hono<ApiEnv>()
     const project = access.project;
 
     const rows = await getEmailDestinationsByProjectId(context.get('db'), projectId);
-    // Refresh status from CF for any rows still pending. CF's
-    // listDestinations is account-level; we filter to the rows we care about.
-    //
-    // Platform-pending rows (verification_source='platform') are
-    // intentionally excluded from CF refresh: CF already shows them as
-    // verified (a different project verified them), but we issued our
-    // own per-project confirmation link and the row stays pending until
-    // THAT link is clicked. Refreshing from CF here would defeat the
-    // platform-side verification gate (Option B in the email design doc).
+    // Decision: Refresh pending rows from CF's account-level list. Platform-pending rows
+    // (verification_source='platform') are left out on purpose: CF shows them verified because another
+    // project verified them, but the row waits for our own per-project link. Refreshing them from CF
+    // would
+    // defeat that gate (Option B in the email design doc).
     const pending = rows.filter(
       (r) => r.status === 'pending' && r.verification_source !== 'platform',
     );
@@ -164,7 +155,7 @@ const app = new Hono<ApiEnv>()
         for (const cf of cfRows) {
           byEmail.set(cf.email.toLowerCase(), cf);
         }
-        // The owner's address is read only when a row needs it (below).
+        // Decision: The owner's address is read only when a row needs it (below).
         let ownerEmail: string | null | undefined;
         for (const row of pending) {
           const cf = byEmail.get(row.address);
@@ -172,7 +163,7 @@ const app = new Hono<ApiEnv>()
             continue;
           }
           if (cf.tag === row.cf_destination_id) {
-            // The click answered the destination THIS row registered.
+            // Decision: The click answered the destination this row registered.
             const updated = await updateEmailDestinationStatus(
               context.get('db'),
               row.id,
@@ -184,22 +175,12 @@ const app = new Hono<ApiEnv>()
               continue;
             }
           } else {
-            // The account carries the address under a tag this row never
-            // registered: its own destination was deleted at Cloudflare
-            // (an operator, or the delete-vs-register window the DELETE
-            // route names) and another project's add recreated it, so CF's
-            // mail — which names no project — was answered for THAT
-            // registration. Had the destination survived, this project
-            // would have been the second registrant and taken the
-            // per-project platform link (Option B); promoting by address
-            // here would hand it the other registration's consent instead.
-            // So a NON-owner row stays pending — `bwf email disallow` then
-            // `allow` re-registers it, and because the address is now
-            // CF-verified that add takes the platform link. This GET must
-            // not mail that link itself. The OWNER's own address is Option
-            // C: the human who clicked is the human who owns the project,
-            // so the row adopts the live tag and records the inherited
-            // consent the way the create paths do.
+            // Decision: The account carries the address under a tag this row never registered: its own destination was
+            // deleted at Cloudflare and another project's add recreated it, so CF's mail was answered for that
+            // registration. Promoting by address would hand this row the other registration's consent. So a
+            // non-owner row stays pending; `bwf email disallow` then `allow` re-registers it and takes the
+            // platform link. This GET must not send that link itself. The owner's own address is Option C: the
+            // row adopts the live tag and records the inherited consent, as the create paths do.
             if (ownerEmail === undefined) {
               const owner = await getUser(context.get('db'), project.user_id);
               ownerEmail = owner?.email?.toLowerCase() ?? null;
@@ -210,9 +191,8 @@ const app = new Hono<ApiEnv>()
               );
               continue;
             }
-            // The helper re-checks the owner's address under a lock: the
-            // read above is unlocked, and a login that rotates the address
-            // can commit between it and this write.
+            // Decision: The helper re-checks the owner's address under a lock: the read above is unlocked, and a login that
+            // rotates the address can commit between it and this write.
             const promoted = await promoteEmailDestinationWithOwnerAudit(
               context.get('db'),
               projectId,
@@ -236,7 +216,7 @@ const app = new Hono<ApiEnv>()
         }
       } catch (err) {
         console.error('[email] destinations refresh failed:', err);
-        // Non-fatal — we still return the cached view.
+        // Decision: Non-fatal: return the cached view.
       }
     }
     return context.json(rows.map(serializeDestination));
@@ -249,25 +229,24 @@ const app = new Hono<ApiEnv>()
       return access;
     }
     const project = access.project;
-    // Same guard the other provisioning routes use (see `routes/projects.ts`).
-    // Teardown snapshots the CF destination tags it must clean up ONCE; a
-    // destination registered after that snapshot but before the cascade drops
-    // our rows leaves an account-level CF address no row points at any more.
+    // Decision: Same guard as the other provisioning routes. Teardown snapshots the CF destination tags to clean up
+    // once; a destination registered after that snapshot but before the cascade would leave an
+    // account-level CF address no row points at.
     if (project.status === 'deleting') {
       return context.json({ error: 'Project is being deleted' }, 409);
     }
 
-    // Malformed JSON is user input, not a server fault — 400 it here rather
-    // than letting the throw reach the app-level `onError` 500 (same shape
-    // the secrets/domains routes use).
+    // Decision: Malformed JSON is user input, not a server fault: return 400 here instead of letting the throw
+    // reach
+    // the app-level `onError` 500.
     let body: { address?: unknown } = {};
     try {
       body = await context.req.json<{ address?: unknown }>();
     } catch {
       return context.json({ error: 'invalid address' }, 400);
     }
-    // Length is checked on the RAW string: `MAX_ADDRESS_LENGTH` exists to
-    // bound the normalization and the regex, so neither may run first.
+    // Decision: Check length on the raw string: `MAX_ADDRESS_LENGTH` bounds the normalization and the regex, so
+    // neither may run first.
     const raw = body.address;
     if (typeof raw !== 'string' || raw.length > MAX_ADDRESS_LENGTH) {
       return context.json({ error: 'invalid address' }, 400);
@@ -277,7 +256,7 @@ const app = new Hono<ApiEnv>()
       return context.json({ error: 'invalid address' }, 400);
     }
 
-    // Rate-limit before Cloudflare calls. KV reads make this abuse gate approximate.
+    // Decision: Rate-limit before Cloudflare calls. KV reads make this abuse gate approximate.
     const rateCheck = await checkAndIncrementAddRate(context.env.ROUTING, projectId);
     if (!rateCheck.allowed) {
       return context.json({ error: rateCheck.message }, 429);
@@ -285,14 +264,10 @@ const app = new Hono<ApiEnv>()
 
     const existing = await getEmailDestinationByAddress(context.get('db'), projectId, address);
     if (existing) {
-      // A platform-pending row waits on OUR link (Option B below), which is
-      // best-effort and expires in 24h — so a repeat POST is the resend, and
-      // the only one a project owner has. The rate check above already
-      // bounds it. A CF-pending row is not resendable: CF mails its own link
-      // on create only, and the row flips via the GET refresh when clicked —
-      // so that repeat is answered with `verificationSent: false`, the same
-      // marker the recovered-owner insert below carries, because both mean
-      // "nothing went out; the row waits on a Cloudflare link mailed earlier".
+      // Decision: A platform-pending row waits on our link (Option B), which is best-effort and expires in 24h, so a
+      // repeat POST is the resend, the only one an owner has; the rate check bounds it. A CF-pending row
+      // isn't resendable: CF mails its link only on create, so that repeat answers
+      // `verificationSent: false`, meaning nothing went out and the row waits on a link sent earlier.
       if (existing.status === 'pending' && existing.verification_source === 'platform') {
         const accessResponse = await recheckEmailDestinationSettingsAccess(context, projectId);
         if (accessResponse) {
@@ -312,18 +287,13 @@ const app = new Hono<ApiEnv>()
       );
     }
 
-    // Create CF destination; CF responds with the tag and triggers the
-    // verification email. If the address already exists on the CF account
-    // (e.g. another project already registered it, or this is a same-
-    // request race), narrowly handle the "already exists" error by
-    // listing + reusing the existing record so we don't spam users with
-    // duplicate verification emails and don't fail their request.
-    // Other errors (auth, network, CF outage) are surfaced as 502.
+    // Decision: Create the CF destination; CF returns the tag and sends the verification email. If the address is
+    // already on the account (another project registered it, or a same-request race), handle only the
+    // "already exists" error by listing and reusing the record, so users don't get duplicate verification
+    // emails. Other errors (auth, network, CF outage) return 502.
     let cfRow: CfDestinationAddress;
-    // `cfRow.verified` cannot distinguish a row CF just created for THIS
-    // request from a row that was already on the account and nobody has
-    // clicked yet — both report `null`. Only the recovery path below knows
-    // which one we are holding, so it records that here.
+    // Decision: `cfRow.verified` can't tell a row CF just created for this request from one already on the account
+    // that nobody clicked; both report `null`. Only the recovery path below knows, so it records it here.
     let recoveredExistingCfRow = false;
     try {
       cfRow = await addDestination(context.env.CF_ACCOUNT_ID, context.env.CF_API_TOKEN, address);
@@ -347,24 +317,18 @@ const app = new Hono<ApiEnv>()
       }
     }
 
-    // C+B: when CF reports the address already verified, decide whether
-    // to inherit that verification or issue our own platform-side check.
-    //   Option C (owner-relaxed): the project owner's own email — trust
-    //   CF. Most common case for second-and-later projects of the same
-    //   user.
-    //   Option B (everyone else): a different person/project verified
-    //   it on CF. We cannot trust CF's verified flag for per-project
-    //   consent, so we issue our own confirmation link and keep the row
-    //   'pending' / 'platform' until the recipient clicks it.
+    // Decision: When CF reports the address already verified, decide whether to inherit that or send our own check.
+    // Option C (owner-relaxed): the project owner's own email, so trust CF; common for a user's second
+    // and later projects. Option B (everyone else): someone else verified it on CF, which isn't consent
+    // for this project, so send our own link and keep the row 'pending'/'platform' until it's clicked.
     const owner = await getUser(context.get('db'), project.user_id);
     const ownerEmail = owner?.email?.toLowerCase() ?? null;
     const ownerMatches = !!ownerEmail && ownerEmail === address;
     const cfVerified = !!cfRow.verified;
 
     if (cfVerified && ownerMatches) {
-      // Option C — owner-relaxed CF reuse. Persist who consented + the
-      // email snapshot so we can revoke if the owner's identity later
-      // changes (see `revokeOwnerVerifiedDestinationsForUserChange`).
+      // Decision: Option C: owner-relaxed CF reuse. Persist who consented and the email snapshot so the row can be
+      // revoked if the owner's identity changes (see `revokeOwnerVerifiedDestinationsForUserChange`).
       const ownerAudit: OwnerVerificationAudit = {
         userId: project.user_id,
         emailSnapshot: ownerEmail!,
@@ -383,11 +347,9 @@ const app = new Hono<ApiEnv>()
         return inserted;
       }
       if (!inserted.row) {
-        // Either a sibling DELETE ate the row mid-INSERT-then-SELECT twice,
-        // or project teardown's cascade landed between the `status` guard
-        // above and the INSERT. Neither persisted the CF tag we just
-        // registered, so roll it back rather than leaking an account-level
-        // address, then surface a clean retryable error.
+        // Decision: Either a sibling DELETE removed the row during insert-then-select twice, or teardown's cascade
+        // landed between the `status` guard and the INSERT. Neither persisted the CF tag we just registered,
+        // so roll it back instead of leaking an account-level address, then return a retryable error.
         await rollbackCfDestination(
           context.get('db'),
           context.env.CF_ACCOUNT_ID,
@@ -401,22 +363,14 @@ const app = new Hono<ApiEnv>()
     }
 
     if (!ownerMatches && (cfVerified || recoveredExistingCfRow)) {
-      // Option B — platform-side verification required. It is required
-      // whenever the Cloudflare-side click is not ours to claim:
-      //   - the row was already VERIFIED by someone else, or
-      //   - the row was already on the account and still pending, meaning
-      //     CF mailed the recipient for the OTHER project and will not mail
-      //     again for this one (it refused our create).
-      // Either way, nothing CF does can express consent for THIS project, so
-      // our own link is the only one that can.
-      //
-      // Accepted cost: this creates a state where our row is `verified`
-      // while the CF account row is still pending — the recipient clicked
-      // OUR link, not CF's. The send then fails at the `send_email` binding,
-      // and `packages/proxy/src/email.ts` classifies that CF error as
-      // `UNVERIFIED_DESTINATION`, which the framework reports as "verify the
-      // address first". It fails safe, and it self-heals the moment the
-      // recipient clicks CF's link. No machinery for it.
+      // Decision: Option B: platform-side verification is needed when the Cloudflare click isn't ours to claim: the
+      // row was already verified by someone else, or it was on the account and pending, so CF mailed the
+      // recipient for the other project and won't mail again for this one. Only our own link can express
+      // consent for this project.
+      // Accepted cost: our row can be `verified` while the CF account row is still pending. The send then
+      // fails at the `send_email` binding, `packages/proxy/src/email.ts` maps that to
+      // `UNVERIFIED_DESTINATION`, and the framework says to verify the address first. It fails safe and
+      // heals once the recipient clicks CF's link.
       const inserted = await tryInsertWithRetry(
         context,
         projectId,
@@ -439,31 +393,21 @@ const app = new Hono<ApiEnv>()
         return context.json({ error: 'destination concurrently modified, try again' }, 409);
       }
       const { row } = inserted;
-      // Only fire a fresh confirmation email when WE inserted the row.
-      // A sibling concurrent POST that races to the unique constraint
-      // gets `inserted=false` and reads back the winner's row — without
-      // this gate it would also dispatch a platform email, doubling
-      // recipient mail per race.
+      // Decision: Send a fresh confirmation email only when we inserted the row. A concurrent POST that loses the
+      // unique-constraint race reads back the winner's row; without this gate it would send a second email.
       if (inserted.inserted && row.status === 'pending' && row.verification_source === 'platform') {
         await dispatchPlatformVerification(context, project, row, address);
       }
       return context.json({ ...serializeDestination(row), platformVerificationPending: true }, 201);
     }
 
-    // The row waits on CLOUDFLARE's link. Two ways to get here:
-    //   - CF created the address for THIS request: it is mailing the
-    //     recipient right now, and the GET refresh flips the row to verified
-    //     when they click.
-    //   - The address is the owner's own and CF already held it, still
-    //     pending (their first project's auto-add, or a hand add). CF refused
-    //     our create and mails its link on create only, so NOTHING went out
-    //     for this add — the link from the first add is the only one the
-    //     owner has, and this route cannot mint another (CF has no resend
-    //     API; `deleteDestination` + a fresh create is the only way, and the
-    //     DELETE route takes it only when no other project references the
-    //     tag). Report that as `verificationSent: false` rather than let a
-    //     bare 201 read as "a link went out": `bwf email allow` prints
-    //     "Verification email sent" from the status code alone.
+    // Decision: The row waits on Cloudflare's link. Two ways to get here:
+    // - CF created the address for this request and is mailing the recipient now; the GET refresh flips
+    //   the row when they click.
+    // - It's the owner's own address and CF already held it, pending. CF refused our create and mails
+    //   only on create, so nothing went out; CF has no resend API, and this route can't mint another.
+    // Report `verificationSent: false` so a bare 201 doesn't read as "a link went out": `bwf email
+    // allow` prints "Verification email sent" from the status code alone.
     const inserted = await tryInsertWithRetry(
       context,
       projectId,
@@ -531,15 +475,13 @@ const app = new Hono<ApiEnv>()
     return context.json({ ok: true });
   })
 
-  // -------------------------------------------------------------------------
-  // Custom email domain routes. The connection service runs durable
-  // operations; these routes apply project capabilities and map responses.
-  // -------------------------------------------------------------------------
+  // Decision: Custom email domain routes. The connection service runs durable operations; these routes apply
+  // project capabilities and map responses.
 
-  // Installation settings the CLI needs before it acts: who manages email
-  // domains here (an `admin` platform prints the administrator's command
-  // instead of opening a Cloudflare consent) and the shared-sender recipient
-  // policy. Read-only for project members; the operator API and admin UI write them.
+  // Decision: Installation settings the CLI needs before it acts: who manages email domains here (an `admin`
+  // platform prints the administrator's command instead of opening a Cloudflare consent) and the
+  // shared-sender recipient policy. Read-only for project members; the operator API and admin UI write
+  // them.
   .get('/:id/email/settings', async (context) => {
     const projectId = context.req.param('id');
     const db = context.get('db');
@@ -552,22 +494,22 @@ const app = new Hono<ApiEnv>()
       getEmailRecipientPolicy(db),
       getSharedEmailRecipientReadiness(db, context.env, projectId, true),
     ]);
-    // Republish a drifted recipient-policy mirror for the proxy's local gate.
+    // Decision: Republish a drifted recipient-policy mirror for the proxy's local gate.
     await repairEmailRecipientPolicyMirror(db, context.env.ROUTING);
     return context.json({
       domains: { management, projectSlug: access.project.slug },
       recipientPolicy: { mode: recipientPolicy.mode, domains: [...recipientPolicy.domains] },
       emailAlias: access.project.email_alias,
-      // Set even when the platform has no shared inbound route: projects can
-      // still send from the slug or alias on it.
+      // Decision: Set even when the platform has no shared inbound route: projects can still send from the slug or
+      // alias on it.
       sharedDomain: context.env.EMAIL_SENDER_DOMAIN?.toLowerCase() ?? null,
       sharedInbound,
     });
   })
 
-  // Give the project a shorter name on the shared mail domain. The alias is set
-  // once and never changes, so reply addresses built on it keep working. The
-  // slug keeps sending and receiving too.
+  // Decision: Give the project a shorter name on the shared mail domain. The alias is set once and doesn't
+  // change,
+  // so reply addresses built on it keep working. The slug keeps sending and receiving too.
   .put('/:id/email/alias', async (context) => {
     const projectId = context.req.param('id');
     const db = context.get('db');
@@ -598,7 +540,7 @@ const app = new Hono<ApiEnv>()
     if (nameError) {
       return context.json({ error: nameError }, 400);
     }
-    // A retry of a request that already applied gets the same answer.
+    // Decision: A retry of a request that already applied gets the same answer.
     if (access.project.email_alias === alias) {
       return aliasResponse(context, alias);
     }
@@ -613,7 +555,7 @@ const app = new Hono<ApiEnv>()
     if (alias === access.project.slug) {
       return context.json({ error: 'alias must differ from the project slug' }, 400);
     }
-    // The same plan rule as short project slugs.
+    // Decision: The same plan rule as short project slugs.
     if (alias.length <= 5 && !(await resolvePlan(db, access.owner.plan)).allowShortSlugs) {
       return context.json(
         { error: 'the selected plan does not permit short names (5 characters or fewer)' },
@@ -648,7 +590,7 @@ const app = new Hono<ApiEnv>()
         return rows.length === 1;
       });
     } catch (error) {
-      // The trigger and unique index refuse a name another project claimed meanwhile.
+      // Decision: The trigger and unique index refuse a name another project claimed meanwhile.
       if (hasSqlState(error, '23505')) {
         return context.json({ error: 'this name is already taken' }, 409);
       }
@@ -800,11 +742,6 @@ export function parseCounter(raw: string | null): number {
 }
 
 /**
- * Loose RFC 5322 sanity check. Defers real validation to CF Email
- * Routing — we just want to keep obviously-bad input out of the rate
- * limiter / CF API call.
- */
-/**
  * Answer for a saved alias. Creates the alias rule now when the project
  * already receives mail; the scheduled repair retries a failure.
  */
@@ -884,8 +821,8 @@ async function dispatchPlatformVerification(
     address,
     token,
   );
-  // Keep delivery alive after the response; contexts without waitUntil await it.
-  // Delivery failures are logged; missing platform-mail configuration still rejects.
+  // Decision: Keep delivery alive after the response; contexts without waitUntil await it. Delivery failures are
+  // logged; missing platform-mail configuration still rejects.
   try {
     context.executionCtx.waitUntil(sendPromise);
   } catch {
@@ -941,15 +878,11 @@ async function tryInsertWithRetry(
       if (!isForeignKeyViolation(err)) {
         throw err;
       }
-      // Project teardown committed its cascade between the route's
-      // `status === 'deleting'` guard (an unlocked read) and this INSERT, so
-      // `email_destinations.project_id` has no project row left to point at.
-      // Retrying cannot help — the project is gone for good. Report the same
-      // "not inserted" shape as the row-deleted race so the caller rolls the
-      // CF destination back (`rollbackCfDestination`) and answers 409,
-      // instead of letting a raw 23503 reach the app's `onError` as a 500
-      // that leaves the account-level address allocated with nothing left to
-      // reclaim it.
+      // Decision: Teardown committed its cascade between the route's unlocked `status === 'deleting'` guard and this
+      // INSERT, so `email_destinations.project_id` has no project row. Retrying can't help. Return the same
+      // "not inserted" shape as the row-deleted race so the caller rolls back the CF destination
+      // (`rollbackCfDestination`) and answers 409, instead of a raw 23503 reaching `onError` as a 500 and
+      // leaving the account-level address allocated.
       return { row: null, inserted: false };
     }
     if (result.row || result.ownerEmailChanged) {

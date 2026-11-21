@@ -48,7 +48,7 @@ describe('generateAuthTypes', () => {
     try {
       const { dts } = generateAuthTypes(join(root, 'auth.ts'), outDir);
       expect(dts).toContain('export {}');
-      // better-auth is reached through bwf/auth: apps usually cannot resolve it themselves.
+      // Decision: better-auth is reached through bwf/auth: apps usually cannot resolve it themselves.
       expect(dts).toContain(
         'import type { InferAuthInstance, InferAuthSession } from "@builtbyfriends/bwf/auth";',
       );

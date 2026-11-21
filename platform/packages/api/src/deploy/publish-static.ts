@@ -118,8 +118,8 @@ export async function publishStaticDeployment(input: {
     not_found_handling: 'single-page-application',
   };
 
-  // Every asset was pre-uploaded direct-to-R2 by the CLI, so none are new
-  // to this request; `cached` counts assets verified in R2.
+  // Decision: The CLI pre-uploaded each asset straight to R2, so none are new to this request; `cached` counts
+  // assets verified in R2.
   emit({
     event: 'asset_upload',
     total: assetCount,
@@ -246,7 +246,7 @@ export async function publishStaticDeployment(input: {
     context.env.ROUTING.delete(cutoverIntentKey(deployment.id)),
     context.env.ROUTING.delete(cutoverReadyKey(deployment.id)),
   ]).catch(() => {
-    // Stale markers are harmless once PostgreSQL is live.
+    // Decision: Stale markers are harmless once PostgreSQL is live.
   });
 
   const retained = await getRetainedDeploymentsExcluding(
@@ -258,11 +258,9 @@ export async function publishStaticDeployment(input: {
   markPhase('retention_cleanup');
   if (STATIC_RETENTION_LIMIT > 0) {
     const toEvict = retained.slice(STATIC_RETENTION_LIMIT - 1);
-    // Build the post-eviction retained-hashes union once. Always
-    // built (independent of `toEvict.length`) because the R2
-    // keyspace sweep below uses it to opportunistically GC
-    // direct-to-R2 orphans (bytes uploaded via presigned PUTs that
-    // never finalized into a live deploy).
+    // Decision: Build the post-eviction union of retained hashes once. It's built even when nothing is evicted,
+    // because the R2 sweep below uses it to collect direct-to-R2 orphans (presigned uploads that never
+    // became part of a live deploy).
     const retainedHashes = new Set<string>();
     for (const [, entry] of Object.entries(assetManifest)) {
       retainedHashes.add(entry.hash);
@@ -300,11 +298,10 @@ export async function publishStaticDeployment(input: {
       return { evictable, activeToKeep };
     });
 
-    // A rollback can make a row selected for eviction active before
-    // this lock is acquired. Preserve its hashes before deleting any
-    // other deployment's assets or running the orphan sweep. Missing
-    // legacy metadata fails closed by disabling asset GC for this
-    // pass; retaining extra bytes is safer than deleting live bytes.
+    // Decision: A rollback can make a row picked for eviction active before this lock is taken. Keep its hashes
+    // before deleting other deployments' assets or running the orphan sweep. Missing legacy metadata
+    // fails closed by turning off asset GC for this pass: keeping extra bytes is safer than deleting
+    // live ones.
     let assetCleanupSafe = true;
     if (activeToKeep) {
       if (!activeToKeep.asset_hashes) {
@@ -352,9 +349,8 @@ export async function publishStaticDeployment(input: {
       }
     }
 
-    // Presigned uploads without a finalized manifest become orphans.
-    // Sweep after the terminal event so R2 history does not delay a
-    // successful deploy. The project fence still protects live hashes.
+    // Decision: Presigned uploads without a finalized manifest become orphans. Sweep after the terminal event so
+    // R2 history doesn't delay a successful deploy. The project fence still protects live hashes.
     if (assetCleanupSafe) {
       input.orphanSweepAfterResponse = async () => {
         try {

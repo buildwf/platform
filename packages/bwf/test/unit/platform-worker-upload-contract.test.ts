@@ -30,7 +30,7 @@ it.each(['none', 'batch', 'single-file'] as const)(
       precondition: string | undefined;
       request: string;
     }> = [];
-    // A local fake API with a synthetic credential; nothing can reach a real account.
+    // Decision: A local fake API with a synthetic credential; nothing can reach a real account.
     const server = createServer((request, response) => {
       const url = request.url ?? '';
       let body = '';

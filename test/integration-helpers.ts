@@ -18,13 +18,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { stripVTControlCharacters } from 'node:util';
 import crossSpawn from 'cross-spawn';
 
-/**
- * Timeout multiplier for Windows CI runners, which are 2–3× slower
- * for builds and server startup.
- */
+// Decision: Windows CI runners are 2-3x slower for builds and server startup.
 const CI_TIMEOUT_SCALE = process.platform === 'win32' ? 3 : 1;
 
-/** How many ports startServer() tries before it gives up. */
 const START_ATTEMPTS = 3;
 
 const GENERATED_PLAYGROUND_ENTRIES = new Set([
@@ -58,11 +54,9 @@ function shouldCopyPlaygroundPath(sourceRoot: string, path: string): boolean {
   return relativePath === '' || !GENERATED_PLAYGROUND_ENTRIES.has(topLevelEntry);
 }
 
-/**
- * Copies a playground outside the workspace package globs so concurrent task-graph scans never
- * discover a manifest while the fixture is created or removed. Run Vite+ directly from the copy.
- * Dependencies stay linked to the installed source tree; generated state is deliberately not copied.
- */
+// Decision: The playground is copied outside the workspace package globs so concurrent task-graph scans
+// don't find a manifest while the fixture is created or removed. Dependencies stay linked to the
+// source tree; generated state isn't copied.
 export function createIsolatedPlayground(
   workspaceRoot: string,
   sourceWorkspacePath: string,
@@ -75,9 +69,8 @@ export function createIsolatedPlayground(
   cpSync(sourceRoot, root, {
     recursive: true,
     filter(path) {
-      // `cpSync` reports native backslash paths on Windows, while these workspace paths are
-      // normalized to forward slashes. Normalize before using the POSIX path helpers or the
-      // top-level `node_modules` directory is copied into the isolated dependency tree.
+      // Decision: cpSync reports native backslash paths on Windows, while these paths use forward slashes.
+      // Normalizing first keeps the top-level node_modules out of the isolated dependency tree.
       return shouldCopyPlaygroundPath(sourceRoot, path);
     },
   });
@@ -92,10 +85,10 @@ export function createIsolatedPlayground(
         destination,
         process.platform === 'win32' ? 'junction' : 'dir',
       );
-    // Linking the whole directory leaves pnpm's relative package links behind
-    // a Windows junction at a different depth. Pin each package's real target.
+    // Decision: Linking the whole directory leaves pnpm's relative package links behind a Windows junction at
+    // a different depth, so each package's real target is pinned.
     for (const entry of readdirSync(sourceNodeModules, { withFileTypes: true })) {
-      // Kit 3 writes project-specific generated configs here, not package dependencies.
+      // Decision: Kit 3 writes project-specific generated configs here, not package dependencies.
       if (entry.name === '$app') {
         continue;
       }
@@ -118,7 +111,7 @@ export function createIsolatedPlayground(
     }
   }
 
-  // Avoid duplicate workspace package names when multiple copies exist concurrently.
+  // Decision: Avoids duplicate workspace package names when several copies exist at once.
   const packagePath = join(root, 'package.json');
   const packageJson = JSON.parse(readFileSync(packagePath, 'utf-8')) as { name?: string };
   packageJson.name = `${packageJson.name ?? basename(sourceWorkspacePath)}-${basename(root)}`;
@@ -133,7 +126,7 @@ export function createIsolatedPlayground(
   };
 }
 
-/** Returns a port that is free right now. Another process can still take it before use. */
+// Decision: The port is free right now, but another process can still take it before use.
 async function getFreePort(): Promise<number> {
   const server = createServer();
   server.listen(0, '127.0.0.1');
@@ -149,7 +142,6 @@ export type WaitForServerOptions = {
   rejectBody?: string;
   expectStatus?: number;
   isAlive?: () => boolean;
-  /** Answers on the URL count only once this returns true. */
   isReady?: () => boolean;
   requestTimeoutMs?: number;
   diagnostics?: () => string;
@@ -159,36 +151,26 @@ export type StartServerOptions = Omit<
   WaitForServerOptions,
   'isAlive' | 'isReady' | 'diagnostics'
 > & {
-  /**
-   * Pass `false` for a server that does not print its URL (Nuxt under Vitest). Answers then count
-   * as soon as they match, so also pass an `expectBody` that only this app serves.
-   */
+  // Decision: Pass `false` for a server that doesn't print its URL (Nuxt under Vitest). Answers then count as
+  // soon as they match, so also pass an `expectBody` that only this app serves.
   printsUrl?: boolean;
 };
 
 export type StartedServer = {
   child: ReturnType<typeof spawn>;
   port: number;
-  /** `http://127.0.0.1:<port>` */
   base: string;
-  /** The server's recent stdout and stderr. */
   output: () => string;
 };
 
-/**
- * Starts a server on a free port and waits until it answers.
- *
- * The server binds its port seconds after the port is chosen, and another process can take
- * the port in that time. `spawnServer` must make the server stop instead of moving to the
- * next port (pass `--strictPort` to Vite): a server that moves can take the port of another
- * test that is starting at the same time. When the server reports that its port is taken,
- * it is started again on a new port.
- *
- * Another process that takes the port can also answer on it. So answers count only after the
- * server prints its own URL with the port, which it does once it listens: Vite and Astro print
- * `Local: http://127.0.0.1:<port>/`, and the Node, Bun and Deno servers print
- * `Listening on http://…:<port>`.
- */
+// Decision: The server binds its port seconds after the port is chosen, and another process can take it in
+// that time. spawnServer has to make the server stop instead of moving to the next port (pass
+// `--strictPort` to Vite), since a moving server can take another starting test's port. When the
+// port is taken, the server starts again on a new one.
+//
+// Another process on the port can also answer, so answers count only after the server prints its
+// own URL: Vite and Astro print `Local: http://127.0.0.1:<port>/`, and the Node, Bun and Deno
+// servers print `Listening on http://…:<port>`.
 export async function startServer(
   spawnServer: (port: number) => ReturnType<typeof spawn>,
   timeoutMs: number,
@@ -201,7 +183,7 @@ export async function startServer(
     const closed = new Promise((resolve) => child.once('close', resolve));
     const base = `http://127.0.0.1:${port}`;
     const exited = () => child.exitCode !== null || child.signalCode !== null;
-    // Vite without `--strictPort` (Astro) keeps running and moves to the next port.
+    // Decision: Vite without `--strictPort` (Astro) keeps running and moves to the next port.
     const moved = () => output().includes(`Port ${port} is in use`);
     const listeningLine = new RegExp(
       String.raw`(?:Local:?|Listening on)\s+https?://[^\s/]+:${port}(?!\d)`,
@@ -218,10 +200,10 @@ export async function startServer(
       return { child, port, base, output };
     } catch (error) {
       if (exited()) {
-        // The last output can arrive after the exit.
+        // Decision: The last output can arrive after the exit.
         await Promise.race([closed, delay(1_000)]);
       }
-      // Vite with `--strictPort`, Node, Bun and Deno exit with one of these messages.
+      // Decision: Vite with `--strictPort`, Node, Bun and Deno exit with one of these messages.
       const portTaken = moved() || (exited() && /already in use|EADDRINUSE/.test(output()));
       await killChild(child);
       if (!portTaken) {
@@ -237,7 +219,6 @@ export async function startServer(
   }
 }
 
-/** Spawns a workspace playground's `dev` or `preview` script; pass it to {@link startServer}. */
 export function spawnPlaygroundServer(
   workspaceRoot: string,
   playground: string,
@@ -301,9 +282,7 @@ export async function waitForServer(
           return;
         }
       }
-    } catch {
-      // retry
-    }
+    } catch {}
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
   throw new Error(
@@ -311,7 +290,6 @@ export async function waitForServer(
   );
 }
 
-/** Drain both pipes during startup and retain bounded diagnostics for failures. */
 export function collectServerOutput(child: ReturnType<typeof spawn>): () => string {
   let stdout = '';
   let stderr = '';
@@ -327,18 +305,14 @@ export function collectServerOutput(child: ReturnType<typeof spawn>): () => stri
 export async function killChild(child: ReturnType<typeof spawn>): Promise<void> {
   if (child.exitCode === null && child.signalCode === null) {
     if (process.platform === 'win32' && child.pid) {
-      // On Windows, SIGTERM doesn't propagate to child processes.
-      // Use taskkill /T to kill the entire process tree (e.g. workerd.exe).
+      // Decision: On Windows, SIGTERM doesn't reach child processes, so taskkill /T kills the whole tree
+      // (workerd.exe included).
       try {
         execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: 'ignore' });
-      } catch {
-        // Process may have already exited
-      }
+      } catch {}
     } else if (child.pid) {
-      // On Unix, SIGTERM only reaches the direct child (e.g. pnpm).
-      // Grandchildren like vite → miniflare → workerd are NOT signalled
-      // and become orphans that hold resource locks (D1 SQLite, ports).
-      // Walk the process tree bottom-up so every descendant is killed.
+      // Decision: On Unix, SIGTERM only reaches the direct child (pnpm). Grandchildren like vite -> miniflare ->
+      // workerd become orphans that hold locks (D1 SQLite, ports), so the tree is walked bottom-up.
       killTree(child.pid, 'SIGTERM');
     } else {
       child.kill('SIGTERM');
@@ -365,9 +339,8 @@ export async function killChild(child: ReturnType<typeof spawn>): Promise<void> 
 }
 
 function killTree(pid: number, signal: NodeJS.Signals): void {
-  // Find direct children before killing the parent, because once the
-  // parent dies its children are reparented to init and pgrep -P won't
-  // find them anymore.
+  // Decision: Children are found before the parent is killed: once it dies they move to init and pgrep -P
+  // can't find them.
   let childPids: Array<number> = [];
   try {
     childPids = execSync(`pgrep -P ${pid}`, { encoding: 'utf8' })
@@ -376,14 +349,12 @@ function killTree(pid: number, signal: NodeJS.Signals): void {
       .filter(Boolean)
       .map(Number);
   } catch {
-    // pgrep exits 1 when no children are found
+    // Decision: pgrep exits 1 when there are no children.
   }
   for (const childPid of childPids) {
     killTree(childPid, signal);
   }
   try {
     process.kill(pid, signal);
-  } catch {
-    // Process may have already exited
-  }
+  } catch {}
 }

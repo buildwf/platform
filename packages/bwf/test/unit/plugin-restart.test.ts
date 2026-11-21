@@ -15,10 +15,6 @@ interface FakeResponse {
   body: string;
 }
 
-/**
- * Runs the plugin's real `configureServer` against a minimal connect-style
- * stack, so the middlewares see Node-shaped req/res objects.
- */
 function createFakeViteServer(plugin: Plugin = restartPlugin()) {
   const stack: Array<{ route: string; handle: NodeHandler }> = [];
   const restart = vi.fn();
@@ -47,7 +43,7 @@ function createFakeViteServer(plugin: Plugin = restartPlugin()) {
     }
     const req = {
       method,
-      // connect strips the mounted prefix from req.url.
+      // Decision: connect strips the mounted prefix from req.url.
       url: rawUrl ?? '/' + parsed.search,
       headers: { host: 'localhost:5173', ...headers },
       socket: { encrypted },
@@ -71,13 +67,11 @@ function createFakeViteServer(plugin: Plugin = restartPlugin()) {
   return { dispatch, restart, token, plugin };
 }
 
-/** The toast module the browser loads from `virtual:bwf/binding-hint`. */
 function loadClientModule(plugin: Plugin): string {
   const load = plugin.load as { handler: () => string };
   return load.handler();
 }
 
-/** The restart token the toast module embeds. */
 function tokenOf(clientModule: string): string {
   const match = /const token = (".*?");\n/.exec(clientModule);
   if (!match) {
@@ -86,7 +80,6 @@ function tokenOf(clientModule: string): string {
   return JSON.parse(match[1]!) as string;
 }
 
-/** The token the restarting page sends with its POST. */
 function pageTokenOf(html: string): string {
   const match = /var token=(.*?);\n/.exec(html);
   if (!match) {
@@ -95,7 +88,6 @@ function pageTokenOf(html: string): string {
   return JSON.parse(match[1]!) as string;
 }
 
-/** The navigation target the restarting page's inline script assigns. */
 function targetOf(html: string): string {
   const match = /var target=(.*?);\n/.exec(html);
   if (!match) {
@@ -200,8 +192,8 @@ describe('restartPlugin middlewares', () => {
     );
   });
 
-  // Plain-HTTP LAN origins (`bwf dev --host`) get no Fetch Metadata, so a
-  // foreign page can navigate here and the page's POST carries our Origin.
+  // Decision: Plain-HTTP LAN origins (`bwf dev --host`) get no Fetch Metadata, so a foreign page can
+  // navigate here and the page's POST carries our Origin.
   it('does not restart from a foreign navigation without Fetch Metadata', () => {
     vi.useFakeTimers();
     const { dispatch, restart } = createFakeViteServer();
@@ -252,7 +244,7 @@ describe('restartPlugin middlewares', () => {
   it('gives each server instance a new token', () => {
     vi.useFakeTimers();
     const first = createFakeViteServer();
-    // `server.restart()` runs configureServer again for the new instance.
+    // Decision: `server.restart()` runs configureServer again for the new instance.
     const second = createFakeViteServer(first.plugin);
     expect(second.token).not.toBe(first.token);
     expect(tokenOf(loadClientModule(first.plugin))).toBe(second.token);
@@ -262,7 +254,7 @@ describe('restartPlugin middlewares', () => {
     expect(
       second.dispatch('POST', '/__platform/restart', { 'x-platform-restart': second.token }).status,
     ).toBe(200);
-    // A restart that failed leaves the old instance checking its own token.
+    // Decision: A restart that failed leaves the old instance checking its own token.
     expect(
       first.dispatch('POST', '/__platform/restart', { 'x-platform-restart': first.token }).status,
     ).toBe(200);

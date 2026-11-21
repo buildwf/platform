@@ -82,8 +82,8 @@ function describeGithubClientError(
   describe: typeof describeConnectError,
 ): string | null {
   const body = parsePlatformErrorBody(error.body);
-  // The client knows whether this was a project read, settings change, or an
-  // account-level GitHub operation. A 403 alone does not identify the cause.
+  // Decision: The client knows whether this was a project read, a settings change or an account-level GitHub
+  // operation. A 403 alone doesn't identify the cause.
   if (platformErrorMessage(body) || error.status === 403) {
     return error.message;
   }
@@ -103,7 +103,6 @@ export function parseGithubRepoFullName(repositoryUrl: string | null): string | 
     if (url.hostname !== 'github.com') {
       return null;
     }
-    // pathname is like /owner/repo or /owner/repo.git
     const parts = url.pathname
       .replace(/^\//, '')
       .replace(/\.git$/, '')
@@ -206,9 +205,9 @@ export async function runInstall(
       try {
         ({ url } = await client.getGithubInstallUrl());
       } catch (retryErr) {
-        // Only the SAME identity-required 403 means linking didn't take — show
-        // the actionable link/install guidance. Any other failure (401, 426,
-        // 500, a different 403) is the real error and must surface normally.
+        // Decision: Only the same identity-required 403 means linking didn't take, so show the link and install
+        // guidance. Any other failure (401, 426, 500, a different 403) is the real error and has to surface
+        // normally.
         if (
           retryErr instanceof PlatformApiError &&
           retryErr.status === 403 &&
@@ -240,9 +239,9 @@ export async function runGithubLink(client: PlatformClient): Promise<void> {
   const challenge = createCodeChallenge(verifier);
   const state = randomBytes(32).toString('hex');
 
-  // completeGithubLink runs INSIDE the request handler (via finalize), so the
-  // browser only shows the success page after the link actually succeeds; a 409
-  // conflict rejects out of awaitBrowserCallback and is mapped below.
+  // Decision: completeGithubLink runs inside the request handler (through finalize), so the browser only shows
+  // the success page after the link actually succeeds; a 409 conflict rejects out of
+  // awaitBrowserCallback and is mapped below.
   let status: 'linked' | 'already_linked';
   try {
     ({ status } = await awaitBrowserCallback<{ status: 'linked' | 'already_linked' }>({
@@ -295,8 +294,8 @@ async function performGithubJoin(client: PlatformClient): Promise<number> {
   const challenge = createCodeChallenge(verifier);
   const state = randomBytes(32).toString('hex');
 
-  // completeGithubJoin runs INSIDE the request handler (via finalize), so the
-  // browser only shows the success page after the join actually succeeds.
+  // Decision: completeGithubJoin runs inside the request handler (through finalize), so the browser only shows
+  // the success page after the join actually succeeds.
   const { count } = await awaitBrowserCallback<{ status: 'joined'; count: number }>({
     successTitle: 'GitHub installations joined',
     state,
@@ -326,8 +325,8 @@ export async function runGithubJoin(client: PlatformClient): Promise<void> {
   try {
     count = await performGithubJoin(client);
   } catch (err) {
-    // Fail closed: org-installation sharing OAuth is not configured on this
-    // instance. The membership flow has no already-joined conflict to map.
+    // Decision: Fail closed: org-installation sharing OAuth isn't configured on this instance. The membership
+    // flow has no already-joined conflict to map.
     if (
       err instanceof PlatformApiError &&
       err.status === 503 &&
@@ -488,12 +487,11 @@ export async function runConnect(
   const listActiveInstallations = async () =>
     (await client.listGithubInstallations()).filter((i) => i.status === 'active');
 
-  // Auto-join fallback: an org member whose org already installed the App has
-  // no membership row until a join round-trip records one, so their list is
-  // empty (or missing the shared installation) even though the App is
-  // installed. Run the join flow once instead of telling them to re-install.
-  // Browser round-trips are TTY-only, mirroring every other prompt here. A 503
-  // (sharing not configured) falls through to the install-first error.
+  // Decision: Auto-join fallback: an org member whose org already installed the App has no membership row until
+  // a join round trip records one, so their list is empty (or missing the shared installation) even
+  // though the App is installed. Run the join flow once instead of telling them to re-install.
+  // Browser round trips are TTY-only, like the other prompts here. A 503 (sharing not configured)
+  // falls through to the install-first error.
   let autoJoinAttempted = false;
   const attemptAutoJoin = async (): Promise<number> => {
     autoJoinAttempted = true;
@@ -575,10 +573,9 @@ export async function runConnect(
     repoFullName = args.repo;
   } else if (installation.repository_selection === 'selected') {
     if (installation.repositories.length === 0) {
-      // The server redacts `repositories` to [] for every organization
-      // installation. A personal installation can also genuinely have zero
-      // grants. Either way the list is not enumerable here — take free text and
-      // let the server's per-repository access check decide.
+      // Decision: The server redacts `repositories` to [] for all organization installations. A personal
+      // installation can also have zero grants. Either way the list isn't enumerable here, so take free
+      // text and let the server's per-repository access check decide.
       if (!isTTY) {
         log.error(
           'connect: --repo <owner/repo> is required — this installation does not expose a repository list to your account.',
@@ -603,10 +600,9 @@ export async function runConnect(
       repoFullName = picked as string;
     }
   } else {
-    // 'all' — repos aren't enumerable. Do NOT infer the repo from git in CI:
-    // GITHUB_REPOSITORY / origin can point at a fork or the wrong checkout and
-    // would silently bind the project to the wrong repo. Require --repo, the
-    // same way --branch is required in non-interactive mode.
+    // Decision: 'all': repos aren't enumerable. Don't infer the repo from git in CI: GITHUB_REPOSITORY or origin
+    // can point at a fork or the wrong checkout and would quietly bind the project to the wrong repo.
+    // Require --repo, the same way --branch is required in non-interactive mode.
     if (!isTTY) {
       log.error(
         'connect: --repo <owner/repo> is required in non-interactive mode for an all-repositories installation.',
@@ -658,8 +654,8 @@ export async function runConnect(
     executor = picked as 'container' | 'github_actions';
   }
 
-  // Container builds never read the workflow file. A prompted value equal to the
-  // default stays unset, so the server applies its own default.
+  // Decision: Container builds don't read the workflow file. A prompted value equal to the default stays unset,
+  // so the server applies its own default.
   let workflowPath = args.workflowPath;
   if (executor === 'github_actions' && args.workflowPath === undefined && isTTY) {
     const input = await text({
@@ -702,14 +698,12 @@ export async function runConnect(
     }
     if (err.status === 403 && err.code === 'connect_authorization_required') {
       if (!isTTY) {
-        // Authorization waits for a browser callback, so fail now instead of
-        // hanging until it times out.
+        // Decision: Authorization waits for a browser callback, so fail now instead of hanging until it times out.
         log.error(
           'connect: this installation requires per-repo authorization, which needs an interactive browser sign-in. Run `bwf github connect` locally to authorize, then retry.',
         );
         process.exit(1);
       }
-      // Prove per-repo access, then retry the connect once with the grant.
       const grant = await runGithubConnectAuthorize(
         client,
         installation.installation_id,
@@ -726,8 +720,8 @@ export async function runConnect(
           retryErr.status === 403 &&
           retryErr.code === 'invalid connect grant'
         ) {
-          // The grant expired or the browser identity differs from the linked
-          // one; the generic 403 message would wrongly blame project access.
+          // Decision: The grant expired or the browser identity differs from the linked one; the generic 403 message
+          // would wrongly blame project access.
           log.error(
             'connect: GitHub authorization failed or expired. Run `bwf github connect` again.',
           );
@@ -755,7 +749,7 @@ export async function runGithubUpdate(
 ): Promise<void> {
   const isTTY = process.stdin.isTTY === true;
 
-  // Check before any API call so this usage error never depends on API state.
+  // Decision: Check before any API call so this usage error doesn't depend on API state.
   if (
     !isTTY &&
     args.branch === undefined &&
@@ -822,7 +816,7 @@ export async function runGithubUpdate(
       executor = picked as 'container' | 'github_actions';
     }
 
-    // Container builds never read the workflow file, so there is nothing to ask.
+    // Decision: Container builds don't read the workflow file, so there's nothing to ask.
     if (executor === 'github_actions' && args.workflowPath === undefined) {
       const input = await text({
         message: 'Deploy workflow file:',
@@ -943,7 +937,7 @@ export async function runGithubDisconnect(
     connection = await client.getGithubConnection(projectId);
   } catch (err) {
     if (err instanceof PlatformApiError) {
-      // No connection is already the goal state.
+      // Decision: No connection is already the goal state.
       if (err.status === 404 && err.code?.includes('connection not found')) {
         log.info('This project is not connected to a GitHub repository. Nothing to disconnect.');
         return;

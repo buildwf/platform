@@ -18,7 +18,6 @@ kv.post('/get', async (context) => {
     return context.json({ error: 'binding and key required' }, 400);
   }
 
-  // Try WfP dispatch first
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/kv/get', body, {
     fallbackOnDispatchError: true,
   });
@@ -26,7 +25,6 @@ kv.post('/get', async (context) => {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API
   let nsId: string;
   try {
     nsId = await resolveResource(context.env.API, context.env.JWT_SECRET, projectId, 'kv', binding);
@@ -74,13 +72,11 @@ kv.post('/put', async (context) => {
     return context.json({ error: 'binding and key required' }, 400);
   }
 
-  // Try WfP dispatch first
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/kv/put', body);
   if (dispatchRes) {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API
   let nsId: string;
   try {
     nsId = await resolveResource(context.env.API, context.env.JWT_SECRET, projectId, 'kv', binding);
@@ -100,7 +96,6 @@ kv.post('/put', async (context) => {
   let value: string | ArrayBuffer;
   let contentType = 'text/plain';
   if (body.base64 === true && typeof body.value === 'string') {
-    // Decode base64-encoded binary data from the client
     const binary = atob(body.value);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
@@ -141,13 +136,11 @@ kv.post('/delete', async (context) => {
     return context.json({ error: 'binding and key required' }, 400);
   }
 
-  // Try WfP dispatch first
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/kv/delete', body);
   if (dispatchRes) {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API
   let nsId: string;
   try {
     nsId = await resolveResource(context.env.API, context.env.JWT_SECRET, projectId, 'kv', binding);
@@ -163,7 +156,7 @@ kv.post('/delete', async (context) => {
     },
   );
 
-  // 404 is fine — delete is idempotent
+  // Decision: A 404 is fine: delete is idempotent.
   if (!cfRes.ok && cfRes.status !== 404) {
     return context.json({ error: 'KV delete failed', status: cfRes.status }, 502);
   }
@@ -180,7 +173,6 @@ kv.post('/list', async (context) => {
     return context.json({ error: 'binding required' }, 400);
   }
 
-  // Try WfP dispatch first
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/kv/list', body, {
     fallbackOnDispatchError: true,
   });
@@ -188,7 +180,6 @@ kv.post('/list', async (context) => {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API
   let nsId: string;
   try {
     nsId = await resolveResource(context.env.API, context.env.JWT_SECRET, projectId, 'kv', binding);

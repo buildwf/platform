@@ -20,7 +20,7 @@ describe('bwf dev better-auth module', () => {
   it('loads one OAuth state module for the worker runtime and app code', async () => {
     const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'platform-better-auth-')));
     roots.push(root);
-    // The package export is `dist/index.mjs`.
+    // Decision: The package export is `dist/index.mjs`.
     const betterAuthEntry = fileURLToPath(import.meta.resolve('better-auth'));
     const betterAuthRoot = realpathSync(dirname(dirname(betterAuthEntry)));
     mkdirSync(join(root, 'node_modules', '@builtbyfriends', 'bwf'), { recursive: true });
@@ -32,14 +32,14 @@ describe('bwf dev better-auth module', () => {
         dependencies: { 'better-auth': '*', '@builtbyfriends/bwf': '*' },
       }),
     );
-    // Auth apps enable nodejs_compat because Better Auth hashes passwords with node:crypto.
+    // Decision: Auth apps enable nodejs_compat because Better Auth hashes passwords with node:crypto.
     writeFileSync(
       join(root, 'bwf.json'),
       JSON.stringify({
         worker: { compatibility_date: '2026-02-24', compatibility_flags: ['nodejs_compat'] },
       }),
     );
-    // An installed `@builtbyfriends/bwf` is excluded from dependency optimization, so its import of
+    // Decision: An installed `@builtbyfriends/bwf` is excluded from dependency optimization, so its import of
     // better-auth stays on the package source. This probe is that file: the relative path
     // is the module the runtime reaches, and the route imports the public subpath a plugin uses.
     writeFileSync(

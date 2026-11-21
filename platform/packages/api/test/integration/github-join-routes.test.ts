@@ -34,9 +34,9 @@ import {
 
 let env: TestEnv;
 
-// Self-contained app mirroring how index.ts mounts githubRoutes: auth is applied
-// per-route inside githubRoutes (join-url + join/complete are authed; the public
-// join-callback is not), so the only outer middleware is the db setter.
+// Decision: Mirrors how index.ts mounts githubRoutes. Auth is applied per route inside githubRoutes
+// (join-url and join/complete are authed, the public join-callback isn't), so the only outer
+// middleware sets the db.
 const app = new Hono<ApiEnv>()
   .use('*', async (context, next) => {
     context.set('db', env.db);
@@ -44,20 +44,18 @@ const app = new Hono<ApiEnv>()
   })
   .route('/github', githubRoutes);
 
-// The App's user-to-server OAuth credentials. Present only when the App is
-// configured for "Request user authorization (OAuth)" — the join flow is inert
-// (503) without them.
+// Decision: The App's user-to-server OAuth credentials. They're present only when the App is configured for
+// "Request user authorization (OAuth)". Without them the join flow returns 503.
 const GITHUB_APP_USER_OAUTH_ENV = {
   GITHUB_APP_CLIENT_ID: 'Iv1.testappclientid',
   GITHUB_APP_CLIENT_SECRET: 'test-app-client-secret',
 } as const;
 
-// A valid 43-char RFC 7636 code_verifier and a second, mismatched one.
-const CODE_VERIFIER = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ'; // 43 chars
-const WRONG_VERIFIER = 'ZYXWVUTSRQPONMLKJIHGFEDCBA0123456789._~-abcd'; // 44 chars, well-formed
-// The GitHub account id carried by the default `mintJoinCode` / `runJoinCallback`.
-// The revocation tombstone is keyed by THIS id, not the joiner's Platform
-// user id, so the join-flow revocation tests record the tombstone against it.
+const CODE_VERIFIER = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ';
+const WRONG_VERIFIER =
+  'ZYXWVUTSRQPONMLKJIHGFEDCBA0123456789._~-abcd'; /* Decision: The GitHub account id that the default `mintJoinCode` and `runJoinCallback` carry. The
+   revocation tombstone is keyed by this id, not the joiner's Platform user id, so the join-flow
+   revocation tests record the tombstone against it. */
 const JOIN_ACCOUNT_ID = '5551234';
 
 beforeAll(async () => {
@@ -89,11 +87,6 @@ function authedPost(jwt: string, body: unknown): RequestInit {
   };
 }
 
-// Stub global fetch for the App user-OAuth reads the join callback performs via
-// `listAuthorizedInstallationIds`:
-//   - POST login/oauth/access_token -> user token (unless `acceptCode === false`)
-//   - GET  /user/installations       -> the installations the caller can manage
-//   - GET  /user                     -> the caller's numeric github account id
 function mockUserJoin(opts: {
   installationIds: Array<string>;
   accountId: string;
@@ -113,8 +106,8 @@ function mockUserJoin(opts: {
         }
         return Response.json({ access_token: 'user-to-server-token' });
       }
-      // The installations list must be matched BEFORE the `/user` id read, since
-      // `/user/installations` also ends the account read's `/user` substring.
+      // Decision: Match the installations list before the `/user` id read, since `/user/installations` also
+      // contains `/user`.
       if (url.includes('/user/installations')) {
         return Response.json({
           installations: opts.installationIds.map((id) => ({ id: Number(id) })),
@@ -129,7 +122,6 @@ function mockUserJoin(opts: {
   return { tokenExchangeBody };
 }
 
-// Decode the signed `state` out of a github.com/login/oauth/authorize URL.
 function decodeStateFromAuthorizeUrl(url: string): Record<string, unknown> {
   const parsed = new URL(url);
   const state = parsed.searchParams.get('state');
@@ -140,8 +132,6 @@ function decodeStateFromAuthorizeUrl(url: string): Record<string, unknown> {
   return JSON.parse(atob(encoded)) as Record<string, unknown>;
 }
 
-// Mint a signed join `state` exactly the way GET /join-url does — used to drive
-// the callback directly and to forge expired/altered states.
 async function mintJoinState(payload: {
   redirect: string;
   purpose?: string;
@@ -161,10 +151,9 @@ async function mintJoinState(payload: {
   return `${encoded}.${signature}`;
 }
 
-// Forge a signed `join_code` the same `${btoa(json)}.${hmac(JWT_SECRET)}` way the
-// public join callback mints it — used to drive /join/complete with a controllable
-// `iat` (the moment GitHub access was proven) so the revocation-tombstone gate can
-// be exercised without racing the DB clock.
+// Decision: Forge a signed `join_code` the way the join callback mints it, so /join/complete gets a
+// controllable `iat` (when GitHub access was proven) and the revocation-tombstone gate can be
+// tested without racing the DB clock.
 async function mintJoinCode(payload: {
   installationIds: Array<string>;
   githubAccountId?: string;
@@ -187,18 +176,13 @@ async function mintJoinCode(payload: {
   return `${encoded}.${signature}`;
 }
 
-// Extract the JS-redirect target URL from the 200 HTML body the callback returns.
-// The callback uses 200 + `location.replace("<target>")` (not a 302) because
-// `wrangler dev` mangles `Location: http://localhost:*` headers. The target
-// carries the signed `join_code`.
+// Decision: The callback returns 200 with `location.replace("<target>")`, not a 302, because `wrangler dev`
+// mangles `Location: http://localhost:*` headers. The target carries the signed `join_code`.
 function extractRedirectTarget(body: string): string | null {
   const match = /location\.replace\("([^"]+)"\)/.exec(body);
   return match ? match[1]! : null;
 }
 
-// Drive the callback for a freshly-minted valid state + a stubbed exchange, and
-// return the `join_code` it redirected to localhost with (parsed out of the 200
-// HTML body's `location.replace(...)` target, not a Location header).
 async function runJoinCallback(opts: {
   redirect: string;
   codeChallenge: string;
@@ -223,9 +207,8 @@ async function runJoinCallback(opts: {
   return { res, body, joinCode, target };
 }
 
-// Seed an installation Platform tracks, with no owner. `accountType` defaults to
-// 'Organization' (the only account type org-share admits) — pass 'User' to seed
-// an unlinked personal install for the Organization-only guard regressions.
+// Decision: `accountType` defaults to 'Organization', the only account type org-share admits. Pass 'User'
+// to seed a personal install for the Organization-only guard tests.
 async function seedInstall(opts: {
   installationId: string;
   accountId?: string;
@@ -241,9 +224,6 @@ async function seedInstall(opts: {
   });
 }
 
-// Decode the eligible installation-id list out of a signed join_code (the same
-// `${btoa(json)}.${hmac}` form the callback mints). Used to assert the eligibility
-// gate excluded a personal (account_type='User') install.
 function decodeJoinCodeInstallationIds(joinCode: string): Array<string> {
   const encoded = joinCode.slice(0, joinCode.lastIndexOf('.'));
   const payload = JSON.parse(atob(encoded)) as { installationIds?: Array<string> };
@@ -296,7 +276,7 @@ describe('GET /github/join-url', () => {
     expect(state.redirect).toBe(redirect);
     expect(typeof state.exp).toBe('number');
     expect((state.exp as number) > Date.now()).toBe(true);
-    // The crux: state carries NO Platform user id (the bind is deferred to complete).
+    // Decision: The state carries no Platform user id. The bind waits until complete.
     expect('userId' in state).toBe(false);
   });
 
@@ -321,7 +301,6 @@ describe('GET /github/join-url', () => {
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const redirect = 'http://localhost:9999/callback';
 
-    // No GITHUB_APP_CLIENT_ID/SECRET on env.
     const res = await app.fetch(
       new Request(
         `http://localhost/github/join-url?redirect=${encodeURIComponent(redirect)}&code_challenge=${challenge}`,
@@ -357,7 +336,6 @@ describe('GET /github/join-callback', () => {
       accountId: '5551234',
     });
 
-    // 200 + JS `location.replace`, NOT a 302.
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     expect(res.headers.get('location')).toBeNull();
@@ -366,17 +344,13 @@ describe('GET /github/join-callback', () => {
     expect(joinCode).not.toBeNull();
     expect(body).toContain('location.replace(');
 
-    // The callback binds nothing — no membership rows exist yet.
     expect(await countAllMemberRows(env.db)).toBe(0);
   });
 
-  // The join_code `iat` must be sampled (getDbNowMs) BEFORE the GitHub
-  // access proof, so it is a conservative lower bound. A removal landing in the
-  // proof→mint gap (dominated by GitHub access-propagation lag) then has
-  // revoked_at >= iat and is rejected at /join/complete. This asserts the
-  // ordering deterministically (no timing race): a spied getDbNowMs records its
-  // call, the proof's first network hit records its own, and getDbNowMs must come
-  // first; the spied value is what the artifact carries.
+  // Decision: The join_code `iat` is sampled (getDbNowMs) before the GitHub access proof, so it's a
+  // conservative lower bound. A removal in the gap between proof and mint (mostly GitHub's access
+  // propagation lag) then has revoked_at >= iat and is rejected at /join/complete. The test checks
+  // the order with spies, not timing.
   it('stamps the join_code iat via getDbNowMs BEFORE the GitHub proof', async () => {
     await seedInstall({ installationId: '700' });
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
@@ -387,8 +361,6 @@ describe('GET /github/join-callback', () => {
       callOrder.push('iat');
       return SENTINEL_IAT;
     });
-    // Custom fetch stub that records the FIRST proof network call (the OAuth token
-    // exchange) so its position relative to getDbNowMs is observable.
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: string | URL | Request) => {
@@ -422,10 +394,8 @@ describe('GET /github/join-callback', () => {
     const body = await res.text();
     const joinCode = new URL(extractRedirectTarget(body)!).searchParams.get('join_code')!;
 
-    // getDbNowMs ran exactly once, and BEFORE the proof's first network call.
     expect(iatSpy).toHaveBeenCalledTimes(1);
     expect(callOrder).toEqual(['iat', 'proof']);
-    // The pre-proof sentinel is exactly the iat carried into the minted artifact.
     const decoded = JSON.parse(atob(joinCode.slice(0, joinCode.lastIndexOf('.')))) as {
       iat: number;
     };
@@ -448,9 +418,9 @@ describe('GET /github/join-callback', () => {
       { ...env, ...GITHUB_APP_USER_OAUTH_ENV },
     );
     expect(res.status).toBe(200);
-    // redirect_uri is derived from the join-callback request origin (NOT
-    // state.redirect, the CLI's localhost). join-url and join-callback derive the
-    // same value, so GitHub's redirect_uri-match requirement is satisfied.
+    // Decision: redirect_uri comes from the join-callback request origin, not state.redirect (the CLI's
+    // localhost). join-url and join-callback derive the same value, so GitHub's redirect_uri match
+    // holds.
     expect(tokenExchangeBody.current?.redirect_uri).toBe('http://localhost/github/join-callback');
   });
 
@@ -462,8 +432,8 @@ describe('GET /github/join-callback', () => {
       codeChallenge: challenge,
       exp: Date.now() + 10 * 60 * 1000,
     });
-    // Flip the FIRST char of the signature (a full 6 significant bits, so the
-    // decoded HMAC bytes always change — no flaky no-op tamper).
+    // Decision: Flip the first char of the signature. It carries a full 6 bits, so the decoded HMAC bytes
+    // change each time and the tamper can't be a flaky no-op.
     const dot = state.lastIndexOf('.');
     const sig = state.slice(dot + 1);
     const first = sig[0] === 'A' ? 'B' : 'A';
@@ -485,7 +455,7 @@ describe('GET /github/join-callback', () => {
     const state = await mintJoinState({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
-      exp: Date.now() - 1000, // already expired
+      exp: Date.now() - 1000,
     });
 
     const res = await app.fetch(
@@ -501,8 +471,8 @@ describe('GET /github/join-callback', () => {
   it('rejects a link-purpose state (cross-flow replay)', async () => {
     mockUserJoin({ installationIds: ['700'], accountId: '5551234' });
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
-    // A validly-signed state whose purpose is 'link' must not drive the join
-    // callback — the purpose discriminator blocks cross-flow replay.
+    // Decision: A validly signed state with purpose 'link' mustn't drive the join callback. The purpose field
+    // blocks replay across flows.
     const state = await mintJoinState({
       redirect: 'http://localhost:9999/callback',
       purpose: 'link',
@@ -531,7 +501,6 @@ describe('GET /github/join-callback', () => {
         exp: Date.now() + 60_000,
       }),
     );
-    // `*` is outside the base64 alphabet → atob() throws inside hmacVerifyState.
     const malformed = `${encoded}.*`;
     const res = await app.fetch(
       new Request(
@@ -543,8 +512,6 @@ describe('GET /github/join-callback', () => {
   });
 
   it('bounces github_oauth_failed to the CLI localhost when the exchange yields no installations', async () => {
-    // acceptCode:false → the token exchange fails → the accessible set is empty →
-    // nothing to join, so the error bounces to the CLI's localhost.
     mockUserJoin({ installationIds: ['700'], accountId: '5551234', acceptCode: false });
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const state = await mintJoinState({
@@ -596,12 +563,9 @@ describe('GET /github/join-callback', () => {
     expect(parsed.searchParams.get('join_code')).toBeNull();
   });
 
-  // Org-share is Organization-only (guard a). A personal (account_type='User')
-  // install the caller merely collaborates on must NOT become a join target — it
-  // has no member_removed revocation path. The minted join_code's eligible list
-  // must exclude the personal install and keep only the Organization one.
+  // Decision: Org-share is Organization-only. A personal (account_type='User') install the caller only
+  // collaborates on mustn't become a join target, because it has no member_removed revocation path.
   it('excludes a personal (account_type=User) install from the join_code eligibility', async () => {
-    // 700: Organization → eligible. 701: personal (User) → excluded.
     await seedInstall({ installationId: '700', accountType: 'Organization' });
     await seedInstall({ installationId: '701', accountType: 'User' });
 
@@ -622,7 +586,6 @@ describe('GET /github/join-callback', () => {
 
 describe('POST /github/join/complete', () => {
   it('upserts a membership keyed on the completing token-holder and returns joined', async () => {
-    // The joiner is a google-only account with no github identity.
     const other = await createTestUser(env.db, 'other', 'github', '900000700');
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
@@ -647,12 +610,11 @@ describe('POST /github/join/complete', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: 'joined', count: 1 });
     expect(await countMemberRows(env.db, '700', joiner.id)).toBe(1);
-    // Never bound to any other user.
     expect(await countMemberRows(env.db, '700', other.id)).toBe(0);
   });
 
-  // A join_code minted in a callback is completed by an arbitrary authed user; the membership binds to the COMPLETING bearer token,
-  // NEVER to anyone named in the state/join_code.
+  // Decision: The membership binds to the completing bearer token, not to anyone named in the state or
+  // join_code.
   it('binds the membership to the completing token-holder, not the flow initiator', async () => {
     const attacker = await createTestUser(env.db, 'attacker', 'google', 'google-attacker');
     const completer = await createTestUser(env.db, 'completer', 'google', 'google-completer');
@@ -667,8 +629,6 @@ describe('POST /github/join/complete', () => {
     });
     expect(joinCode).not.toBeNull();
 
-    // `completer` (the machine the join_code landed on) redeems it. The bind MUST
-    // go to `completer`, never `attacker`.
     const res = await app.fetch(
       new Request(
         'http://localhost/github/join/complete',
@@ -705,7 +665,6 @@ describe('POST /github/join/complete', () => {
     expect(firstComplete.status).toBe(200);
     expect(await firstComplete.json()).toEqual({ status: 'joined', count: 1 });
 
-    // A second, independent join_code for the same install.
     const second = await runJoinCallback({
       redirect: 'http://localhost:9999/callback',
       codeChallenge: challenge,
@@ -722,7 +681,6 @@ describe('POST /github/join/complete', () => {
     expect(secondComplete.status).toBe(200);
     expect(await secondComplete.json()).toEqual({ status: 'joined', count: 1 });
 
-    // Still exactly one row for (install, user).
     expect(await countMemberRows(env.db, '700', joiner.id)).toBe(1);
     expect(await countAllMemberRows(env.db)).toBe(1);
   });
@@ -756,7 +714,6 @@ describe('POST /github/join/complete', () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
-    // Mint an already-expired join_code directly with the same signer scheme.
     const encoded = btoa(
       JSON.stringify({
         purpose: 'join',
@@ -784,9 +741,6 @@ describe('POST /github/join/complete', () => {
 
   it('excludes installs outside the caller accessible set and installs Platform does not track', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
-    // 700: accessible AND Platform-known → eligible.
-    // 800: Platform-known but NOT in the accessible set → excluded.
-    // 999: accessible but NOT Platform-known → excluded.
     await seedInstall({ installationId: '700' });
     await seedInstall({ installationId: '800' });
 
@@ -814,9 +768,8 @@ describe('POST /github/join/complete', () => {
     expect(await countAllMemberRows(env.db)).toBe(1);
   });
 
-  // The person who installed the App on an organization has no special standing:
-  // once the membership recorded by the install callback lapses, they rejoin like
-  // any other member and the installation becomes visible again.
+  // Decision: The person who installed the App on an organization has no special standing. Once the
+  // membership from the install callback lapses, they rejoin like any other member.
   it('lets the organization installer rejoin after their membership expires', async () => {
     const installer = await createTestUser(env.db, 'installer', 'github', '900000704');
     await seedInstall({ installationId: '700' });
@@ -875,13 +828,10 @@ describe('POST /github/join/complete', () => {
     expect(res.status).toBe(401);
   });
 
-  // A successful join makes the install visible via the
-  // owner-OR-member by-user lookup.
   it('makes the joined install visible via getGitHubInstallationsByUser', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
 
-    // Before joining, the joiner sees nothing.
     expect(await getGitHubInstallationsByUser(env.db, joiner.id)).toHaveLength(0);
 
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
@@ -904,16 +854,13 @@ describe('POST /github/join/complete', () => {
     expect(installs.map((i) => i.installation_id)).toContain('700');
   });
 
-  // Monotonic revocation: a join_code minted BEFORE a recorded
-  // revocation (iat <= revoked_at) is a stale artifact from a removed member — it
-  // must NOT resurrect the membership. The install is silently skipped (not
-  // counted).
+  // Decision: Revocation is monotonic. A join_code minted before a recorded revocation (iat <= revoked_at)
+  // is a stale artifact from a removed member and mustn't bring the membership back. The install is
+  // skipped and not counted.
   it('skips an install whose join_code predates a recorded revocation (stale replay)', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
 
-    // The member was removed AFTER minting the join_code: record the tombstone
-    // now (revoked_at = now()), and forge a join_code stamped a minute in the past.
     await recordInstallationRevocations(env.db, ['700'], JOIN_ACCOUNT_ID);
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const staleJoinCode = await mintJoinCode({
@@ -931,19 +878,16 @@ describe('POST /github/join/complete', () => {
     );
 
     expect(res.status).toBe(200);
-    // Skipped, not counted — no membership resurrected.
     expect(await res.json()).toEqual({ status: 'joined', count: 0 });
     expect(await countMemberRows(env.db, '700', joiner.id)).toBe(0);
   });
 
-  // The tombstone is a HIGH-WATER MARK, not a permanent ban: a legit re-join AFTER
-  // re-add mints a FRESH join_code (iat > revoked_at) which must be honored.
+  // Decision: The tombstone is a high-water mark, not a permanent ban. A real re-join after a re-add mints a
+  // fresh join_code (iat > revoked_at), which is honored.
   it('restores membership when the join_code post-dates the revocation (legit re-join)', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
 
-    // Revoke first, then the member is re-added and re-joins: the fresh join_code
-    // is stamped in the future relative to the tombstone.
     await recordInstallationRevocations(env.db, ['700'], JOIN_ACCOUNT_ID);
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const freshJoinCode = await mintJoinCode({
@@ -965,9 +909,8 @@ describe('POST /github/join/complete', () => {
     expect(await countMemberRows(env.db, '700', joiner.id)).toBe(1);
   });
 
-  // A join_code without `iat` cannot be compared with revocation tombstones, so
-  // it is rejected outright. Mint inline so the property is truly ABSENT from the
-  // signed payload (mintJoinCode would inject one).
+  // Decision: A join_code without `iat` can't be compared with revocation tombstones, so it's rejected. Mint
+  // it inline so the property is really absent (mintJoinCode would add one).
   it('rejects a join_code without iat', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
@@ -999,7 +942,6 @@ describe('POST /github/join/complete', () => {
     expect(await countMemberRows(env.db, '700', joiner.id)).toBe(0);
   });
 
-  // A membership must record the GitHub account that proved access.
   it.each([null, ''])('rejects a join_code with GitHub account id %j', async (githubAccountId) => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
@@ -1032,25 +974,20 @@ describe('POST /github/join/complete', () => {
     expect(await countMemberRows(env.db, '700', joiner.id)).toBe(0);
   });
 
-  // The tombstone-read + upsert loop runs inside a transaction
-  // that locks the target install rows install-first. That serializes a concurrent
-  // member_removed (not deterministically reproducible under PGlite's serialized
-  // txns — hence no flaky race test), but the tombstone-skip RESULT must be
-  // unchanged. Over a multi-install join_code, the revoked install is skipped and
-  // the fresh one created in a SINGLE atomic commit, and `count` excludes the skip.
+  // Decision: The tombstone read and upsert loop runs in a transaction that locks the install rows install
+  // first, which serializes a concurrent member_removed. PGlite serializes transactions, so that race
+  // can't be reproduced here, and there's no race test. This checks the skip result is unchanged.
   it('under the tx-wrap, a multi-install join skips the revoked install and creates the fresh one', async () => {
     const joiner = await createTestUser(env.db, 'joiner', 'google', 'google-joiner');
     await seedInstall({ installationId: '700' });
     await seedInstall({ installationId: '701' });
 
-    // 700 was revoked AFTER the join_code was minted (stale → skip); 701 has no
-    // tombstone (fresh → create). One join_code covers both installs.
     await recordInstallationRevocations(env.db, ['700'], JOIN_ACCOUNT_ID);
     const challenge = await calculatePKCECodeChallenge(CODE_VERIFIER);
     const joinCode = await mintJoinCode({
       installationIds: ['700', '701'],
       codeChallenge: challenge,
-      iat: Date.now() - 60_000, // predates the 700 tombstone
+      iat: Date.now() - 60_000,
     });
 
     const res = await app.fetch(
@@ -1062,7 +999,6 @@ describe('POST /github/join/complete', () => {
     );
 
     expect(res.status).toBe(200);
-    // Only 701 honored — 700 is a stale replay, skipped and not counted.
     expect(await res.json()).toEqual({ status: 'joined', count: 1 });
     expect(await countMemberRows(env.db, '700', joiner.id)).toBe(0);
     expect(await countMemberRows(env.db, '701', joiner.id)).toBe(1);

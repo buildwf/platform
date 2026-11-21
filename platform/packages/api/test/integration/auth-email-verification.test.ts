@@ -49,8 +49,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // github_installations isn't known to the shared clearTables helper; clear it
-  // before it removes the users they reference (mirrors the routes test).
+  // Decision: The shared clearTables helper doesn't know github_installations; clear it before it removes the
+  // users it references.
   await env.db.delete(githubInstallations);
   await clearTables(env.db);
   delete (env as TestEnv & { GITHUB_PREVIEW_REPO_PAT?: string }).GITHUB_PREVIEW_REPO_PAT;
@@ -110,7 +110,6 @@ describe('email verification gating on account linking', () => {
   it.each([true, false])(
     'uses the platform allowlist for restricted signup (allowed: %s)',
     async (allowed) => {
-      // A stale legacy secret must neither bypass access control nor trigger repository API calls.
       Object.assign(env, { GITHUB_PREVIEW_REPO_PAT: 'test-legacy-pat' });
       await env.ROUTING.put('signup:enabled', 'true');
       await env.ROUTING.put(
@@ -369,32 +368,28 @@ describe('email verification gating on account linking', () => {
   });
 
   it('does not link a SECOND github identity when the existing account already has one (RFC 0074 one-github invariant)', async () => {
-    // Alice signed in via google, then linked github id X.
     const existing = await createTestUser(env.db, 'one-github-alice', 'google', 'google-alice');
     await env.db
       .update(users)
       .set({ email: 'one-github@example.com' })
       .where(eq(users.id, existing.id));
-    await createOAuthAccount(env.db, existing.id, 'github', '111111'); // X
+    await createOAuthAccount(env.db, existing.id, 'github', '111111');
 
-    // An UNOWNED installation whose account_id is the REJECTED github id Y.
-    // Because Y is rejected as an identity, the backfill must NOT claim it.
     await upsertGitHubInstallation(env.db, {
       installationId: '600',
       userId: null,
       accountLogin: 'another-gh-account',
-      accountId: '222222', // Y
+      accountId: '222222',
       accountType: 'User',
       repositories: [{ full_name: 'another-gh-account/app', id: 1 }],
     });
 
     const state = await buildSignedState('github');
     await seedOAuthNonce(env.db, 'test-nonce');
-    // Now log in with a DIFFERENT github id Y whose verified email matches Alice.
     vi.stubGlobal(
       'fetch',
       mockGitHubApi({
-        id: 222222, // Y != X
+        id: 222222,
         login: 'another-gh-account',
         email: 'one-github@example.com',
         emailVerified: true,
@@ -409,7 +404,6 @@ describe('email verification gating on account linking', () => {
       executionCtx,
     );
 
-    // Signed into the EXISTING account (not a new user)...
     expect(res.status).toBe(302);
     const location = res.headers.get('Location')!;
     const token = new URL(location).searchParams.get('token')!;
@@ -418,7 +412,6 @@ describe('email verification gating on account linking', () => {
     expect(payload).toBeDefined();
     expect(payload!.sub).toBe(existing.id);
 
-    // ...and NO github row for Y was created (still exactly one github row, X).
     const githubRows = await env.db
       .select({ providerId: oauthAccounts.provider_id })
       .from(oauthAccounts)
@@ -427,7 +420,6 @@ describe('email verification gating on account linking', () => {
     expect(githubRows[0]!.providerId).toBe('111111');
     expect(await getUserByOAuthAccount(env.db, 'github', '222222')).toBeNull();
 
-    // ...and the unowned installation for the REJECTED id Y was NOT claimed.
     const [install] = await env.db
       .select({ userId: githubInstallations.user_id })
       .from(githubInstallations)
@@ -436,7 +428,6 @@ describe('email verification gating on account linking', () => {
   });
 
   it('consolidates a github login onto an existing account that has NO github yet (cross-provider link unchanged)', async () => {
-    // Bob signed in via google, has NO github identity.
     const existing = await createTestUser(env.db, 'no-github-bob', 'google', 'google-bob');
     await env.db
       .update(users)
@@ -463,7 +454,6 @@ describe('email verification gating on account linking', () => {
       executionCtx,
     );
 
-    // Signed into the existing account...
     expect(res.status).toBe(302);
     const location = res.headers.get('Location')!;
     const token = new URL(location).searchParams.get('token')!;
@@ -472,19 +462,16 @@ describe('email verification gating on account linking', () => {
     expect(payload).toBeDefined();
     expect(payload!.sub).toBe(existing.id);
 
-    // ...and the github row WAS created and is owned by the existing account.
     const owner = await getUserByOAuthAccount(env.db, 'github', '333333');
     expect(owner?.id).toBe(existing.id);
   });
 
   it('revokes owner-inherited email destinations when the verified primary email changes', async () => {
-    // `users.email` is NOT a signup-time constant: this callback re-reads the
-    // provider's current primary address on every login and writes it straight
-    // back. Destination rows minted by the Option C owner branch
-    // (`routes/email.ts`) and by `autoAddOwnerDestination`
-    // (`routes/projects.ts`) are verified purely on "this address IS the
-    // owner's" — so once the owner's address moves, the old mailbox (possibly
-    // reassigned to someone else) must lose its per-project send grant.
+    // Decision: `users.email` isn't a signup-time constant: this callback re-reads the provider's current primary
+    // address on each login and writes it back. Destination rows minted by the Option C owner branch
+    // (`routes/email.ts`) and by `autoAddOwnerDestination` (`routes/projects.ts`) are verified only on
+    // "this address is the owner's", so once the owner's address moves, the old mailbox (possibly
+    // reassigned to someone else) loses its per-project send grant.
     const existing = await createTestUser(env.db, 'rotating-user', 'github', '717171');
     await env.db
       .update(users)
@@ -504,7 +491,6 @@ describe('email verification gating on account linking', () => {
         verified_by_user_id: existing.id,
         verified_by_email_snapshot: 'Old-Owner@Example.com',
       },
-      // Per-recipient consent — independent of who the owner is. Must survive.
       {
         id: 'edst_third_party',
         project_id: project.id,
@@ -517,7 +503,6 @@ describe('email verification gating on account linking', () => {
     ]);
     const state = await buildSignedState('github');
     await seedOAuthNonce(env.db, 'test-nonce');
-    // Same GitHub identity, DIFFERENT verified primary email.
     vi.stubGlobal(
       'fetch',
       mockGitHubApi({
@@ -536,7 +521,6 @@ describe('email verification gating on account linking', () => {
       executionCtx,
     );
 
-    // Login still succeeds, as the same user.
     expect(res.status).toBe(302);
     const location = res.headers.get('Location')!;
     const token = new URL(location).searchParams.get('token')!;
@@ -555,9 +539,8 @@ describe('email verification gating on account linking', () => {
 
     const revoked = byId.get('edst_owner_inherited');
     expect(revoked?.status).toBe('pending');
-    // 'platform' is load-bearing: a row left at 'cf' falls back into the
-    // destinations GET's CF refresh filter and is re-promoted on the next
-    // listing, because CF still reports the address verified.
+    // Decision: 'platform' is load-bearing: a row left at 'cf' falls back into the destinations GET's CF refresh
+    // filter and is re-promoted on the next listing, because CF still reports the address verified.
     expect(revoked?.verification_source).toBe('platform');
     expect(revoked?.verified_at).toBeNull();
     expect(revoked?.verified_by_user_id).toBeNull();
@@ -592,7 +575,6 @@ describe('email verification gating on account linking', () => {
       mockGitHubApi({
         id: 818181,
         login: 'stable-user',
-        // Same address, different case — a case flip is not a reassignment.
         email: 'Stable-Owner@Example.com',
         emailVerified: true,
       }),
@@ -616,7 +598,6 @@ describe('email verification gating on account linking', () => {
   });
 
   describe('owner email change survives a transient failure', () => {
-    // Shared fixture: owner-inherited consent plus independent recipient consent.
     async function seedRotatingOwner(providerId: string, login: string) {
       const existing = await createTestUser(env.db, login, 'github', providerId);
       await env.db
@@ -684,12 +665,10 @@ describe('email verification gating on account linking', () => {
     }
 
     it('retries the demotion on the next login when the Postgres demotion failed once', async () => {
-      // A transient Postgres failure in the demotion must not be permanent.
-      // `users.email` and the owner-inherited demotion are committed
-      // together: if the demotion cannot run, the email change rolls back
-      // too, so the next login still sees `previousEmail !== email` and
-      // retries. Committing `users.email` alone would make every later login
-      // see `previousEmail === email`, and the stale grant would survive.
+      // Decision: A transient Postgres failure in the demotion mustn't be permanent. `users.email` and the
+      // owner-inherited demotion commit together: if the demotion can't run, the email change rolls back
+      // too, so the next login still sees `previousEmail !== email` and retries. Committing `users.email`
+      // alone would make later logins see `previousEmail === email`, and the stale grant would survive.
       const { existing } = await seedRotatingOwner('919191', 'blip-user');
       const inheritedId = 'edst_inherited_919191';
 
@@ -699,18 +678,13 @@ describe('email verification gating on account linking', () => {
 
       const first = await loginWithNewEmail('919191', 'blip-user');
       expect(revokeSpy).toHaveBeenCalledTimes(1);
-      // The sign-in fails the way a failed `updateUser` write always has...
       expect(first.status).toBe(500);
 
-      // ...and NOTHING of the change is committed: the email still reads the
-      // old address, so the stale grant is not sitting next to a rotated
-      // `users.email` that would hide it from every later comparison.
       const afterFirst = await readState(existing.id, inheritedId);
       expect(afterFirst.email).toBe('old-owner@example.com');
       expect(afterFirst.status).toBe('verified');
       expect(afterFirst.source).toBe('cf');
 
-      // Second login, same new email — the retry.
       const second = await loginWithNewEmail('919191', 'blip-user');
       expect(second.status).toBe(302);
       expect(revokeSpy).toHaveBeenCalledTimes(2);
@@ -765,19 +739,16 @@ describe('email verification gating on account linking', () => {
   });
 
   describe('owner email change racing an owner-inherited grant', () => {
-    // `autoAddOwnerDestination` (`routes/projects.ts`) captures the owner's
-    // address BEFORE its unbounded Cloudflare call and only inserts after it.
-    // The demotion above runs `UPDATE users` + the revoke in one transaction,
-    // but it can only demote rows that EXIST when it runs. A login that
-    // changes the address while the auto-add is parked at Cloudflare commits
-    // first and finds nothing; the auto-add must not insert the OLD address as
-    // `verified`, attributed to the OLD identity. Every later login compares
-    // equal and never revisits that grant.
+    // Decision: `autoAddOwnerDestination` (`routes/projects.ts`) captures the owner's address before its unbounded
+    // Cloudflare call and only inserts after it. The demotion runs `UPDATE users` + the revoke in one
+    // transaction, but it can only demote rows that exist when it runs. A login that changes the address
+    // while the auto-add is parked at Cloudflare commits first and finds nothing; the auto-add mustn't
+    // then insert the old address as `verified`, attributed to the old identity, since later logins
+    // compare equal and never revisit it.
     //
-    // Interleaves at the Cloudflare stub: the projects route awaits the stub,
-    // and the stub drives the real `/auth/callback` before answering. Both
-    // routes run against the same PGlite session, so the login's transaction
-    // has fully committed before the auto-add gets its answer.
+    // Interleaves at the Cloudflare stub: the projects route awaits the stub, and the stub drives the
+    // real `/auth/callback` before answering. Both routes share the PGlite session, so the login's
+    // transaction has committed before the auto-add gets its answer.
     const emailEnv = () => ({
       ...env,
       EMAIL_GATEWAY_ORIGIN: 'https://platform-email-gateway-staging.voidzer0.workers.dev',
@@ -821,8 +792,6 @@ describe('email verification gating on account linking', () => {
         .set({ email: 'old-owner@example.com' })
         .where(eq(users.id, existing.id));
 
-      // The provider now reports the NEW address; every login below rotates
-      // (or confirms) it.
       const github = mockGitHubApi({
         id: 939393,
         login: 'racing-user',
@@ -832,7 +801,6 @@ describe('email verification gating on account linking', () => {
       let loginDuringAdd: Response | undefined;
       const calls = stubEmailRoutingOver(github, async (method) => {
         if (method === 'POST') {
-          // Second-or-later project: Cloudflare already holds the address.
           return Response.json(
             {
               success: false,
@@ -843,14 +811,11 @@ describe('email verification gating on account linking', () => {
             { status: 400 },
           );
         }
-        // The owner's email changes while the add is recovering the tag.
         loginDuringAdd = await completeGitHubCallback();
         return Response.json({
           success: true,
           errors: [],
           messages: [],
-          // ...and Cloudflare reports the OLD address verified: the owner
-          // clicked its link on a prior project.
           result: [
             {
               tag: 'cf-tag-racing',
@@ -861,8 +826,8 @@ describe('email verification gating on account linking', () => {
         });
       });
 
-      // No execution context: `scheduleAfterResponse` awaits the add inline,
-      // so the 201 below means the add has finished.
+      // Decision: No execution context: `scheduleAfterResponse` awaits the add inline, so the 201 below means the add
+      // has finished.
       const created = await app.fetch(
         new Request('http://localhost/rpc/projects.create', {
           method: 'POST',
@@ -877,22 +842,15 @@ describe('email verification gating on account linking', () => {
       const [user] = await env.db.select().from(users).where(eq(users.id, existing.id));
       expect(user!.email).toBe('new-owner@example.com');
 
-      // The grant the login could not see must not exist: the row would say
-      // the OLD identity consented to mail reaching a mailbox the owner no
-      // longer holds, and no later login would ever revisit it.
       const rows = await env.db
         .select()
         .from(emailDestinations)
         .where(eq(emailDestinations.project_id, project.id));
       expect(rows.filter((r) => r.status === 'verified')).toEqual([]);
-      // Nothing references the tag any more, so the add released it — the
-      // same rollback every other post-allocation failure takes.
       expect(calls.filter((c) => c.method === 'DELETE').map((c) => c.url)).toEqual([
         expect.stringContaining('/email/routing/addresses/cf-tag-racing'),
       ]);
 
-      // A later login sees no change and revokes nothing — which is exactly
-      // why the row must never have been written.
       const later = await completeGitHubCallback();
       expect(later.status).toBe(302);
       const after = await env.db
@@ -903,13 +861,11 @@ describe('email verification gating on account linking', () => {
     });
 
     it('answers 409 instead of inheriting when the owner address rotates under the manual add', async () => {
-      // The Option C branch of `POST /projects/:id/email/destinations` reads
-      // the owner AFTER its Cloudflare calls, so its window is only the gap
-      // between that read and the insert — but the read is unlocked, and the
-      // same login can commit inside it. The helper's locked re-check is
-      // what closes it; the route then takes the same rollback + 409 it
-      // takes when the row it just inserted vanished, and a retry re-reads
-      // the owner and lands on the Option B platform link.
+      // Decision: The Option C branch of `POST /projects/:id/email/destinations` reads the owner after its Cloudflare
+      // calls, so its window is only the gap between that read and the insert, but the read is unlocked
+      // and the same login can commit inside it. The helper's locked re-check closes it; the route then
+      // takes the same rollback + 409 as when its inserted row vanished, and a retry re-reads the owner and
+      // lands on the Option B platform link.
       const existing = await createTestUser(env.db, 'racing-manual', 'github', '949494');
       await env.db
         .update(users)
@@ -970,8 +926,8 @@ describe('email verification gating on account linking', () => {
           ],
         });
       });
-      // Rotate the owner after the route captures its access snapshot. PGlite
-      // has one session, so update through the route's existing transaction.
+      // Decision: Rotate the owner after the route captures its access snapshot. PGlite has one session, so update
+      // through the route's existing transaction.
       const realTryCreate = dbModule.tryCreateEmailDestination;
       let rotatedDuringAdd = false;
       vi.spyOn(dbModule, 'tryCreateEmailDestination').mockImplementation(async (...args) => {
@@ -1010,8 +966,6 @@ describe('email verification gating on account linking', () => {
         expect.stringContaining('/email/routing/addresses/cf-tag-racing-manual'),
       ]);
 
-      // The rollback deleted the old provider tag. The retry creates a fresh
-      // provider destination and waits on its new verification email.
       const retry = await app.fetch(
         new Request(`http://localhost/projects/${project.id}/email/destinations`, {
           method: 'POST',
@@ -1029,12 +983,10 @@ describe('email verification gating on account linking', () => {
     });
 
     it('leaves a pending row pending when the owner address rotates under the listing refresh', async () => {
-      // Third Option C site: the GET refresh adopts a recreated tag for the
-      // owner's own address off an unlocked owner read. The login's revoke
-      // skips a `pending` row, so a promotion that lands after the rotation
-      // would be the same never-revisited grant. Fire the login on the
-      // route's owner read (the second `getUser`; the first is the auth
-      // middleware) and expect the locked helper to write nothing.
+      // Decision: Third Option C site: the GET refresh adopts a recreated tag for the owner's own address off an
+      // unlocked owner read. The login's revoke skips a `pending` row, so a promotion after the rotation
+      // would be the same never-revisited grant. Fire the login on the route's owner read (the second
+      // `getUser`; the first is the auth middleware) and expect the locked helper to write nothing.
       const existing = await createTestUser(env.db, 'racing-listing', 'github', '959595');
       await env.db
         .update(users)
@@ -1061,8 +1013,6 @@ describe('email verification gating on account linking', () => {
           success: true,
           errors: [],
           messages: [],
-          // The address is verified on the account under a tag this row
-          // never registered — the owner-adopt branch of the refresh.
           result: [
             {
               tag: 'cf-tag-racing-listing-live',

@@ -197,7 +197,7 @@ export function encodeCloudflareVersionMessage(
 export function parseCloudflareVersionMessage(
   message: string | null | undefined,
 ): CloudflareVersionMetadata | null {
-  // Versions that earlier releases deployed carry the prefix `nosam:` or `void:`, so an upgrade
+  // Decision: Versions that earlier releases deployed carry the prefix `nosam:` or `void:`, so an upgrade
   // still finds their record.
   const prefix = ['platform:', 'nosam:', 'void:'].find((candidate) =>
     message?.startsWith(candidate),
@@ -223,9 +223,8 @@ export function parseCloudflareVersionMessage(
       return null;
     }
     if (value.schema === 1) {
-      // Schema 1 did not capture preview_urls and represented an omitted
-      // workers_dev ambiguously. Keep its migration history, but never expose
-      // its incomplete trigger state to rollback.
+      // Decision: Schema 1 didn't capture preview_urls and represented an omitted workers_dev ambiguously.
+      // Keep its migration history, but don't expose its incomplete trigger state to rollback.
       return { schema: 1, migrations: value.migrations };
     }
     const triggerConfig = parseTriggerConfig(value.triggerConfig);
@@ -254,7 +253,7 @@ export function readCloudflareTriggerConfig(
   sourceConfigPath?: string,
 ): CloudflareTriggerConfig {
   const config = parseRootWranglerConfig(configPath);
-  // Build tooling can supply defaults; only authored settings may change the live Worker.
+  // Decision: Build tooling can supply defaults; only authored settings may change the live Worker.
   const source = sourceConfigPath ? parseRootWranglerConfig(sourceConfigPath) : config;
   const result = triggerConfigFromWrangler({
     ...config,
@@ -291,8 +290,8 @@ export async function deployCloudflareVersionTriggers(options: {
     return { status: 0, stdout: '', stderr: '' };
   }
   const source = options.configPath ? parseRootWranglerConfig(options.configPath) : {};
-  // `triggers deploy` still validates unrelated upload configuration. Build a trigger-only
-  // config so an ephemeral assets directory (or another bundle-only field) cannot break the
+  // Decision: `triggers deploy` still validates unrelated upload configuration. Build a trigger-only
+  // config so an ephemeral assets directory (or another bundle-only field) can't break the
   // post-activation reconciliation after `versions upload` has already consumed it.
   const base = pickWranglerTriggerContext(source);
   const config = triggerWranglerConfig(
@@ -506,7 +505,7 @@ function mergeTriggerCleanupBaselines(
       return true;
     });
   };
-  // Keep `addresses` absent when no config carried a plan (see CloudflareTriggerConfig).
+  // Decision: Keep `addresses` absent when no config carried a plan (see CloudflareTriggerConfig).
   const withAddresses = present.filter((config) => config.addresses !== undefined);
   return {
     workers_dev: present.some((config) => config.workers_dev),
@@ -552,7 +551,7 @@ function triggerConfigWithQueueConsumerCleanup(
   if (queues.length === 0) {
     return previous;
   }
-  // A concurrent rollback replays this copy verbatim, so spread every snapshot field.
+  // Decision: A concurrent rollback replays this copy verbatim, so spread each snapshot field.
   const base: CloudflareTriggerConfig = previous ?? {
     workers_dev: false,
     preview_urls: false,
@@ -640,9 +639,9 @@ function triggerConfigFromWrangler(config: Record<string, unknown>): CloudflareT
     : config.route === undefined
       ? []
       : [config.route];
-  // Wrangler disables workers.dev by default when an explicit route is
-  // configured. Persist the effective value so trigger publication and
-  // rollback do not accidentally reopen the public workers.dev hostname.
+  // Decision: Wrangler turns off workers.dev by default when an explicit route is configured. Persist the
+  // effective value so trigger publication and rollback don't reopen the public workers.dev
+  // hostname by accident.
   const workersDev =
     typeof config.workers_dev === 'boolean' ? config.workers_dev : routes.length === 0;
   const addresses = readEmailAddresses(config.addresses);
@@ -752,7 +751,7 @@ function triggerWranglerConfig(
   if (manageRoutes && !triggerConfig.preserveRoutes) {
     config.routes = [...triggerConfig.routes];
   }
-  // Replay only a recorded plan; `[]` would delete every Email Routing rule this Worker owns.
+  // Decision: Replay only a recorded plan; `[]` would delete each Email Routing rule this Worker owns.
   if (triggerConfig.addresses !== undefined) {
     config.addresses = [...triggerConfig.addresses];
   }
@@ -791,7 +790,7 @@ function resolvePreservedTraffic(
     crons: desired.crons,
     queueConsumers: desired.queueConsumers,
     workflows: desired.workflows,
-    // Not a traffic surface, but dropping it would skip Wrangler's Email Routing plan.
+    // Decision: Not a traffic surface, but dropping it would skip Wrangler's Email Routing plan.
     ...(desired.addresses === undefined ? {} : { addresses: desired.addresses }),
   };
 }
@@ -961,10 +960,10 @@ async function activateCloudflareVersionWithSecretsFile(
         'This binding-preserving handoff requires a candidate preview before activation. Configure version metadata on the existing Worker or retry without atomic publication; production traffic is unchanged.',
     };
   }
-  // Activation can succeed before trigger synchronization or the local receipt
-  // cleanup fails. Once its last recorded candidate owns all live traffic, the
-  // receipt no longer authorizes any *inactive* successor. The history checks
-  // below still reject a newer upload from another operation.
+  // Decision: Activation can succeed before trigger synchronization or the local receipt cleanup fails.
+  // Once its last recorded candidate owns all live traffic, the receipt no longer authorizes an
+  // *inactive* successor. The history checks below still reject a newer upload from another
+  // operation.
   const trustedInheritanceVersionIds =
     previousVersionId && options.trustedInheritanceVersionIds?.at(-1) === previousVersionId
       ? []
@@ -1063,9 +1062,9 @@ async function activateCloudflareVersionWithSecretsFile(
     );
     return previousVersion?.isSecretOnlyDraft === true;
   }
-  // Recovery only: true when the previous version is an empty Worker that must never get traffic
+  // Decision: Recovery only: true when the previous version is an empty Worker that mustn't get traffic
   // back. Unlike `isBwfSecretOnlyDraft`, this also accepts bwf's zero-binding placeholder, which
-  // the bootstrap path must not treat as first-deployment proof.
+  // the bootstrap path mustn't treat as first-deployment proof.
   async function previousIsRestorePlaceholder(): Promise<boolean | null> {
     if (!previousVersionId) {
       return false;
@@ -1149,9 +1148,9 @@ async function activateCloudflareVersionWithSecretsFile(
     !options.requirePreviewForReadiness &&
     previousVersion?.isBwfSecretOnlyDraft === true;
   if (previous.versionId !== null && (options.atomic || bootstrapBwfDraft)) {
-    // The exact private cf placeholder has no serving preview. Publish its first
-    // application once through the bootstrap path, pinning its active secrets
-    // just as for an explicitly atomic release.
+    // Decision: The exact private cf placeholder has no serving preview. Publish its first application once
+    // through the bootstrap path, pinning its active secrets just as for an explicitly atomic
+    // release.
     if (bootstrapBwfDraft && !activeSecretsPinned && !options.pinActiveSecrets) {
       return { ok: false, reason: 'inheritance-source-unavailable' };
     }
@@ -1201,10 +1200,10 @@ async function activateCloudflareVersionWithSecretsFile(
       previousIsRestorePlaceholder,
     );
   }
-  // The ordinary cf uploader refuses a non-interactive revision of an API-origin
-  // Worker. Keep inherited secrets on the same UUID-pinned upload path used by
-  // bootstrap, rather than bypassing cf's general overwrite confirmation. An
-  // explicitly supplied replacement retains its existing upload semantics.
+  // Decision: The ordinary cf uploader refuses a non-interactive revision of an API-origin Worker. Keep
+  // inherited secrets on the same UUID-pinned upload path used by bootstrap, rather than
+  // bypassing cf's general overwrite confirmation. An explicitly supplied replacement keeps its
+  // existing upload semantics.
   if (
     previous.versionId !== null &&
     !activeSecretsPinned &&
@@ -1316,8 +1315,8 @@ async function activateCloudflareVersionWithSecretsFile(
   options.onProgress?.('Verifying the uploaded Worker...');
   const baseline = inheritanceBaseline;
   if (baseline) {
-    // The list can still show the exact pre-upload history after a successful upload.
-    // Wait for a fresh read, but pass any other history straight to the lineage check.
+    // Decision: The list can still show the exact pre-upload history after a successful upload. Wait for a
+    // fresh read, but pass any other history straight to the lineage check.
     const readUpdatedHistory = async () => {
       const recent = await readRecentCloudflareVersionIds(options);
       const unchanged =
@@ -1450,7 +1449,7 @@ async function activateCloudflareVersionWithSecretsFile(
       options.preserveTriggers ||
       desiredTriggerConfig.preserve
     ) {
-      // Preserved triggers may still expose HTTP routes absent from the local configuration.
+      // Decision: Preserved triggers may still expose HTTP routes absent from the local configuration.
       return {
         ok: false,
         reason: 'preview-unavailable',
@@ -1463,7 +1462,7 @@ async function activateCloudflareVersionWithSecretsFile(
 
   if (readinessUrl) {
     const trustedReadinessOrigin = normalizeReadinessAccessOrigin(options.readinessHeadersOrigin);
-    // A route hostname is not guaranteed to reach this Worker. Send Access credentials to a custom
+    // Decision: A route hostname isn't guaranteed to reach this Worker. Send Access credentials to a custom
     // route only when the operator named its exact origin.
     const withholdsCustomRouteHeaders = (url: string) =>
       readinessUsesCustomRoute && !isTrustedReadinessOrigin(url, trustedReadinessOrigin);
@@ -1484,13 +1483,12 @@ async function activateCloudflareVersionWithSecretsFile(
     options.onProgress?.('Waiting for the Worker to become ready...');
     let ready = await probe(readinessUrl);
 
-    // Account-wide Access default-deny commonly blocks Wrangler's generated preview alias even
-    // when the stable `<worker>.<account>.workers.dev` destination has an application admitting the
-    // operator or a service token. The preview response gives us the account subdomain, so preserve
-    // the same no-traffic readiness invariant by staging the uploaded version at 0% and selecting it
-    // explicitly through the stable, policy-covered hostname. This requires a prior active version
-    // whose traffic can remain untouched while the new version is staged; a truly empty first
-    // deployment has no safe zero-percent fallback.
+    // Decision: Account-wide Access default-deny often blocks Wrangler's generated preview alias even when
+    // the stable `<worker>.<account>.workers.dev` destination has an application admitting the
+    // operator or a service token. The preview response gives us the account subdomain, so keep
+    // the no-traffic readiness invariant by staging the uploaded version at 0% and selecting it
+    // through the stable, policy-covered hostname. This needs a prior active version whose traffic
+    // can stay untouched; a truly empty first deployment has no safe zero-percent fallback.
     if (
       ready === 'access-denied' &&
       !stagedVersionOverride &&
@@ -1554,7 +1552,7 @@ async function activateCloudflareVersionWithSecretsFile(
     };
   }
 
-  // Readiness can take long enough for another deploy or rollback to finish. Never flatten that
+  // Decision: Readiness can take long enough for another deploy or rollback to finish. Don't flatten that
   // newer operation using the stale `previous` snapshot captured before this upload began.
   const ownerBeforeActivation = await readCurrentProductionVersion(options);
   if (ownerBeforeActivation.kind === 'failed') {
@@ -1621,9 +1619,8 @@ async function activateCloudflareVersionWithSecretsFile(
       reason: 'uploader-changed',
       versionId,
       previousVersionId: previous.versionId,
-      // Never invoke a binary that just failed integrity verification, even to
-      // restore traffic. The active version must be repaired with a trusted
-      // Wrangler installation instead.
+      // Decision: Don't invoke a binary that just failed integrity verification, even to restore traffic. The
+      // active version has to be repaired with a trusted Wrangler installation instead.
       rollback: previous.versionId ? 'unsafe' : 'unavailable',
     };
   }
@@ -1728,10 +1725,9 @@ async function activateCloudflareVersionWithSecretsFile(
         triggerRepair: triggerRepairOutcome(repair),
       };
     }
-    // This deploy owns 100%. Switch back only when bwf can restore the previous version's
-    // triggers too. An empty placeholder or a version without a bwf trigger snapshot stays
-    // inactive: moving traffic to it would serve an empty Worker or code with this deploy's
-    // partly applied triggers.
+    // Decision: This deploy owns 100%. Switch back only when bwf can restore the previous version's triggers
+    // too. An empty placeholder or a version without a bwf trigger snapshot stays inactive: moving
+    // traffic to it would serve an empty Worker or code with this deploy's partly applied triggers.
     const placeholder = await previousIsRestorePlaceholder();
     const previousSnapshot =
       placeholder === false
@@ -1825,8 +1821,8 @@ async function restorePreviousVersionAndTriggers(
     [{ versionId: failedVersionId, percentage: 100 }],
   ]);
   if (traffic.rollback !== 'succeeded') {
-    // Without a status read, the failed version still owns traffic: the caller saw it at 100%
-    // just before, and no restore command ran.
+    // Decision: Without a status read, the failed version still owns traffic: the caller saw it at 100% just
+    // before, and no restore command ran.
     return {
       ...traffic,
       activeVersionId:
@@ -1834,10 +1830,9 @@ async function restorePreviousVersionAndTriggers(
       triggersRestored: 'no',
     };
   }
-  // Traffic attachments can change between uploads (for example `bwf domain
-  // add`), so the caller passes the snapshot captured before this deployment,
-  // not the older immutable version annotation. Cleanup-only queue names are
-  // deliberately not part of this target snapshot.
+  // Decision: Traffic attachments can change between uploads (for example `bwf domain add`), so the caller
+  // passes the snapshot captured before this deployment, not the older immutable version
+  // annotation. Cleanup-only queue names are deliberately not part of this target snapshot.
   if (!options.verifyUploader()) {
     return { ...traffic, rollback: 'unsafe', triggersRestored: 'no' };
   }
@@ -1860,7 +1855,7 @@ async function restorePreviousVersionAndTriggers(
       triggersRestored: 'yes',
     };
   }
-  // A status read or traffic split during the replay leaves both owner and triggers unknown.
+  // Decision: A status read or traffic split during the replay leaves both owner and triggers unknown.
   const ownerUnknown = triggers.reason === 'status-failed' || triggers.reason === 'traffic-split';
   return {
     ...traffic,
@@ -1886,8 +1881,8 @@ type CloudflareVersionInspection = Readonly<{
   isSecretOnlyDraft: boolean;
   isBwfSecretOnlyDraft: boolean;
   bwfDraftSecretNames: ReadonlyArray<string> | null;
-  // A Wrangler `secret put` version whose resources could not be read, so it may still be an
-  // empty draft. Recovery must not offer traffic back to it.
+  // Decision: A Wrangler `secret put` version whose resources couldn't be read, so it may still be an
+  // empty draft. Recovery mustn't offer traffic back to it.
   draftUnknown: boolean;
 }>;
 
@@ -1900,8 +1895,8 @@ async function readCloudflareVersionInspection(
   knownVersions?: ReadonlyArray<unknown>,
 ): Promise<CloudflareVersionInspection | null> {
   try {
-    // Version metadata is immutable. Reuse the pre-upload inheritance snapshot,
-    // but keep ownership and the post-upload inheritance checks as fresh reads.
+    // Decision: Version metadata is immutable. Reuse the pre-upload inheritance snapshot, but keep ownership
+    // and the post-upload inheritance checks as fresh reads.
     let versions = knownVersions;
     if (versions === undefined) {
       const result = await options.runWrangler(
@@ -1922,8 +1917,8 @@ async function readCloudflareVersionInspection(
       }
       const annotations = isRecord(entry.annotations) ? entry.annotations : undefined;
       const message = annotations?.['workers/message'];
-      // The list endpoint omits resources. Inspect the exact active version before deciding
-      // whether secret provisioning left a placeholder rather than an existing application.
+      // Decision: The list endpoint omits resources. Inspect the exact active version before deciding whether
+      // secret provisioning left a placeholder rather than an existing application.
       let draft = entry;
       let draftUnknown = false;
       if (
@@ -1993,7 +1988,7 @@ async function isBwfSecretDraftPlaceholderVersion(
       },
       { capture: true },
     );
-    // null: the version could not be read, so it may still be the placeholder.
+    // Decision: null: the version couldn't be read, so it may still be the placeholder.
     if (!isCleanCommandExit(view)) {
       return null;
     }
@@ -2210,11 +2205,10 @@ async function bootstrapFirstDeployment(
     !options.preserveTriggers &&
     options.resolveWorkersDevSubdomain
   ) {
-    // A publish over a Worker with workers.dev disabled, such as the draft that
-    // `secret put` creates, reports no URL. Trigger synchronization below
-    // publishes `workers_dev: true` when no trigger is preserved, so the
-    // readiness URL needs only the account subdomain. The lookup can run the
-    // uploader to read the session token.
+    // Decision: A publish over a Worker with workers.dev turned off, such as the draft that `secret put`
+    // creates, reports no URL. Trigger synchronization below publishes `workers_dev: true` when no
+    // trigger is preserved, so the readiness URL needs only the account subdomain. The lookup can
+    // run the uploader to read the session token.
     if (!options.verifyUploader()) {
       return {
         ok: false,
@@ -2293,10 +2287,9 @@ async function bootstrapFirstDeployment(
       owner.versionId !== versionId ||
       !productionVersionPercentagesEqual(owner.versions, [{ versionId, percentage: 100 }])
     ) {
-      // Another deployment may have published its code while this uploader was
-      // still applying bootstrap settings. Repair only that owner's immutable
-      // snapshot. If our code regains ownership, preserve all triggers until
-      // its upload validation and checkpoint have completed.
+      // Decision: Another deployment may have published its code while this uploader was still applying
+      // bootstrap settings. Repair only that owner's immutable snapshot. If our code regains
+      // ownership, preserve all triggers until its upload validation and checkpoint have completed.
       const repair =
         owner.kind === 'ok' &&
         owner.versionId &&
@@ -2365,9 +2358,9 @@ async function bootstrapFirstDeployment(
       return checkpointOwnerFailure;
     }
   }
-  // A version-aware atomic upload activates code without publishing routes.
-  // Publish only the active owner's snapshot before probing a first Custom
-  // Domain; enabling an unrequested workers.dev URL would expose the app.
+  // Decision: A version-aware atomic upload activates code without publishing routes. Publish only the
+  // active owner's snapshot before probing a first Custom Domain; enabling an unrequested
+  // workers.dev URL would expose the app.
   options.onProgress?.('Updating routes and triggers...');
   const triggers = await stabilizeCloudflareVersionTriggers(triggerOptions);
   if (!triggers.ok || !triggers.targetOwnsTraffic) {
@@ -2387,8 +2380,8 @@ async function bootstrapFirstDeployment(
         triggerRepair: triggerRepairOutcome(triggers),
       };
     }
-    // A non-versioned publish has no staged predecessor to switch back to, so this version
-    // stays live with whatever triggers were applied.
+    // Decision: A non-versioned publish has no staged predecessor to switch back to, so this version stays
+    // live with whatever triggers were applied.
     const placeholder =
       previousVersionId && triggers.activeVersionId === versionId
         ? await previousIsRestorePlaceholder?.()
@@ -2425,7 +2418,7 @@ async function bootstrapFirstDeployment(
   const customDomainBootstrap = !atomic && usesCustomDomain;
   const readinessTimeoutMs = customDomainBootstrap ? 300_000 : 60_000;
   const previewSubdomain = extractWorkersDevSubdomain(previewUrl);
-  // Outside workers.dev, the probe reaches a configured custom route. Apply the same exact-origin
+  // Decision: Outside workers.dev, the probe reaches a configured custom route. Apply the same exact-origin
   // opt-in as a staged custom-route probe.
   const trustedReadinessOrigin = previewSubdomain
     ? undefined
@@ -2442,9 +2435,9 @@ async function bootstrapFirstDeployment(
     undefined,
     options.fetch ?? globalThis.fetch,
     options.sleep ?? delay,
-    // A first Custom Domain needs DNS and certificate propagation. Existing
-    // previews and explicitly atomic releases retain their shorter window.
-    // Keep an overall deadline even when requests time out individually.
+    // Decision: A first Custom Domain needs DNS and certificate propagation. Existing previews and explicitly
+    // atomic releases keep their shorter window. Keep an overall deadline even when requests time
+    // out individually.
     options.readinessAttempts ?? (customDomainBootstrap ? 150 : 30),
     readinessTimeoutMs,
     options.requireVersionMetadata ? versionId : undefined,
@@ -2483,8 +2476,8 @@ async function bootstrapFirstDeployment(
       rollback: 'unsafe',
     };
   }
-  // DNS propagation can outlast another deploy. A successful response alone
-  // must not record this version as live after a newer owner took over.
+  // Decision: DNS propagation can outlast another deploy. A successful response alone mustn't record this
+  // version as live after a newer owner took over.
   const ownerAfterReadiness = await readCurrentProductionVersion(options);
   if (ownerAfterReadiness.kind === 'failed') {
     return {
@@ -2792,7 +2785,7 @@ async function probeReadiness(
         return 'access-denied';
       }
     } catch {
-      // Preview propagation is eventually consistent; retry below.
+      // Decision: Preview propagation is eventually consistent; retry below.
     } finally {
       if (response && !response.bodyUsed) {
         await response.body?.cancel().catch(() => {});
@@ -3026,18 +3019,18 @@ async function restorePreviousVersion(
       [`${previousVersionId}@100`],
       `bwf automatic rollback after ${cause}.`,
     );
-  // A restore that did not exit cleanly may still have moved traffic (a killed child, or a lost
-  // response after Cloudflare applied it), so read the owner again instead of reusing the
-  // earlier read. A failed read reports the owner as unknown.
+  // Decision: A restore that didn't exit cleanly may still have moved traffic (a killed child, or a lost
+  // response after Cloudflare applied it), so read the owner again instead of reusing the earlier
+  // read. A failed read reports the owner as unknown.
   const failed = async (): Promise<PreviousVersionRestore> => ({
     rollback: 'failed',
     activeVersionId: (await readOwner()).activeVersionId,
   });
   const result = await restore(false);
-  // Cloudflare refuses to move traffic back to a version older than a secret
-  // change (10220). When the failed version made that change, force the
-  // restore, as Wrangler's rollback does. Check again first that bwf still
-  // owns traffic, so a deployment made by someone else is not overwritten.
+  // Decision: Cloudflare refuses to move traffic back to a version older than a secret change (10220).
+  // When the failed version made that change, force the restore, as Wrangler's rollback does.
+  // Check again first that bwf still owns traffic, so a deployment made by someone else isn't
+  // overwritten.
   if (result.errorCode === CLOUDFLARE_SECRET_CHANGED_ERROR) {
     owner = await readOwner();
     if (!owner.owns) {

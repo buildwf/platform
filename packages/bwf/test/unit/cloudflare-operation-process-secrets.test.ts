@@ -19,8 +19,8 @@ type CfReply = { status: number; stdout?: string; stderr?: string };
 type ApiReply = { status: number; body: unknown };
 type CfCall = { label: string; file?: string };
 
-// Replaces cf with replies scripted by command prefix, served in call order. Each call is logged
-// with the contents of its `--file` argument, which cf would read before the scratch file goes.
+// Decision: Replaces cf with replies scripted by command prefix, served in call order. Each call logs the
+// contents of its `--file` argument, because cf reads that scratch file before it's deleted.
 const SCRIPTED_CF = `import child from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
@@ -47,7 +47,6 @@ child.spawnSync = (binary, args, options) => {
 syncBuiltinESMExports();
 `;
 
-/** Run a secret operation with scripted cf replies and the Cloudflare API on a local server. */
 async function runSecretScenario(options: {
   operation: CloudflareOperation;
   input: string;
@@ -119,7 +118,6 @@ const exists: ApiReply = {
   body: { success: false, errors: [{ code: 10040, message: 'This Worker name is in use.' }] },
 };
 
-/** Workers API replies keyed by request: create and version upload. */
 function workersApi(replies: { create: ApiReply; upload?: ApiReply }) {
   return (method: string, path: string): ApiReply => {
     if (method === 'POST' && path === '/workers/workers') {

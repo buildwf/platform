@@ -151,7 +151,7 @@ export function parsePlatformBillingArgs(args: ReadonlyArray<string>): PlatformB
     } else if ((arg === 'set' || arg === 'show') && !action) {
       action = arg;
     } else if (/^STRIPE_[A-Z_]*=/.test(arg)) {
-      // Keep the value out of the message: it can be a secret.
+      // Decision: Keep the value out of the message: it can be a secret.
       throw new Error(
         'platform: Pass billing values through environment variables or --stdin, not as arguments.',
       );

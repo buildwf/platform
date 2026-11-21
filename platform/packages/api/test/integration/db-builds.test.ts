@@ -65,11 +65,9 @@ afterAll(async () => {
   await teardownEnv();
 });
 
-// The immutable numeric repo id (as text) used by the in-tx install
-// re-check. The build txns confirm the install still covers this repo, so
-// every test reaching that check seeds an install whose selection includes it
-// (or an `all`-repos install). Connections also carry it so the helper's
-// repositoryId arg is non-null (a null id fails closed).
+// Decision: The build txns confirm the install still covers this repo, so each test reaching that check seeds
+// an install whose selection includes it (or an `all`-repos install). Connections carry it too so the
+// helper's repositoryId arg is non-null (a null id fails closed).
 const DEFAULT_REPO_ID = '42';
 
 async function createGitHubConnection(
@@ -88,9 +86,6 @@ async function createGitHubConnection(
   });
 }
 
-// Seed an ACTIVE GitHub App installation so the in-tx re-check
-// (`installationCoversRepoInTx`) passes. Defaults to an `all`-repos install
-// (membership not enforced); pass `repositories` for a `selected` install.
 async function seedActiveInstall(
   db: Db,
   installationId: string,
@@ -180,7 +175,6 @@ describe('builds', () => {
 
     const q1 = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
     const q2 = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
-    // q1 is older than q2 so the per-project candidate is q1 (oldest).
     await env.db
       .update(builds)
       .set({ created_at: sql`now() - interval '2 minute'` })
@@ -189,35 +183,28 @@ describe('builds', () => {
       .update(builds)
       .set({ created_at: sql`now() - interval '1 minute'` })
       .where(eq(builds.id, q2.id));
-    // queued github_actions build — wrong executor.
     await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
       executor: 'github_actions',
     });
 
-    // One row for the (idle) project, and it is that project's OLDEST queued build.
     const queued = await getQueuedBuilds(env.db);
     expect(queued.map((b) => b.id)).toEqual([q1.id]);
   });
 
   it("getQueuedBuilds surfaces an idle project even when another of the user's projects is active", async () => {
-    // A per-user scan (DISTINCT ON user_id) would surface the user's oldest
-    // build across ALL projects; if that project were active, the user's OTHER
-    // startable project would never be surfaced. The per-idle-project scan
-    // excludes the busy project and returns the idle one's build.
+    // Decision: A per-user scan (DISTINCT ON user_id) would surface the user's oldest build across all projects; if
+    // that project were active, the user's other startable project would never surface. The
+    // per-idle-project scan excludes the busy project and returns the idle one's build.
     const user = await createTestUser(env.db);
     const busy = await createTestProject(env.db, user.id, 'starve-busy');
     const idle = await createTestProject(env.db, user.id, 'starve-idle');
 
-    // Project X (busy): an active build PLUS an older queued build.
     await createTestBuild(env.db, { projectId: busy.id, userId: user.id, status: 'building' });
     const busyQueued = await createTestBuild(env.db, { projectId: busy.id, userId: user.id });
-    // Project Y (idle): a NEWER queued build that must still be surfaced.
     const idleQueued = await createTestBuild(env.db, { projectId: idle.id, userId: user.id });
 
-    // busy's queued build is OLDER than idle's, so a per-user "oldest" scan would
-    // have picked busy (and hidden idle behind it).
     await env.db
       .update(builds)
       .set({ created_at: sql`now() - interval '2 minute'` })
@@ -232,8 +219,6 @@ describe('builds', () => {
   });
 
   it('getQueuedBuilds excludes a project that already has an active build', async () => {
-    // A project with an active build must not be surfaced at all,
-    // regardless of how many queued builds it has.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
 
@@ -258,9 +243,8 @@ describe('builds', () => {
   });
 
   it('getQueuedBuilds excludes builds owned by excludeUserIds', async () => {
-    // The scheduler passes ids of users AT their plan cap so the scan
-    // never wastes its window on rows the claim step would only reject. An empty
-    // exclude list must NOT change behavior (no `NOT IN ()`).
+    // Decision: The scheduler passes ids of users at their plan cap so the scan doesn't waste its window on rows
+    // the claim step would reject. An empty exclude list mustn't change behavior (no `NOT IN ()`).
     const capped = await createTestUser(env.db, 'capped-user');
     const eligible = await createTestUser(env.db, 'eligible-user');
     const cappedProj = await createTestProject(env.db, capped.id, 'r95-capped');
@@ -275,19 +259,14 @@ describe('builds', () => {
       userId: eligible.id,
     });
 
-    // No exclusions → both surface.
     const all = await getQueuedBuilds(env.db, 50);
     expect(new Set(all.map((b) => b.id))).toEqual(new Set([cappedBuild.id, eligibleBuild.id]));
 
-    // Exclude the capped owner → only the eligible owner's build remains.
     const filtered = await getQueuedBuilds(env.db, 50, [capped.id]);
     expect(filtered.map((b) => b.id)).toEqual([eligibleBuild.id]);
   });
 
   it('getQueuedBuilds orders globally oldest-first across idle projects (age-fair)', async () => {
-    // The scan must surface the globally oldest-waiting startable build
-    // first, not the lowest project_id. Three idle projects across two users;
-    // the LIMIT must keep the oldest two regardless of project_id.
     const user = await createTestUser(env.db);
     const projA = await createTestProject(env.db, user.id, 'age-a');
     const projB = await createTestProject(env.db, user.id, 'age-b');
@@ -309,28 +288,21 @@ describe('builds', () => {
       .set({ created_at: sql`now() - interval '1 minute'` })
       .where(eq(builds.id, newest.id));
 
-    // Full scan: oldest-waiting first.
     const ordered = await getQueuedBuilds(env.db, 50);
     expect(ordered.map((b) => b.id)).toEqual([oldest.id, middle.id, newest.id]);
 
-    // Limit applies AFTER the age sort, so the two oldest survive — not the two
-    // lowest project_ids.
     const limited = await getQueuedBuilds(env.db, 2);
     expect(limited.map((b) => b.id)).toEqual([oldest.id, middle.id]);
   });
 
   it('getUsersWithQueuedContainerBuilds reports queue owners + their active build counts', async () => {
-    // Drives the scheduler's cap computation. Only users owning a QUEUED
-    // CONTAINER build appear; the active count includes any executor (a
+    // Decision: Only users owning a queued container build appear; the active count includes any executor (a
     // github_actions build also occupies a concurrency slot).
     const withQueued = await createTestUser(env.db, 'has-queued');
     const noQueued = await createTestUser(env.db, 'no-queued');
     const projWith = await createTestProject(env.db, withQueued.id, 'owners-with');
     const projNo = await createTestProject(env.db, noQueued.id, 'owners-no');
 
-    // withQueued: one active container build + one active github_actions build
-    // (both count) on one project, plus a QUEUED container build on a second
-    // project so the project-serialization filter doesn't hide their queued work.
     const projWith2 = await createTestProject(env.db, withQueued.id, 'owners-with-2');
     await createTestBuild(env.db, {
       projectId: projWith.id,
@@ -355,7 +327,6 @@ describe('builds', () => {
       status: 'failed',
     });
 
-    // noQueued: only a completed build — must NOT appear (no queued container work).
     await createTestBuild(env.db, {
       projectId: projNo.id,
       userId: noQueued.id,
@@ -423,18 +394,16 @@ describe('builds', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
 
-    // Empty queue.
     expect(await hasQueuedContainerBuilds(env.db)).toBe(false);
 
-    // A queued container build for an ACTIVE project — getQueuedBuilds returns []
-    // (it is blocked), but hasQueuedContainerBuilds must still report true so the
-    // scheduler keeps a heartbeat until the project frees.
+    // Decision: A queued container build for an active project: getQueuedBuilds returns [] (it's blocked), but
+    // hasQueuedContainerBuilds still reports true so the scheduler keeps a heartbeat until the project
+    // frees.
     await createTestBuild(env.db, { projectId: project.id, userId: user.id, status: 'building' });
     await createTestBuild(env.db, { projectId: project.id, userId: user.id });
     expect(await getQueuedBuilds(env.db, 50)).toEqual([]);
     expect(await hasQueuedContainerBuilds(env.db)).toBe(true);
 
-    // Only a queued github_actions build — not a container build.
     await env.db.delete(builds);
     await createTestBuild(env.db, {
       projectId: project.id,
@@ -449,10 +418,8 @@ describe('builds', () => {
     const project = await createTestProject(env.db, user.id);
     const otherProject = await createTestProject(env.db, user.id);
 
-    // Cancelled: queued/starting/building/deploying, both executors.
-    // Stamp a known instance_type on this one so the returned object's
-    // instance_type can be asserted to round-trip (the post-commit DO teardown
-    // needs it to address the right container-size namespace).
+    // Decision: Stamp a known instance_type on this one so it can be asserted to round-trip: the post-commit DO
+    // teardown needs it to address the right container-size namespace.
     const queuedContainer = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -475,7 +442,6 @@ describe('builds', () => {
       executor: 'github_actions',
       status: 'deploying',
     });
-    // Left alone: terminal rows.
     const complete = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -486,7 +452,6 @@ describe('builds', () => {
       userId: user.id,
       status: 'failed',
     });
-    // Left alone: in-flight build on a DIFFERENT project.
     const otherProj = await createTestBuild(env.db, {
       projectId: otherProject.id,
       userId: user.id,
@@ -497,16 +462,12 @@ describe('builds', () => {
       reason: 'project disconnected',
     });
 
-    // Returns id + executor + new status for exactly the four in-flight rows.
     expect(cancelled.map((b) => b.id).sort()).toEqual(
       [queuedContainer.id, startingContainer.id, buildingContainer.id, deployingActions.id].sort(),
     );
     expect(cancelled.every((b) => b.status === 'cancelled')).toBe(true);
     expect(cancelled.filter((b) => b.executor === 'container')).toHaveLength(3);
     expect(cancelled.filter((b) => b.executor === 'github_actions')).toHaveLength(1);
-    // instance_type is carried out so the caller can address the right
-    // container-size namespace; the stamped build round-trips its value, the
-    // unstamped ones surface null.
     expect(cancelled.find((b) => b.id === queuedContainer.id)?.instance_type).toBe('standard-4');
     expect(cancelled.find((b) => b.id === startingContainer.id)?.instance_type).toBeNull();
 
@@ -550,7 +511,6 @@ describe('builds', () => {
       branch: 'main',
     });
 
-    // Branch filter: only the main-branch builds (both executors) cancel.
     const byBranch = await terminateBuildsForProject(env.db, project.id, {
       branch: 'main',
       reason: 'branch changed',
@@ -559,7 +519,6 @@ describe('builds', () => {
     expect((await getBuild(env.db, developContainer.id))!.status).toBe('building');
     expect((await getBuild(env.db, mainContainer.id))!.error).toBe('branch changed');
 
-    // Executor filter: only the remaining container build cancels.
     const byExecutor = await terminateBuildsForProject(env.db, project.id, {
       executor: 'container',
       reason: 'executor changed',
@@ -567,7 +526,6 @@ describe('builds', () => {
     expect(byExecutor.map((b) => b.id)).toEqual([developContainer.id]);
     expect((await getBuild(env.db, developContainer.id))!.status).toBe('cancelled');
 
-    // Nothing in-flight left -> no-op, empty result.
     const empty = await terminateBuildsForProject(env.db, project.id);
     expect(empty).toHaveLength(0);
   });
@@ -585,8 +543,6 @@ describe('builds', () => {
     });
     await seedActiveInstall(env.db, '12345');
 
-    // First push for aaa -> a brand new queued build (nothing to supersede), so
-    // the cancelled set is empty.
     const created = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -601,8 +557,6 @@ describe('builds', () => {
     expect(created.build!.instance_type).toBe('standard-3');
     expect(created.cancelled).toEqual([]);
 
-    // Newer push for bbb -> the aaa build is superseded (cancelled) and a new
-    // bbb build is queued. The cancelled set reports the superseded aaa build.
     const superseded = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -613,8 +567,6 @@ describe('builds', () => {
     });
     expect(superseded.reused).toBe(false);
     expect(superseded.build!.id).not.toBe(created.build!.id);
-    // The returned `status` reflects the post-UPDATE row (RETURNING returns new
-    // values), so the superseded build reports `cancelled`.
     expect(superseded.cancelled).toEqual([
       {
         id: created.build!.id,
@@ -627,7 +579,6 @@ describe('builds', () => {
     expect(cancelledAaa!.status).toBe('cancelled');
     expect(cancelledAaa!.error).toBe('superseded by newer push');
 
-    // Redelivery while bbb is still queued -> reuse, no new row, cancels nothing.
     const reusedQueued = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -640,10 +591,6 @@ describe('builds', () => {
     expect(reusedQueued.build!.id).toBe(superseded.build!.id);
     expect(reusedQueued.cancelled).toEqual([]);
 
-    // Mark bbb complete AND make it the project's LIVE deployment, then redeliver
-    // -> reuse the COMPLETE build (no re-enqueue of an already-deployed commit),
-    // cancels nothing. The live-deployment link is what proves this is a true
-    // redelivery (not a rollback), so the complete build is reused.
     const depBbb = await createTestDeployment(env.db, project.id, 'live');
     await updateBuildStatus(env.db, superseded.build!.id, 'complete', { deploymentId: depBbb.id });
     const reusedComplete = await supersedeAndCreateContainerBuild(env.db, {
@@ -702,15 +649,12 @@ describe('builds', () => {
     expect(result.build?.instance_type).toBe('standard-3');
   });
 
-  // Same-SHA recreate race — a branch-delete cancellation samples a DB-clock fence
-  // BEFORE confirming the branch absent, then cancels active builds with
-  // created_at <= fence. If the branch is deleted then recreated at the SAME commit
-  // and the recreate push REUSES the still-active in-flight row (path a) instead of
-  // inserting a fresh post-fence row, the reused row would keep its pre-fence
-  // created_at and be wrongly cancelled when the delete tx interleaves after the
-  // push (it lost the connection FOR UPDATE race). The reuse path re-stamps
-  // created_at to now(), making the row post-fence so it survives. github_actions is
-  // immune (a recreate is a new workflow run → new run_id → a fresh row).
+  // Decision: Same-SHA recreate race: a branch-delete cancellation samples a DB-clock fence before confirming the
+  // branch absent, then cancels active builds with created_at <= fence. If the branch is deleted and
+  // recreated at the same commit and the recreate push reuses the still-active row instead of
+  // inserting a fresh one, the reused row keeps its pre-fence created_at and would be wrongly
+  // cancelled when the delete tx runs after the push. The reuse path re-stamps created_at to now() so
+  // it survives. github_actions is immune (a recreate is a new workflow run, so a new run_id and row).
   it('supersedeAndCreateContainerBuild re-stamps created_at on active reuse so a pre-push branch-delete fence spares it', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -725,7 +669,6 @@ describe('builds', () => {
     await seedActiveInstall(env.db, '12345');
     const connId = (await getGitHubConnection(env.db, project.id))!.id;
 
-    // An in-flight build for commit 'A'.
     const first = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: connId,
@@ -735,18 +678,14 @@ describe('builds', () => {
       repositoryId: DEFAULT_REPO_ID,
     });
     expect(first.reused).toBe(false);
-    // Age it well before the fence (a build that has been running a while).
     await env.db
       .update(builds)
       .set({ created_at: sql`now() - interval '1 hour'` })
       .where(eq(builds.id, first.build!.id));
 
-    // The branch-delete handler sampled its DB-clock fence BEFORE the recreate push
-    // is processed. Model that ordering with a fence one minute in the past: the
-    // build's original stamp (now()-1h) sits below it (so WITHOUT the re-stamp it
-    // would be cancelled), while the reuse re-stamp
-    // (now()) sits above it (so WITH the re-stamp it survives). A literal `now()`
-    // here would tie the re-stamp's instant and make the assertion racy.
+    // Decision: Model the delete handler sampling its fence before the recreate push with a fence one minute in
+    // the past: the original stamp (now()-1h) sits below it and the re-stamp (now()) above it. A literal
+    // `now()` here would tie the re-stamp's instant and make the assertion racy.
     const fenceRes = (await env.db.execute(
       sql`select (now() - interval '1 minute')::text as now`,
     )) as {
@@ -754,7 +693,6 @@ describe('builds', () => {
     };
     const fence = fenceRes.rows[0]!.now;
 
-    // SAME-SHA recreate: a push for commit 'A' arrives and REUSES the in-flight row.
     const reused = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: connId,
@@ -766,9 +704,6 @@ describe('builds', () => {
     expect(reused.reused).toBe(true);
     expect(reused.build!.id).toBe(first.build!.id);
 
-    // The interleaved branch-delete cancellation runs with the pre-push fence. The
-    // reused row was re-stamped to now() (> fence), so it MUST survive. Without the
-    // re-stamp it would still carry its pre-fence created_at and be wrongly cancelled.
     const cancelled = await terminateBuildsForProject(env.db, project.id, {
       branch: 'main',
       reason: 'branch deleted',
@@ -778,14 +713,11 @@ describe('builds', () => {
     expect((await getBuild(env.db, first.build!.id))!.status).not.toBe('cancelled');
   });
 
-  // A force-push ROLLBACK to a previously-`complete` SHA that is
-  // NOT what the project is currently live on must RE-DEPLOY it (enqueue a fresh
-  // build), NOT reuse the stale complete row — otherwise the project stays live
-  // on the newer commit while the branch head is the rolled-back SHA. A NEWER
-  // in-flight build for the now-off-branch commit must STILL be cancelled
-  // (otherwise it keeps a live deploy token and publishes the stale newer
-  // commit). The supersede runs FIRST, before the reuse lookup, so it fires even
-  // on a complete-SHA push.
+  // Decision: A force-push rollback to a previously `complete` SHA the project isn't live on re-deploys it
+  // (enqueues a fresh build) instead of reusing the stale complete row, or the project stays live on
+  // the newer commit while the branch head is the rolled-back SHA. A newer in-flight build for the
+  // off-branch commit is still cancelled. The supersede runs first, before the reuse lookup, so it
+  // fires even on a complete-SHA push.
   it('supersedeAndCreateContainerBuild rebuilds a complete SHA that is not live AND cancels a newer active build', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -799,8 +731,6 @@ describe('builds', () => {
     });
     await seedActiveInstall(env.db, '12345');
 
-    // B1: a previously-deployed commit C1 on main, already `complete`. No live
-    // deployment links to it (the project is not currently on C1).
     const b1 = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -809,7 +739,6 @@ describe('builds', () => {
       commitSha: 'C1',
       branch: 'main',
     });
-    // B2: a NEWER in-flight (building) build for C2 on the same project+branch.
     const b2 = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -819,9 +748,6 @@ describe('builds', () => {
       branch: 'main',
     });
 
-    // Roll back: push C1 again. C1 is NOT provably live (B1 has no deployment_id
-    // link and there is no live deployment for C1) → REBUILD: a fresh queued C1
-    // build is enqueued (not B1 reused), AND B2 is cancelled.
     const rollback = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -834,23 +760,18 @@ describe('builds', () => {
     expect(rollback.build!.id).not.toBe(b1.id);
     expect(rollback.build!.status).toBe('queued');
     expect(rollback.build!.commit_sha).toBe('C1');
-    // The newer active B2 is in the cancelled set with its post-UPDATE status.
     expect(rollback.cancelled).toEqual([
       { id: b2.id, executor: 'container', status: 'cancelled', instance_type: null },
     ]);
     const cancelledB2 = await getBuild(env.db, b2.id);
     expect(cancelledB2!.status).toBe('cancelled');
     expect(cancelledB2!.error).toBe('superseded by newer push');
-    // B1 is left intact (complete builds are never terminalized by supersede).
     expect((await getBuild(env.db, b1.id))!.status).toBe('complete');
-    // A fresh queued C1 build now exists alongside the old complete B1.
     const c1Builds = await getProjectBuilds(env.db, project.id);
     const queuedC1 = c1Builds.filter((b) => b.commit_sha === 'C1' && b.status === 'queued');
     expect(queuedC1).toHaveLength(1);
     expect(queuedC1[0]!.id).toBe(rollback.build!.id);
 
-    // Same-commit redelivery of the rollback now reuses the freshly-queued C1
-    // build (it is active/in-flight) — no self-cancel, no re-enqueue.
     const redeliver = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -864,10 +785,6 @@ describe('builds', () => {
     expect(redeliver.cancelled).toEqual([]);
   });
 
-  // Rollback via the authoritative deployment_id link — deploy A
-  // (live=depA, B1.deployment_id=depA), deploy B (live=depB), force-push A. A is
-  // no longer live, so it must REBUILD even though B1 is `complete` AND linked to
-  // depA (which is no longer the active deployment).
   it('supersedeAndCreateContainerBuild rebuilds on rollback when the complete SHA is no longer the live deployment', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -881,7 +798,6 @@ describe('builds', () => {
     });
     await seedActiveInstall(env.db, '12345');
 
-    // Deploy A: complete build A linked to live deployment depA.
     const depA = await createTestDeployment(env.db, project.id, 'live', undefined, undefined, {
       commit: 'A',
     });
@@ -895,7 +811,6 @@ describe('builds', () => {
     });
     await updateBuildStatus(env.db, buildA.id, 'complete', { deploymentId: depA.id });
 
-    // Deploy B: complete build B linked to live deployment depB (now the active).
     const depB = await createTestDeployment(env.db, project.id, 'live', undefined, undefined, {
       commit: 'B',
     });
@@ -908,14 +823,12 @@ describe('builds', () => {
       branch: 'main',
     });
     await updateBuildStatus(env.db, buildB.id, 'complete', { deploymentId: depB.id });
-    // Sanity: depB is the active deployment.
     const [projRow] = await env.db
       .select({ active: projects.active_deployment_id })
       .from(projects)
       .where(eq(projects.id, project.id));
     expect(projRow!.active).toBe(depB.id);
 
-    // Force-push back to A → A is not live → REBUILD (new queued A build).
     const rollback = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -930,10 +843,6 @@ describe('builds', () => {
     expect(rollback.build!.commit_sha).toBe('A');
   });
 
-  // Genuine redelivery — A is the current live deployment (live=depA,
-  // buildA.deployment_id=depA). A redelivered push for A must REUSE the complete
-  // build via the authoritative deployment_id link, with no new build and no
-  // cancellations.
   it('supersedeAndCreateContainerBuild reuses a complete build whose deployment is currently live', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -971,14 +880,10 @@ describe('builds', () => {
     expect(redeliver.reused).toBe(true);
     expect(redeliver.build!.id).toBe(buildA.id);
     expect(redeliver.cancelled).toEqual([]);
-    // No new build was enqueued.
     const all = await getProjectBuilds(env.db, project.id);
     expect(all.filter((b) => b.commit_sha === 'A')).toHaveLength(1);
   });
 
-  // In-flight idempotency — an ACTIVE (building) build for A is always
-  // reused regardless of what is (or isn't) live, so a redelivered push doesn't
-  // duplicate an in-flight build.
   it('supersedeAndCreateContainerBuild reuses an in-flight build for the commit regardless of live deployment', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -992,7 +897,6 @@ describe('builds', () => {
     });
     await seedActiveInstall(env.db, '12345');
 
-    // Project is live on a different (unrelated) commit B.
     await createTestDeployment(env.db, project.id, 'live', undefined, undefined, { commit: 'B' });
     const activeA = await createTestBuild(env.db, {
       projectId: project.id,
@@ -1028,7 +932,6 @@ describe('builds', () => {
     });
     await seedActiveInstall(env.db, '12345');
 
-    // An ACTIVE (building) container build for C1 on main.
     const active = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -1038,8 +941,6 @@ describe('builds', () => {
       branch: 'main',
     });
 
-    // A newer push for C2 supersedes the active C1 build and returns it in the
-    // cancelled set with its prior status.
     const result = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -1050,8 +951,6 @@ describe('builds', () => {
     });
     expect(result.reused).toBe(false);
     expect(result.build!.commit_sha).toBe('c2');
-    // The returned `status` reflects the post-UPDATE row (RETURNING returns new
-    // values), so the cancelled active build reports `cancelled`, not `building`.
     expect(result.cancelled).toEqual([
       { id: active.id, executor: 'container', status: 'cancelled', instance_type: null },
     ]);
@@ -1073,8 +972,6 @@ describe('builds', () => {
     });
     await seedActiveInstall(env.db, '12345');
 
-    // An ACTIVE build already in flight for the new head commit C2 (a redelivery
-    // race that already enqueued/started for C2).
     const atHead = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -1084,8 +981,6 @@ describe('builds', () => {
       branch: 'main',
     });
 
-    // A push for the SAME commit C2 dedups to the existing in-flight build and
-    // cancels nothing (a delivery must never cancel itself).
     const result = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -1123,7 +1018,6 @@ describe('builds', () => {
     });
     await updateBuildStatus(env.db, first.build!.id, 'failed');
 
-    // Re-pushing aaa after the failure must enqueue a NEW queued build.
     const retry = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -1138,13 +1032,13 @@ describe('builds', () => {
     expect((await getBuild(env.db, first.build!.id))!.status).toBe('failed');
   });
 
-  // The enqueue tx locks + re-reads the connection and skips when a
-  // concurrent PATCH changed the branch/executor first. A skip returns
-  // `{ build: null, skipped: 'config-changed', cancelled: [] }` and inserts no row.
+  // Decision: The enqueue tx locks and re-reads the connection and skips when a concurrent PATCH changed the
+  // branch or executor first. A skip returns
+  // `{ build: null, skipped: 'config-changed', cancelled: [] }`
+  // and inserts no row.
   it('supersedeAndCreateContainerBuild skips when the connection branch no longer matches', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
-    // Connection now points at 'dev'; a delayed push for 'main' must skip.
     await createGitHubConnection(env.db, {
       projectId: project.id,
       installationId: '12345',
@@ -1167,14 +1061,12 @@ describe('builds', () => {
     expect(result.reused).toBe(false);
     expect(result.skipped).toBe('config-changed');
     expect(result.cancelled).toEqual([]);
-    // No queued row was inserted.
     expect(await getProjectBuilds(env.db, project.id)).toEqual([]);
   });
 
   it('supersedeAndCreateContainerBuild skips when the connection executor is no longer container', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
-    // Connection switched to github_actions; a container enqueue must skip.
     await createGitHubConnection(env.db, {
       projectId: project.id,
       installationId: '12345',
@@ -1196,17 +1088,15 @@ describe('builds', () => {
     expect(result.build).toBeNull();
     expect(result.skipped).toBe('config-changed');
     expect(result.cancelled).toEqual([]);
-    // No container build row was inserted.
     expect(
       (await getProjectBuilds(env.db, project.id)).filter((b) => b.executor === 'container'),
     ).toEqual([]);
   });
 
   it('supersedeAndCreateContainerBuild skips when the project is being deleted', async () => {
-    // A push landing after teardownProject flipped the project to `deleting`
-    // (but before the cascade deleted the connection) must not enqueue a build
-    // for a project being torn down — it would burn a build slot. Mirrors the
-    // GitHub Actions path's project-deleting guard.
+    // Decision: A push landing after teardownProject flipped the project to `deleting` (but before the cascade
+    // deleted the connection) mustn't enqueue a build for a project being torn down; it would burn a
+    // build slot. This mirrors the GitHub Actions path's project-deleting guard.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
     await createGitHubConnection(env.db, {
@@ -1233,7 +1123,6 @@ describe('builds', () => {
     expect(result.reused).toBe(false);
     expect(result.skipped).toBe('project-deleting');
     expect(result.cancelled).toEqual([]);
-    // No build row was inserted.
     expect(await getProjectBuilds(env.db, project.id)).toEqual([]);
   });
 
@@ -1303,10 +1192,9 @@ describe('builds', () => {
     expect(result.build!.commit_sha).toBe('aaa');
   });
 
-  // The enqueue tx re-checks installation status + repo membership under
-  // the connection lock. A revocation (App suspend/uninstall, repo removal) that
-  // commits AFTER the push resolver's checks but BEFORE this tx is caught here:
-  // no build row is enqueued, no deploy token is minted. Fails closed.
+  // Decision: The enqueue tx re-checks installation status and repo membership under the connection lock. A
+  // revocation (App suspend or uninstall, repo removal) that commits after the push resolver's checks
+  // but before this tx is caught here: no build row, no deploy token.
   it('supersedeAndCreateContainerBuild skips when the installation is SUSPENDED', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -1374,7 +1262,6 @@ describe('builds', () => {
       branch: 'main',
       buildExecutor: 'container',
     });
-    // A 'selected' install whose cached set does NOT include this repo's id (42).
     await seedActiveInstall(env.db, '12345', [{ full_name: 'acme/other', id: 999 }], 'selected');
 
     const result = await supersedeAndCreateContainerBuild(env.db, {
@@ -1402,7 +1289,6 @@ describe('builds', () => {
       branch: 'main',
       buildExecutor: 'container',
     });
-    // A 'selected' install whose cached set INCLUDES this repo by id (42).
     await seedActiveInstall(env.db, '12345', [{ full_name: 'acme/app', id: 42 }], 'selected');
 
     const result = await supersedeAndCreateContainerBuild(env.db, {
@@ -1418,14 +1304,11 @@ describe('builds', () => {
     expect(result.build!.commit_sha).toBe('aaa');
   });
 
-  // The enqueue tx must assert the LOCKED connection is the SAME row the
-  // caller resolved. `github_connections.project_id` is UNIQUE, so a
-  // disconnect+reconnect to a DIFFERENT repo (same branch/executor, and crucially
-  // the SAME installation_id + repository_id) DELETEs the old row and CREATEs a
-  // new one with a fresh id between resolution and this tx. The branch/executor
-  // guard and the install check both PASS for such a swap (the install check
-  // keys on the PASSED installationId), so the id-match is the only guard that
-  // catches it. A stale resolved id => `connection-replaced`, no build row.
+  // Decision: The enqueue tx asserts the locked connection is the same row the caller resolved.
+  // `github_connections.project_id` is UNIQUE, so a disconnect+reconnect (same branch, executor,
+  // installation_id and repository_id) deletes the old row and creates one with a fresh id between
+  // resolution and this tx. The branch/executor guard and the install check both pass for such a swap,
+  // so the id match is the only guard that catches it.
   it('supersedeAndCreateContainerBuild skips when the connection was disconnected+reconnected', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -1439,9 +1322,6 @@ describe('builds', () => {
     });
     await seedActiveInstall(env.db, '12345');
 
-    // Disconnect + reconnect to the SAME repo/branch/executor/install — proving the
-    // install check does NOT catch this (identical installation_id +
-    // repository_id) — only the row id changes.
     await deleteGitHubConnection(env.db, project.id);
     const cNew = await createGitHubConnection(env.db, {
       projectId: project.id,
@@ -1453,7 +1333,6 @@ describe('builds', () => {
     });
     expect(cNew.id).not.toBe(cOld.id);
 
-    // The caller resolved the OLD connection id; the locked row is now the NEW one.
     const replaced = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: cOld.id,
@@ -1468,7 +1347,6 @@ describe('builds', () => {
     expect(replaced.cancelled).toEqual([]);
     expect(await getProjectBuilds(env.db, project.id)).toEqual([]);
 
-    // Matching-id happy case: resolving the CURRENT connection builds normally.
     const ok = await supersedeAndCreateContainerBuild(env.db, {
       projectId: project.id,
       connectionId: cNew.id,
@@ -1486,9 +1364,8 @@ describe('builds', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
 
-    // Over-age active container build: started 90 min ago (> 75 min cutoff).
-    // Stamp a known instance_type so the reaped object round-trips it out — the
-    // scheduled reaper needs it to address the right container-size namespace.
+    // Decision: Stamp a known instance_type so the reaped object round-trips it: the scheduled reaper needs it to
+    // address the right container-size namespace.
     const stale = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -1501,7 +1378,6 @@ describe('builds', () => {
       .set({ started_at: sql`now() - interval '90 minute'` })
       .where(eq(builds.id, stale.id));
 
-    // Fresh active container build: started 5 min ago — must be left alone.
     const fresh = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -1513,9 +1389,6 @@ describe('builds', () => {
       .set({ started_at: sql`now() - interval '5 minute'` })
       .where(eq(builds.id, fresh.id));
 
-    // Returns the reaped builds with their instance_type so the scheduled
-    // handler can best-effort stop the
-    // still-alive containers via the correctly-sized BuildManager namespace.
     const reaped = await failStaleActiveContainerBuilds(env.db, 75);
     expect(reaped).toEqual([{ id: stale.id, instance_type: 'standard-4' }]);
 
@@ -1524,7 +1397,6 @@ describe('builds', () => {
     expect(staleRow?.completed_at).not.toBeNull();
     expect(staleRow?.error).toBe('build exceeded max lifetime (stale reaper)');
 
-    // Fresh build is untouched.
     const freshRow = await getBuild(env.db, fresh.id);
     expect(freshRow?.status).toBe('building');
     expect(freshRow?.completed_at).toBeNull();
@@ -1534,7 +1406,6 @@ describe('builds', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
 
-    // Over-age active GitHub Actions build — the CONTAINER reaper must not touch it.
     const actions = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -1569,7 +1440,6 @@ describe('builds', () => {
     expect(row?.status).toBe('starting');
     expect(row?.started_at).not.toBeNull();
 
-    // Second claim of the same build sees it is no longer queued.
     const reclaimed = await claimBuildForStartWithinLimit(env.db, {
       buildId: build.id,
       userId: user.id,
@@ -1626,7 +1496,6 @@ describe('builds', () => {
     const project = await createTestProject(env.db, user.id);
     const build = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
 
-    // Claim flips queued -> starting.
     await claimBuildForStartWithinLimit(env.db, {
       buildId: build.id,
       userId: user.id,
@@ -1634,7 +1503,6 @@ describe('builds', () => {
     });
     expect((await getBuild(env.db, build.id))!.status).toBe('starting');
 
-    // The CAS matches the `starting` row and bounces it back to `queued`.
     expect(await requeueBuildIfStarting(env.db, build.id)).toBe(true);
     expect((await getBuild(env.db, build.id))!.status).toBe('queued');
   });
@@ -1644,7 +1512,6 @@ describe('builds', () => {
     const project = await createTestProject(env.db, user.id);
     const build = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
 
-    // Claim -> starting, then a concurrent terminalizer cancels it.
     await claimBuildForStartWithinLimit(env.db, {
       buildId: build.id,
       userId: user.id,
@@ -1653,7 +1520,6 @@ describe('builds', () => {
     await terminateBuildsForProject(env.db, project.id, { reason: 'project disconnected' });
     expect((await getBuild(env.db, build.id))!.status).toBe('cancelled');
 
-    // The CAS does NOT resurrect a cancelled row — the terminal status stands.
     expect(await requeueBuildIfStarting(env.db, build.id)).toBe(false);
     expect((await getBuild(env.db, build.id))!.status).toBe('cancelled');
   });
@@ -1663,7 +1529,6 @@ describe('builds', () => {
     const project = await createTestProject(env.db, user.id);
     const build = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
 
-    // Claim -> starting, then onStart's CAS flips starting -> building.
     await claimBuildForStartWithinLimit(env.db, {
       buildId: build.id,
       userId: user.id,
@@ -1672,20 +1537,17 @@ describe('builds', () => {
     await markBuildBuildingIfStarting(env.db, build.id);
     expect((await getBuild(env.db, build.id))!.status).toBe('building');
 
-    // The CAS only matches `starting`, so a building row is untouched.
     expect(await requeueBuildIfStarting(env.db, build.id)).toBe(false);
     expect((await getBuild(env.db, build.id))!.status).toBe('building');
   });
 
-  // Real-PGlite proof that the progress CAS reads `affectedRows`
-  // (PGlite) not just `rowCount` (pg), so a successful update is not mistaken
-  // for a no-op.
+  // Decision: Real-PGlite check that the progress CAS reads `affectedRows` (PGlite), not just `rowCount` (pg), so
+  // a successful update isn't mistaken for a no-op.
   it('markBuildProgressIfActive advances an active building row to deploying (CAS, true)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
     const build = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
 
-    // Drive the row active: queued -> starting -> building.
     await claimBuildForStartWithinLimit(env.db, {
       buildId: build.id,
       userId: user.id,
@@ -1698,15 +1560,11 @@ describe('builds', () => {
     expect((await getBuild(env.db, build.id))!.status).toBe('deploying');
   });
 
-  // A row a concurrent terminalizer already
-  // drove `cancelled` must NOT be resurrected to a progress status by a
-  // forged/late agent report.
   it('markBuildProgressIfActive no-ops on a cancelled row (terminal preserved)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
     const build = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
 
-    // Claim -> starting, then a concurrent terminalizer cancels it.
     await claimBuildForStartWithinLimit(env.db, {
       buildId: build.id,
       userId: user.id,
@@ -1715,12 +1573,10 @@ describe('builds', () => {
     await terminateBuildsForProject(env.db, project.id, { reason: 'project disconnected' });
     expect((await getBuild(env.db, build.id))!.status).toBe('cancelled');
 
-    // The CAS does NOT resurrect a cancelled row → false, status stands.
     expect(await markBuildProgressIfActive(env.db, build.id, 'deploying')).toBe(false);
     expect((await getBuild(env.db, build.id))!.status).toBe('cancelled');
   });
 
-  // A `complete` row is terminal: the progress CAS no-ops against it.
   it('markBuildProgressIfActive no-ops on a complete row (false)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -1736,7 +1592,6 @@ describe('builds', () => {
     const project = await createTestProject(env.db, user.id);
     const build = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
 
-    // A fresh build has no check run yet.
     expect((await getBuild(env.db, build.id))!.check_run_id).toBeNull();
 
     await setBuildCheckRunId(env.db, build.id, '99001');
@@ -1744,11 +1599,10 @@ describe('builds', () => {
   });
 
   it('claimBuildForStartWithinLimit serializes builds per project (at most one active)', async () => {
-    // pro plan has concurrentBuilds=3 (>= 2), so the per-user cap is NOT what
-    // blocks the second build here — the per-project guard is.
+    // Decision: The pro plan has concurrentBuilds=3, so the per-user cap isn't what blocks the second build here:
+    // the per-project guard is.
     const user = await createTestUser(env.db, 'serialuser', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
-    // Two queued container builds for the SAME project: commit A older, B newer.
     const a = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -1762,7 +1616,6 @@ describe('builds', () => {
       branch: 'main',
     });
 
-    // 1. A claims successfully -> starting.
     expect(
       await claimBuildForStartWithinLimit(env.db, {
         buildId: a.id,
@@ -1772,8 +1625,6 @@ describe('builds', () => {
     ).not.toBeNull();
     expect((await getBuild(env.db, a.id))!.status).toBe('starting');
 
-    // 2. B is blocked: the project already has an active build (A is starting),
-    //    even though the user is well under the per-user cap. B stays queued.
     expect(
       await claimBuildForStartWithinLimit(env.db, {
         buildId: b.id,
@@ -1783,8 +1634,6 @@ describe('builds', () => {
     ).toBeNull();
     expect((await getBuild(env.db, b.id))!.status).toBe('queued');
 
-    // 3. Once A reaches a terminal status, the project has no active build, so
-    //    a later tick claims B (latest-wins via FIFO drain).
     await updateBuildStatus(env.db, a.id, 'complete', {
       completedAt: new Date().toISOString(),
     });
@@ -1799,8 +1648,6 @@ describe('builds', () => {
   });
 
   it('claimBuildForStartWithinLimit guard is per-project: two projects can both go active', async () => {
-    // Same user, pro plan (cap 3). The per-project guard must not serialize
-    // builds across DIFFERENT projects — both should claim.
     const user = await createTestUser(env.db, 'twoproj', 'github', undefined, 'pro');
     const projectA = await createTestProject(env.db, user.id);
     const projectB = await createTestProject(env.db, user.id);
@@ -1870,7 +1717,6 @@ describe('builds', () => {
     expect(updated?.deployment_id).toBe(deployment.id);
     expect(updated?.completed_at).not.toBeNull();
     expect(updated?.error).toBeNull();
-    // instance_type was set at create time and not passed to the update.
     expect(updated?.instance_type).toBe('standard-1');
   });
 
@@ -1892,15 +1738,10 @@ describe('builds', () => {
     const project = await createTestProject(env.db, user.id);
     const deployment = await createTestDeployment(env.db, project.id);
     const build = await createTestBuild(env.db, { projectId: project.id, userId: user.id });
-    // Point the build at the deployment so both build->project and
-    // build->deployment FKs (ON DELETE NO ACTION) are in play during teardown.
+    // Decision: Point the build at the deployment so both build->project and build->deployment FKs (ON DELETE NO
+    // ACTION) are in play during teardown.
     await updateBuildStatus(env.db, build.id, 'complete', { deploymentId: deployment.id });
 
-    // Builds reference the project and deployment, so the cascade deletes them
-    // inside its transaction (no foreign_key_violation). It terminalizes
-    // in-flight builds first and returns them; a completed build is
-    // already terminal, so nothing is returned for cancellation. No resources
-    // exist, so deletedResources is empty too.
     await expect(deleteProjectCascade(env.db, project.id)).resolves.toEqual({
       cancelledBuilds: [],
       deletedResources: [],
@@ -1927,26 +1768,18 @@ describe('builds', () => {
 
     const { cancelledBuilds } = await deleteProjectCascade(env.db, project.id);
 
-    // Both in-flight builds are returned (terminalized under the project lock)
-    // so teardownProject can cancel the still-running container DO. The
-    // github_actions build has no DO, but its row — and thus its deploy token —
-    // is gone.
     expect(cancelledBuilds.map((b) => b.id).sort()).toEqual([container.id, actions.id].sort());
     expect(cancelledBuilds.find((b) => b.id === container.id)?.executor).toBe('container');
     expect(cancelledBuilds.find((b) => b.id === actions.id)?.executor).toBe('github_actions');
-    // instance_type round-trips so teardownProject stops the container DO on the
-    // correctly-sized BuildManager namespace.
     expect(cancelledBuilds.find((b) => b.id === container.id)?.instance_type).toBe('standard-4');
-    // The rows are deleted by the cascade.
     expect(await getProjectBuilds(env.db, project.id)).toEqual([]);
   });
 
   it('returns the deleted resource rows so teardown can clean race-window CF orphans', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
-    // A resource whose row exists at cascade time — deleteProjectCascade must
-    // return it so teardownProject can delete the CF object behind any resource
-    // that raced the pre-cascade snapshot (its row is gone after this).
+    // Decision: deleteProjectCascade returns resource rows that exist at cascade time so teardownProject can delete
+    // the CF object behind any resource that raced the pre-cascade snapshot (its row is gone after this).
     await env.db.insert(resources).values({
       id: 'res_hd_cascade',
       project_id: project.id,
@@ -2069,10 +1902,10 @@ describe('createGithubActionsBuildWithinLimit', () => {
     }
   });
 
-  // The workflow_path gate in auth-oidc runs against the connection SNAPSHOT; the
-  // locked re-read here is the authority. A concurrent PATCH that re-pins
-  // workflow_path between the gate and this lock must fail the exchange closed so
-  // a just-de-authorized workflow can't mint a token through the race window.
+  // Decision: The workflow_path gate in auth-oidc runs against the connection snapshot; the locked re-read here
+  // is the authority. A concurrent PATCH that re-pins workflow_path between the gate and this lock
+  // fails the exchange closed, so a just-de-authorized workflow can't mint a token through the race
+  // window.
   it('rejects with workflow-mismatch when the pin no longer matches the token workflow', async () => {
     const user = await createTestUser(env.db, 'gha-wf-mismatch', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
@@ -2082,12 +1915,9 @@ describe('createGithubActionsBuildWithinLimit', () => {
       repoFullName: 'acme/wf',
       repositoryId: DEFAULT_REPO_ID,
       buildExecutor: 'github_actions',
-      // Pin (the locked row) is the default bwf-deploy.yml.
     });
     await seedActiveInstall(env.db, 'inst-wf');
 
-    // expectedWorkflowPath is the OIDC token's OWN workflow (ci.yml) — it passed
-    // the pre-tx gate when the pin was ci.yml, but the pin is now the default.
     const result = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -2144,7 +1974,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     }
     expect(second.build.status).toBe('building');
 
-    // The first (older run) was superseded; the second (newer run) is active.
     const superseded = await getBuild(env.db, first.build.id);
     expect(superseded!.status).toBe('cancelled');
     expect(superseded!.error).toBe('superseded by newer run');
@@ -2195,7 +2024,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     }
     expect(repeat.build.id).toBe(first.build.id);
 
-    // No duplicate row, and the single build stays active (not superseded).
     const all = await getProjectBuilds(env.db, project.id);
     expect(all).toHaveLength(1);
     expect(all[0]!.status).toBe('building');
@@ -2204,10 +2032,9 @@ describe('createGithubActionsBuildWithinLimit', () => {
   it('does NOT supersede an active Actions build on a DIFFERENT branch', async () => {
     const user = await createTestUser(env.db, 'gha-branch', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
-    // Connection is on `main` (schema default). A connection only ever has ONE
-    // branch, so the OIDC helper only creates builds for THAT branch (the branch
-    // re-check rejects others). Seed the off-branch (`develop`) build DIRECTLY to
-    // model a stray build from a prior connection branch.
+    // Decision: A connection has one branch, so the OIDC helper only creates builds for it (the branch re-check
+    // rejects others). Seed the off-branch (`develop`) build directly to model a stray build from a
+    // prior connection branch.
     await createGitHubConnection(env.db, {
       projectId: project.id,
       installationId: 'inst-branch',
@@ -2238,12 +2065,10 @@ describe('createGithubActionsBuildWithinLimit', () => {
     });
     expect(onMain.outcome).toBe('created');
 
-    // The develop build is untouched — supersede is scoped to project+branch.
     expect((await getBuild(env.db, onDevelop.id))!.status).toBe('building');
   });
 
   it('enforces the per-user cap, and a superseded build frees the slot', async () => {
-    // free plan => concurrentBuilds = 1.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
     await createGitHubConnection(env.db, {
@@ -2270,8 +2095,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
       throw new Error('unreachable');
     }
 
-    // A newer run for the same project+branch supersedes the first (freeing the
-    // single slot), so it is admitted rather than capped.
     const second = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -2288,8 +2111,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     }
     expect((await getBuild(env.db, first.build.id))!.status).toBe('cancelled');
 
-    // Only one active build remains; another project's NEW run for this owner is
-    // now capped (the slot is held by the second build).
     const otherProject = await createTestProject(env.db, user.id);
     await createGitHubConnection(env.db, {
       projectId: otherProject.id,
@@ -2302,8 +2123,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     const capped = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: otherProject.id,
       connectionId: (await getGitHubConnection(env.db, otherProject.id))!.id,
-      // Simulate a stale pro-plan snapshot; the locked DB owner is free and
-      // already occupies its single slot.
       branch: 'main',
       githubRunId: '4003',
       githubRunAttempt: '1',
@@ -2314,18 +2133,15 @@ describe('createGithubActionsBuildWithinLimit', () => {
     expect(capped.outcome).toBe('limit-exceeded');
   });
 
-  // A concurrent DELETE /projects/:id/github can remove the connection mid-OIDC
-  // exchange. The tx locks + re-reads the github_actions connection row; if it is
-  // gone the helper must reject (no build, no token) rather than orphan an active
-  // build the workflow_run webhook can never finalize.
+  // Decision: A concurrent DELETE /projects/:id/github can remove the connection mid OIDC exchange. The tx locks
+  // and re-reads the github_actions connection row; if it's gone the helper rejects (no build, no
+  // token) rather than orphan an active build the workflow_run webhook can't finalize.
   it('returns connection-removed and inserts no build when no github_actions connection exists', async () => {
     const user = await createTestUser(env.db, 'gha-no-conn', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
 
     const result = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: project.id,
-      // No connection is seeded, so any id is fine — the helper returns
-      // `connection-removed` from the locked re-read before the id-match check.
       connectionId: 'ghc_absent',
       branch: 'main',
       githubRunId: '5001',
@@ -2336,14 +2152,12 @@ describe('createGithubActionsBuildWithinLimit', () => {
     });
     expect(result.outcome).toBe('connection-removed');
 
-    // No build row was inserted for the project.
     const all = await getProjectBuilds(env.db, project.id);
     expect(all).toHaveLength(0);
   });
 
-  // A `container` connection must NOT authorize the github_actions build path:
-  // the OIDC exchange is github_actions-only, and the lock/re-read is scoped to
-  // build_executor='github_actions'.
+  // Decision: A `container` connection doesn't authorize the github_actions build path: the OIDC exchange is
+  // github_actions-only, and the lock and re-read are scoped to build_executor='github_actions'.
   it('returns connection-removed when the project connection is a container executor', async () => {
     const user = await createTestUser(env.db, 'gha-container-conn', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
@@ -2372,14 +2186,12 @@ describe('createGithubActionsBuildWithinLimit', () => {
     expect(all).toHaveLength(0);
   });
 
-  // The branch is re-validated UNDER the FOR UPDATE row lock: a PATCH can
-  // re-point the connection's branch after auth-oidc's pre-tx branch check but
-  // before this lock, so the locked row is authoritative. A mismatch rejects
-  // with `branch-mismatch` and inserts NO build.
+  // Decision: The branch is re-validated under the FOR UPDATE row lock: a PATCH can re-point the connection's
+  // branch after auth-oidc's pre-tx branch check but before this lock, so the locked row is
+  // authoritative.
   it('returns branch-mismatch and inserts no build when the locked connection branch differs', async () => {
     const user = await createTestUser(env.db, 'gha-branch-mismatch', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
-    // Connection is on `main` (schema default); the exchange requests `feature`.
     await createGitHubConnection(env.db, {
       projectId: project.id,
       installationId: 'inst-branch-mismatch',
@@ -2401,13 +2213,10 @@ describe('createGithubActionsBuildWithinLimit', () => {
     });
     expect(result.outcome).toBe('branch-mismatch');
 
-    // No build row was inserted for the project.
     const all = await getProjectBuilds(env.db, project.id);
     expect(all).toHaveLength(0);
   });
 
-  // Tolerant null-guard: a caller that passes NO branch (legacy/backward-compat)
-  // skips the branch re-check entirely and still creates a build.
   it('creates a build when no branch is supplied (tolerant null-guard)', async () => {
     const user = await createTestUser(env.db, 'gha-no-branch', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
@@ -2435,10 +2244,9 @@ describe('createGithubActionsBuildWithinLimit', () => {
     expect(all).toHaveLength(1);
   });
 
-  // Rerun-correctness — a RERUN reuses the same run_id with an incremented
-  // run_attempt. The idempotent reuse query matches on the ATTEMPT, so a new
-  // attempt does NOT reuse the prior attempt's active build: it creates a
-  // distinct row (the prior active row is superseded as a different attempt).
+  // Decision: A rerun reuses the run_id with an incremented run_attempt. The idempotent reuse query matches on
+  // the attempt, so a new attempt doesn't reuse the prior attempt's active build: it creates a
+  // distinct row and the prior active row is superseded as a different attempt.
   it('does NOT reuse the prior attempt build for a new run_attempt (same run_id)', async () => {
     const user = await createTestUser(env.db, 'gha-rerun', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
@@ -2467,7 +2275,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     }
     expect(attempt1.build.github_run_attempt).toBe('1');
 
-    // Same run_id, attempt 2 — must create a DISTINCT row, not reuse attempt 1.
     const attempt2 = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -2485,7 +2292,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     expect(attempt2.build.id).not.toBe(attempt1.build.id);
     expect(attempt2.build.github_run_attempt).toBe('2');
 
-    // A repeated exchange for attempt 2 reuses the attempt-2 row (idempotent).
     const repeat = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -2503,11 +2309,10 @@ describe('createGithubActionsBuildWithinLimit', () => {
     expect(repeat.build.id).toBe(attempt2.build.id);
   });
 
-  // a rerun reuses run_id with an incremented run_attempt. The supersede
-  // UPDATE must cancel ALL other active github_actions builds on the same
-  // project+branch, INCLUDING a still-ACTIVE older attempt of the SAME run_id
-  // (whose completion webhook was missed). Otherwise attempt 1 stays ACTIVE,
-  // counting against the limit and keeping its deploy token live until the reaper.
+  // Decision: The supersede UPDATE cancels the other active github_actions builds on the same project+branch,
+  // including a still-active older attempt of the same run_id (whose completion webhook was missed).
+  // Otherwise attempt 1 stays active, counting against the limit and keeping its deploy token live
+  // until the reaper.
   it('supersedes a still-ACTIVE older attempt of the same run_id on rerun', async () => {
     const user = await createTestUser(env.db, 'gha-rerun-supersede', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
@@ -2535,8 +2340,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
       throw new Error('unreachable');
     }
 
-    // Attempt 1's completion webhook was missed, so it is still ACTIVE when the
-    // rerun (same run_id, attempt 2) arrives. Attempt 2 must supersede attempt 1.
     const attempt2 = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: project.id,
       connectionId: (await getGitHubConnection(env.db, project.id))!.id,
@@ -2553,18 +2356,15 @@ describe('createGithubActionsBuildWithinLimit', () => {
     }
     expect(attempt2.build.status).toBe('building');
 
-    // Attempt 1 (same run_id) is now cancelled/superseded — not left ACTIVE.
     const superseded = await getBuild(env.db, attempt1.build.id);
     expect(superseded!.status).toBe('cancelled');
     expect(superseded!.error).toBe('superseded by newer run');
     expect(superseded!.completed_at).not.toBeNull();
   });
 
-  // The build-creation tx re-checks installation status + repo
-  // membership under the connection lock. A revocation (App suspend/uninstall,
-  // repo removal) that commits AFTER the OIDC resolver + live-install checks but
-  // BEFORE this tx is caught here: no `building` row, no deploy token. Fails
-  // closed.
+  // Decision: The build-creation tx re-checks installation status and repo membership under the connection
+  // lock. A revocation that commits after the OIDC resolver and live-install checks but before this tx
+  // is caught here: no `building` row, no deploy token.
   it('returns install-revoked when the installation is SUSPENDED', async () => {
     const user = await createTestUser(env.db, 'gha-revoked-susp', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
@@ -2629,7 +2429,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
       repositoryId: DEFAULT_REPO_ID,
       buildExecutor: 'github_actions',
     });
-    // A 'selected' install whose cached set does NOT include this repo's id (42).
     await seedActiveInstall(
       env.db,
       'inst-revoked-sel',
@@ -2661,7 +2460,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
       repositoryId: DEFAULT_REPO_ID,
       buildExecutor: 'github_actions',
     });
-    // A 'selected' install whose cached set INCLUDES this repo by id (42).
     await seedActiveInstall(
       env.db,
       'inst-revoked-ok',
@@ -2683,14 +2481,11 @@ describe('createGithubActionsBuildWithinLimit', () => {
     expect(await getProjectBuilds(env.db, project.id)).toHaveLength(1);
   });
 
-  // The build-creation tx must assert the LOCKED connection is the SAME
-  // row the caller resolved. `github_connections.project_id` is UNIQUE, so a
-  // disconnect+reconnect to a DIFFERENT repo (same branch/executor, and crucially
-  // the SAME installation_id + repository_id) DELETEs the old row and CREATEs a
-  // new one with a fresh id between resolution and this tx. The install check
-  // keys on the PASSED installationId, so this same-install swap PASSES it — the
-  // id-match is the only guard that catches it. A stale resolved id =>
-  // `connection-replaced`, no `building` row, no deploy token.
+  // Decision: The build-creation tx asserts the locked connection is the same row the caller resolved.
+  // `github_connections.project_id` is UNIQUE, so a disconnect+reconnect (same branch, executor,
+  // installation_id and repository_id) deletes the old row and creates one with a fresh id between
+  // resolution and this tx. The install check keys on the passed installationId, so the swap passes
+  // it; the id match is the only guard that catches it.
   it('returns connection-replaced when the connection was disconnected+reconnected', async () => {
     const user = await createTestUser(env.db, 'gha-replaced', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id);
@@ -2704,9 +2499,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     });
     await seedActiveInstall(env.db, 'inst-replaced');
 
-    // Disconnect + reconnect to the SAME repo/branch/executor/install — proving the
-    // install check does NOT catch this (identical installation_id +
-    // repository_id) — only the row id changes.
     await deleteGitHubConnection(env.db, project.id);
     const cNew = await createGitHubConnection(env.db, {
       projectId: project.id,
@@ -2718,7 +2510,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     });
     expect(cNew.id).not.toBe(cOld.id);
 
-    // The caller resolved the OLD connection id; the locked row is now the NEW one.
     const replaced = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: project.id,
       connectionId: cOld.id,
@@ -2732,7 +2523,6 @@ describe('createGithubActionsBuildWithinLimit', () => {
     expect(replaced.outcome).toBe('connection-replaced');
     expect(await getProjectBuilds(env.db, project.id)).toHaveLength(0);
 
-    // Matching-id happy case: resolving the CURRENT connection builds normally.
     const ok = await createGithubActionsBuildWithinLimit(env.db, {
       projectId: project.id,
       connectionId: cNew.id,
@@ -2753,7 +2543,6 @@ describe('getBuildByProjectRunIdAndAttempt', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
 
-    // Attempt 1 (terminal) and attempt 2 (active) for the same run_id.
     const a1 = await createTestBuild(env.db, {
       projectId: project.id,
       userId: user.id,
@@ -2771,16 +2560,13 @@ describe('getBuildByProjectRunIdAndAttempt', () => {
       githubRunAttempt: '2',
     });
 
-    // Exact attempt match.
     expect((await getBuildByProjectRunIdAndAttempt(env.db, project.id, '7001', '1'))!.id).toBe(
       a1.id,
     );
     expect((await getBuildByProjectRunIdAndAttempt(env.db, project.id, '7001', '2'))!.id).toBe(
       a2.id,
     );
-    // A non-matching attempt resolves nothing.
     expect(await getBuildByProjectRunIdAndAttempt(env.db, project.id, '7001', '3')).toBeNull();
-    // A different run_id resolves nothing.
     expect(await getBuildByProjectRunIdAndAttempt(env.db, project.id, '7002', '1')).toBeNull();
   });
 });
@@ -2792,7 +2578,6 @@ describe('getDeploymentByProjectAndCommit', () => {
 
     expect(await getDeploymentByProjectAndCommit(env.db, project.id, 'sha1')).toBeNull();
 
-    // Seed a deployment, then stamp its commit (createTestDeployment doesn't set one).
     const older = await createTestDeployment(env.db, project.id);
     await env.db.update(deployments).set({ commit: 'sha1' }).where(eq(deployments.id, older.id));
     const newer = await createTestDeployment(env.db, project.id);
@@ -2801,7 +2586,6 @@ describe('getDeploymentByProjectAndCommit', () => {
     const found = await getDeploymentByProjectAndCommit(env.db, project.id, 'sha1');
     expect(found?.id).toBe(newer.id);
 
-    // A different commit for the same project does not match.
     expect(await getDeploymentByProjectAndCommit(env.db, project.id, 'sha2')).toBeNull();
   });
 });
@@ -2829,8 +2613,8 @@ describe('github_connections', () => {
   it('getGitHubConnectionsByRepo joins the owning user_id (active install)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
-    // The resolver INNER JOINs github_installations and requires status=active
-    // + repo membership, so an active 'all'-repos install must exist.
+    // Decision: The resolver INNER JOINs github_installations and requires status=active plus repo membership, so
+    // an active 'all'-repos install has to exist.
     await upsertGitHubInstallation(env.db, {
       installationId: '12345',
       userId: null,
@@ -2856,14 +2640,13 @@ describe('github_connections', () => {
     expect(rows[0].branch).toBe('release');
     expect(rows[0].build_executor).toBe('github_actions');
 
-    // Wrong repo / wrong installation -> empty.
     expect(await getGitHubConnectionsByRepo(env.db, '12345', '43')).toEqual([]);
     expect(await getGitHubConnectionsByRepo(env.db, '99999', '42')).toEqual([]);
   });
 
-  // The push resolver is revocation-aware: a suspended/deleted install
-  // resolves nothing, so a delayed/redelivered signed push after suspend/uninstall
-  // can't mint a fresh deploy token within the installation-token cache window.
+  // Decision: The push resolver is revocation-aware: a suspended or deleted install resolves nothing, so a
+  // delayed or redelivered signed push after suspend or uninstall can't mint a fresh deploy token
+  // within the installation-token cache window.
   it('getGitHubConnectionsByRepo rejects a suspended or deleted installation', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -2883,24 +2666,18 @@ describe('github_connections', () => {
       repositoryId: '42',
     });
 
-    // Active -> resolves.
     expect(await getGitHubConnectionsByRepo(env.db, '12345', '42')).toHaveLength(1);
 
-    // Suspended -> empty.
     await markGitHubInstallationStatus(env.db, '12345', 'suspended');
     expect(await getGitHubConnectionsByRepo(env.db, '12345', '42')).toEqual([]);
 
-    // Deleted -> empty.
     await markGitHubInstallationStatus(env.db, '12345', 'deleted');
     expect(await getGitHubConnectionsByRepo(env.db, '12345', '42')).toEqual([]);
   });
 
-  // A `selected` install enforces repo membership: a repo dropped from
-  // the install (not in the cached set) resolves nothing.
   it('getGitHubConnectionsByRepo enforces selected-install membership', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
-    // 'selected' install whose cached set does NOT include this repo.
     await upsertGitHubInstallation(env.db, {
       installationId: '12345',
       userId: null,
@@ -2917,10 +2694,8 @@ describe('github_connections', () => {
       repositoryId: '42',
     });
 
-    // Repo is not a member -> empty.
     expect(await getGitHubConnectionsByRepo(env.db, '12345', '42')).toEqual([]);
 
-    // Add the repo to the cached set by id -> now a member -> resolves.
     await setGitHubInstallationRepositories(
       env.db,
       '12345',
@@ -2952,7 +2727,6 @@ describe('github_connections', () => {
 
     await updateGitHubConnection(env.db, project.id, { buildExecutor: 'github_actions' });
     conn = await getGitHubConnection(env.db, project.id);
-    // branch unchanged by the executor-only update.
     expect(conn?.branch).toBe('develop');
     expect(conn?.build_executor).toBe('github_actions');
   });
@@ -2971,8 +2745,8 @@ describe('github_connections', () => {
     expect(await getGitHubConnection(env.db, project.id)).toBeNull();
   });
 
-  // The build manager re-checks coverage from stored build state, which may lack
-  // either id; both fail closed even on an `all`-repos install.
+  // Decision: The build manager re-checks coverage from stored build state, which may lack either id; both fail
+  // closed even on an `all`-repos install.
   it('installationCoversRepo fails closed without a connection id', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id);
@@ -3013,13 +2787,11 @@ describe('github_installations', () => {
     expect(inserted.status).toBe('active');
     expect(inserted.repositories).toEqual([{ full_name: 'acme/app', id: 1 }]);
 
-    // Conflict upsert refreshes account metadata and preserves an existing
-    // user_id link, but must NOT overwrite repo membership / selection. GitHub
-    // never reuses installation_ids, so any `created` that conflicts is a stale
-    // redelivery whose payload membership is never newer than what we hold; the
-    // `installation_repositories` handler is the authoritative membership writer.
-    // A conflict-path overwrite here would let a redelivered original `created`
-    // roll a cache the handler already advanced (e.g. [A,B] back to [A]).
+    // Decision: The conflict upsert refreshes account metadata and keeps an existing user_id link, but doesn't
+    // overwrite repo membership or selection. GitHub doesn't reuse installation_ids, so a conflicting
+    // `created` is a stale redelivery whose membership is never newer than ours; the
+    // `installation_repositories` handler is the authoritative membership writer. Overwriting here would
+    // let a redelivered `created` roll back a cache the handler already advanced ([A,B] to [A]).
     const updated = await upsertGitHubInstallation(env.db, {
       installationId: '555',
       accountLogin: 'acme-renamed',
@@ -3033,13 +2805,12 @@ describe('github_installations', () => {
     expect(updated.id).toBe(inserted.id);
     expect(updated.user_id).toBe(user.id);
     expect(updated.account_login).toBe('acme-renamed');
-    // Membership preserved (NOT rolled forward to the conflicting payload's 2).
     expect(updated.repositories).toEqual([{ full_name: 'acme/app', id: 1 }]);
   });
 
-  // The OAuth callback caller (refreshMembership: true) just refetched the LIVE
-  // membership, so on an existing-row conflict (reconnect / setup_action=update)
-  // it MUST roll the cache forward — both the repo list AND the selection.
+  // Decision: The OAuth callback caller (refreshMembership: true) just refetched the live membership, so on an
+  // existing-row conflict (reconnect or setup_action=update) it rolls the cache forward: both the repo
+  // list and the selection.
   it('upsert rolls membership forward on conflict when refreshMembership is true', async () => {
     const user = await createTestUser(env.db);
 
@@ -3055,7 +2826,6 @@ describe('github_installations', () => {
     expect(inserted.repository_selection).toBe('selected');
     expect(inserted.repositories).toEqual([{ full_name: 'acme/app', id: 1 }]);
 
-    // Authoritative callback re-upsert: widen to `all` and add a repo.
     const refreshed = await upsertGitHubInstallation(env.db, {
       installationId: '559',
       userId: user.id,
@@ -3076,8 +2846,6 @@ describe('github_installations', () => {
       { full_name: 'acme/api', id: 2 },
     ]);
 
-    // NULL-safe branch: refreshMembership with the selection OMITTED must roll the
-    // repo list forward but leave the existing selection ('all') untouched.
     const refreshedNoSelection = await upsertGitHubInstallation(env.db, {
       installationId: '559',
       userId: user.id,
@@ -3091,9 +2859,8 @@ describe('github_installations', () => {
     expect(refreshedNoSelection.repositories).toEqual([{ full_name: 'acme/app', id: 1 }]);
   });
 
-  // the conflict handler must never re-own a personal installation already
-  // linked to a DIFFERENT user (two install callbacks racing), but must still
-  // adopt the user on an unowned (NULL) row.
+  // Decision: The conflict handler doesn't re-own a personal installation already linked to a different user
+  // (two install callbacks racing), but still adopts the user on an unowned (NULL) row.
   it('upsert never re-owns an installation linked to another user', async () => {
     const userA = await createTestUser(env.db);
     const userB = await createTestUser(env.db, 'user-b');
@@ -3107,7 +2874,6 @@ describe('github_installations', () => {
       repositories: [{ full_name: 'acme/app', id: 1 }],
     });
 
-    // A second concurrent callback tries to adopt the SAME row for userB.
     const reOwned = await upsertGitHubInstallation(env.db, {
       installationId: '557',
       userId: userB.id,
@@ -3116,14 +2882,12 @@ describe('github_installations', () => {
       accountType: 'User',
       repositories: [{ full_name: 'acme/app', id: 1 }],
     });
-    // Ownership stays with the original user; the second caller does not re-own.
     expect(reOwned.user_id).toBe(userA.id);
   });
 
   it('upsert adopts the user on an unowned (NULL) installation row', async () => {
     const userB = await createTestUser(env.db, 'user-b');
 
-    // Install-before-signin: the row starts unowned.
     await upsertGitHubInstallation(env.db, {
       installationId: '558',
       accountLogin: 'acme',
@@ -3143,8 +2907,8 @@ describe('github_installations', () => {
     expect(adopted.user_id).toBe(userB.id);
   });
 
-  // GitHub can convert a personal account into an organization; later payloads
-  // report the same installation with the organization type.
+  // Decision: GitHub can convert a personal account into an organization; later payloads report the same
+  // installation with the organization type.
   it('upsert drops the owner when a personal installation becomes an organization', async () => {
     const owner = await createTestUser(env.db, 'converted');
     await upsertGitHubInstallation(env.db, {
@@ -3221,7 +2985,6 @@ describe('github_installations', () => {
     const user = await createTestUser(env.db);
     const otherUser = await createTestUser(env.db, 'other');
 
-    // Unlinked install for acc_1 (install-before-signin).
     await upsertGitHubInstallation(env.db, {
       installationId: '555',
       accountLogin: 'acme',
@@ -3229,7 +2992,6 @@ describe('github_installations', () => {
       accountType: 'User',
       repositories: [],
     });
-    // Already-linked install for the SAME account — must not be clobbered.
     await upsertGitHubInstallation(env.db, {
       installationId: '556',
       userId: otherUser.id,
@@ -3244,7 +3006,6 @@ describe('github_installations', () => {
     const unlinked = await getGitHubInstallation(env.db, '555');
     const alreadyLinked = await getGitHubInstallation(env.db, '556');
     expect(unlinked?.user_id).toBe(user.id);
-    // The already-linked installation keeps its original owner.
     expect(alreadyLinked?.user_id).toBe(otherUser.id);
   });
 
@@ -3258,8 +3019,6 @@ describe('github_installations', () => {
       repositoryId: '42',
     });
 
-    // Delete the project row directly; the FK ON DELETE cascade should remove
-    // the connection (mirrors project_secrets behaviour).
     await env.db.delete(projects).where(eq(projects.id, project.id));
     expect(await getGitHubConnection(env.db, project.id)).toBeNull();
   });

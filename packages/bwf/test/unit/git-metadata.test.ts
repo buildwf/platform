@@ -33,7 +33,7 @@ describe('git deploy metadata', () => {
     );
   });
 
-  // Git hooks and credential helpers must see childEnv, not process.env.
+  // Decision: Git hooks and credential helpers have to see childEnv, not process.env.
   it.skipIf(process.platform === 'win32')('runs the git children under childEnv', () => {
     const dir = mkdtempSync(join(tmpdir(), 'platform-git-meta-'));
     const saved = process.env.CF_ACCESS_CLIENT_SECRET;
@@ -47,7 +47,6 @@ describe('git deploy metadata', () => {
       const scrubbed = collectGitDeployMetadata(dir, null, {}, { PATH: join(dir, 'bin') });
       expect(scrubbed.gitRef).toBe('seen=none');
 
-      // Control: the shim does run and report the child env.
       const leaked = collectGitDeployMetadata(
         dir,
         null,

@@ -163,14 +163,14 @@ async function resolveCloudflareSecretBackend(
 const SECRET_KEY_RE = /^[A-Z][A-Z0-9_]*$/;
 const UTF8_BOM = '\uFEFF';
 
-// Reads the file with Node's dotenv grammar, the same one `.env` loading uses,
+// Decision: Reads the file with Node's dotenv grammar, the same one `.env` loading uses,
 // but calls `parseEnv` directly: shared/dotenv.ts would expand `$VAR`, and a
 // `$` inside a secret value must stay literal.
 export function parseDotenvFile(filePath: string): Array<{ name: string; value: string }> {
   const secrets: Array<{ name: string; value: string }> = [];
 
   const raw = readFileSync(filePath, 'utf-8');
-  // parseEnv keeps a leading BOM as part of the first key name.
+  // Decision: parseEnv keeps a leading BOM as part of the first key name.
   const text = raw.startsWith(UTF8_BOM) ? raw.slice(UTF8_BOM.length) : raw;
   for (const [key, value] of Object.entries(parseEnv(text))) {
     if (value === undefined) {

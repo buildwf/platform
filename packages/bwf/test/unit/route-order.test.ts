@@ -8,7 +8,7 @@ function route(pattern: string) {
   };
 }
 
-/** Hono's route syntax: `:name{.+}` crosses `/`, `:name` is one segment, `*` matches the rest. */
+// Decision: Hono's route syntax: `:name{.+}` crosses `/`, `:name` is one segment, `*` matches the rest.
 function matches(pattern: string, url: string): boolean {
   const source = pattern
     .split('/')
@@ -27,15 +27,12 @@ function matches(pattern: string, url: string): boolean {
 
 describe('compareRouteSpecificity', () => {
   it.each([
-    // A static segment beats a dynamic one, wherever it is
     ['/users/:id', '/:lang/about', '/users/about'],
     ['/users/new/:tab', '/users/:id/edit', '/users/new/edit'],
     ['/:lang/about', '/:lang/:slug', '/en/about'],
     ['/about', '/:slug', '/about'],
-    // Parameter names never decide
     ['/:lang/about', '/:category/:item', '/fr/about'],
     ['/:z/about', '/:a/:b', '/fr/about'],
-    // A plain parameter beats a catch-all, and catch-alls come last
     ['/docs/:path{.+}', '/:slug{.+}', '/docs/intro'],
     ['/:lang/:path{.+}', '/:slug{.+}', '/fr/team/jobs'],
     ['/:lang/:slug', '/docs/:path{.+}', '/docs/intro'],
@@ -72,7 +69,7 @@ describe('compareRouteSpecificity', () => {
       '/*',
     ];
     const expected = [
-      // Fully static routes first, so Pages can look them up exactly
+      // Decision: Fully static routes first, so Pages can look them up exactly.
       '/',
       '/files/a*b',
       '/zzz',
@@ -83,7 +80,6 @@ describe('compareRouteSpecificity', () => {
       '/:lang/about',
       '/:category/:item',
       '/:lang/:slug',
-      // Catch-all routes last
       '/docs/:path{.+}',
       '/:lang/:path{.+}',
       '/*',

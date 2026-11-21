@@ -53,7 +53,6 @@ it('keeps two identical minimal rows from one tail poll and drops them when poll
   const seen = new Map<string, number>();
   expect(takeFreshTailEntries([row, { ...row }], seen)).toHaveLength(2);
   expect(takeFreshTailEntries([row, { ...row }], seen)).toHaveLength(0);
-  // A third identical request lands in the next poll.
   expect(takeFreshTailEntries([row, { ...row }, { ...row }], seen)).toHaveLength(1);
   expect(takeFreshTailEntries([{ ...row, status: '500' }], seen)).toHaveLength(1);
 });

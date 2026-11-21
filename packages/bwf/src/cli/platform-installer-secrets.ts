@@ -53,7 +53,7 @@ export function createPlatformInstallationSecrets(input: {
     }
     return value;
   };
-  // Runtime signing/encryption keys are installation identity, not ordinary
+  // Decision: Runtime signing/encryption keys are installation identity, not ordinary
   // configuration. A checkpoint wins over the legacy single-key inputs. The
   // explicit complete-keyring pair is the only supported way to supersede a
   // stale encryption checkpoint, and existing Workers still inherit live keys.
@@ -162,7 +162,7 @@ export function createPlatformInstallationSecrets(input: {
     const value = configured(input[key], key);
     return optional ? value : required(value, requiredName);
   };
-  // `bwf platform config billing` saves billing values with billingPending.
+  // Decision: `bwf platform config billing` saves billing values with billingPending.
   // The next run sends them to the API Worker, and its checkpoint keeps the
   // values without the marker. Later runs keep the live secrets.
   const billing = parsePlatformBillingSecrets(checkpoint.billingJson);
@@ -190,7 +190,7 @@ export function createPlatformInstallationSecrets(input: {
       : {}),
     ...(modernAuthentication ? { authenticationSetupJson, authSetupToken, authBootstrapCode } : {}),
     ...(Object.keys(billing).length > 0 ? { billing } : {}),
-    // A run that does not update existing Workers leaves the change for the next one.
+    // Decision: A run that does not update existing Workers leaves the change for the next one.
     ...(checkpoint.billingPending === 'true' && !input.updateExistingWorkers
       ? { billingPending: true }
       : {}),
@@ -400,7 +400,7 @@ export function secretCheckpoint(
     ...(secrets.accessCredentialsJson
       ? { accessCredentialsJson: secrets.accessCredentialsJson }
       : {}),
-    // Once a run sends a billing change, workerSecretUpdatesJson carries it.
+    // Decision: Once a run sends a billing change, workerSecretUpdatesJson carries it.
     ...(secrets.billing && Object.keys(secrets.billing).length > 0
       ? { billingJson: JSON.stringify(secrets.billing) }
       : {}),
@@ -770,7 +770,7 @@ export function readPlatformBillingInput(
       continue;
     }
     const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
-    // Name the line, not its text: the text can hold a secret.
+    // Decision: Name the line, not its text: the text can hold a secret.
     if (!match) {
       throw new Error(`platform: Line ${index + 1} of stdin is not NAME=value.`);
     }

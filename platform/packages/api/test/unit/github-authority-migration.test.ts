@@ -124,7 +124,6 @@ it('keeps only GitHub connections and memberships that current authority rules a
       { id: 'c-org-authorized', authorized_by_user_id: 'admin' },
       { id: 'c-personal', authorized_by_user_id: 'owner' },
     ]);
-    // Builds of removed connections lose their build-bound deploy tokens.
     const cancelled =
       'github repository authorization is no longer valid; reconnect the repository';
     expect(

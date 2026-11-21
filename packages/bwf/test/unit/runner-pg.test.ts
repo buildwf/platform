@@ -17,8 +17,8 @@ let client: PgClient;
 beforeAll(
   async () => {
     pglite = new PGlite();
-    // Cold WASM startup can exceed 10s on Windows CI. Pay that cost once here,
-    // not in the first schema-reset hook; query and test deadlines stay unchanged.
+    // Decision: Cold WASM startup can take over 10s on Windows CI. Pay that cost once here, not in the first
+    // schema-reset hook; query and test deadlines stay unchanged.
     await pglite.waitReady;
     client = pglite;
   },
@@ -163,12 +163,10 @@ describe('applyPgMigrations', () => {
 
     await expect(applyPgMigrations(client, migrations)).rejects.toThrow(/INVALID/i);
 
-    // First migration committed before the failure
     const tracking = await pglite.query<{ name: string }>('SELECT name FROM _void_migrations');
     expect(tracking.rows).toHaveLength(1);
     expect(tracking.rows[0].name).toBe('001_create_users.sql');
 
-    // users table exists, no residue from bad migration
     const tables = await pglite.query<{ table_name: string }>(
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name != '_void_migrations'",
     );
@@ -185,13 +183,11 @@ describe('applyPgMigrations', () => {
 
     await expect(applyPgMigrations(client, migrations)).rejects.toThrow(/INVALID/i);
 
-    // temp_table should NOT exist — transaction rolled back
     const tables = await pglite.query(
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'temp_table'",
     );
     expect(tables.rows).toHaveLength(0);
 
-    // No tracking entry
     const tracking = await pglite.query('SELECT name FROM _void_migrations');
     expect(tracking.rows).toHaveLength(0);
   });

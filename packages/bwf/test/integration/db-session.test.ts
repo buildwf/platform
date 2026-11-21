@@ -27,7 +27,7 @@ afterEach(async () => {
 });
 
 describe('D1 bookmarks in generated Workers', () => {
-  // Local D1 has no replica lag. The unit reproduction controls lag; this verifies
+  // Decision: Local D1 has no replica lag. The unit reproduction controls lag; this verifies
   // real D1 bookmarks, middleware, redirects, bundling and request scope in workerd.
   it.each(
     [
@@ -259,11 +259,11 @@ export default {
         },
       );
       expect(loaded.status, await loaded.clone().text()).toBe(200);
-      // Local D1 has no replica lag, so explicitly assert that middleware
+      // Decision: Local D1 has no replica lag, so explicitly assert that middleware
       // preserved the outer bookmark even when nested dispatch happens first.
       const starts = JSON.parse(loaded.headers.get('X-Test-Session-Starts')!) as Array<string>;
       expect(starts[0]).toBe(bookmark);
-      // Direct GET also creates an explicit client from its wrapped env.
+      // Decision: Direct GET also creates an explicit client from its wrapped env.
       // Local fetch receives cloudflare:workers env for explicit clients,
       // while its default db still shares the outer runtime session.
       expect(starts).toHaveLength(dispatch === 'direct' ? 2 : 1);

@@ -5,21 +5,17 @@ import {
   verifyUserRepoAccess,
 } from '../../src/github/user-installations.ts';
 
-// The App's user-to-server OAuth creds present → isAppUserOAuthConfigured true.
 const CONFIGURED_ENV = {
   GITHUB_APP_CLIENT_ID: 'Iv1.testappclientid',
   GITHUB_APP_CLIENT_SECRET: 'test-app-client-secret',
 } as unknown as ApiEnv['Bindings'];
 
-// No user-OAuth creds → isAppUserOAuthConfigured false → fail closed, no fetch.
 const UNCONFIGURED_ENV = {} as unknown as ApiEnv['Bindings'];
 
 function urlOf(input: string | URL | Request): string {
   return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 }
 
-// Parse the JSON body the source POSTs to the token-exchange endpoint so a test
-// can assert the forwarded `redirect_uri` (or its absence).
 function bodyOf(init?: RequestInit): Record<string, unknown> {
   if (!init || typeof init.body !== 'string') {
     return {};
@@ -36,23 +32,16 @@ function range(start: number, end: number): Array<number> {
 }
 
 type StubHandlers = {
-  // Token-exchange response; defaults to a valid `{ access_token }`.
   tokenResponse?: () => Response;
-  // `GET /user/installations` page → its installations list.
   installations?: (page: number) => { installations: Array<{ id: number }> };
-  // `GET /user` → the code-holder's numeric id.
   user?: () => { id: number };
-  // `GET /user/installations/:id/repositories` page → response (a raw Response
-  // to exercise the non-ok throw, or a JSON body object).
   repositories?: (
     page: number,
   ) => Response | { total_count: number; repositories: Array<{ id: number; full_name: string }> };
 };
 
-// Route the stubbed global fetch by URL, mirroring the real GitHub endpoints the
-// module hits. Captures every token-exchange body so redirect_uri forwarding is
-// assertable. `/repositories` is matched BEFORE `/user/installations` because
-// the repositories URL contains that path.
+// Decision: `/repositories` is matched before `/user/installations` because the repositories URL contains
+// that path.
 function stubFetch(handlers: StubHandlers): {
   tokenBodies: Array<Record<string, unknown>>;
   fetchSpy: ReturnType<typeof vi.fn>;
@@ -122,7 +111,6 @@ describe('listAuthorizedInstallationIds', () => {
     expect(result.installationIds.has('100')).toBe(true);
     expect(result.installationIds.has('102')).toBe(true);
     expect(result.callerAccountId).toBe('4242');
-    // The token-exchange POST forwarded the authorize redirect_uri byte-for-byte.
     expect(tokenBodies).toHaveLength(1);
     expect(tokenBodies[0].redirect_uri).toBe('https://api.platform.example/cb');
   });
@@ -136,7 +124,6 @@ describe('listAuthorizedInstallationIds', () => {
 
     expect(result.installationIds.size).toBe(0);
     expect(result.callerAccountId).toBeNull();
-    // No redirectUri argument → no redirect_uri key on the exchange body.
     expect(tokenBodies).toHaveLength(1);
     expect('redirect_uri' in tokenBodies[0]).toBe(false);
   });

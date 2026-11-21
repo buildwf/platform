@@ -89,8 +89,8 @@ export function planFromCatalog(catalog: PlatformPlanCatalog, id: string): Platf
     return plan;
   }
   const fallback = createDefaultPlanCatalog().plans.find((plan) => plan.id === 'free')!;
-  // Legacy installations allowed short slugs for every ID except literal free.
-  // Preserve that behavior while retaining the historic free quota fallback.
+  // Decision: Legacy installations allowed short slugs for each ID except literal free. Keep that behavior along
+  // with the historic free quota fallback.
   return { ...fallback, allowShortSlugs: id !== 'free' };
 }
 

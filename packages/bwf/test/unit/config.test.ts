@@ -161,7 +161,7 @@ describe('readConfig', () => {
     } catch (caught) {
       error = caught;
     }
-    // inspect() is what prints the `[cause]` line under an uncaught error.
+    // Decision: inspect() is what prints the `[cause]` line under an uncaught error.
     expect(inspect(error)).toContain('"routing.typedRoutes" in bwf.config.ts must be a boolean');
     expect(inspect(error)).not.toContain('bwf.json');
     cleanup();
@@ -538,7 +538,7 @@ describe('readConfig', () => {
     cleanup();
   });
 
-  // `routing.notFound` is written straight into `assets.not_found_handling`, so a typo
+  // Decision: `routing.notFound` is written straight into `assets.not_found_handling`, so a typo
   // must fail here instead of when Cloudflare rejects the deployed config.
   it.each(['404-page', 'single-page-application', 'none'])(
     'accepts routing.notFound: %j',
@@ -873,8 +873,8 @@ describe('routing.rewrites and routing.fallbacks validation', () => {
 });
 
 describe('routing.redirects protocol-relative guard', () => {
-  // Redirects legitimately support external destinations ("https://..."), so
-  // the guard only applies when the destination is an internal path ("/..").
+  // Decision: Redirects can point to external destinations ("https://..."), so the guard applies only
+  // when the destination is an internal path ("/..").
   it('throws on string destination starting with "//"', () => {
     setup(JSON.stringify({ routing: { redirects: { '/old': '//evil.com/new' } } }));
     expect(() => readConfig(tmpDir)).toThrow('must not start with "//"');
@@ -1011,9 +1011,8 @@ describe('routing rules: host-prefixed sources', () => {
 });
 
 describe('duplicate "*" wildcards in rule sources', () => {
-  // Dispatch compiles each `*` into a `(?<splat>...)` capture group, so two
-  // in one source makes `new RegExp()` throw on duplicate group name at
-  // startup. Catch these at config-read time with a clear message.
+  // Decision: Dispatch compiles each `*` into a `(?<splat>...)` capture group, so two in one source make
+  // `new RegExp()` throw on a duplicate group name at startup. Catch these at config-read time.
   it.each<[string, Record<string, unknown>]>([
     ['redirect source', { redirects: { '/a/*/b/*': '/dest' } }],
     ['rewrite source', { rewrites: { '/*/docs/*': '/dest' } }],
@@ -1032,10 +1031,9 @@ describe('duplicate "*" wildcards in rule sources', () => {
     cleanup();
   });
 
-  // `countSplats` only counts anonymous `*` wildcards. The `*` that terminates
-  // a `:name*` multi-segment named capture compiles to `(?<name>.*)` (distinct
-  // group name from the legacy `(?<splat>.*)`), so it doesn't trigger the
-  // duplicate-group-name `RegExp` failure that `assertSingleSplat` guards.
+  // Decision: `countSplats` counts only anonymous `*` wildcards. The `*` that ends a `:name*` capture
+  // compiles to `(?<name>.*)`, a different group name from `(?<splat>.*)`, so it doesn't trigger
+  // the duplicate-group-name failure that `assertSingleSplat` guards.
   describe('countSplats', () => {
     it('returns 0 for a path with no wildcards', () => {
       expect(countSplats('/foo')).toBe(0);
@@ -1063,8 +1061,6 @@ describe('duplicate "*" wildcards in rule sources', () => {
   });
 
   it('accepts a rewrite combining ":name*" and "*"', () => {
-    // `:id*` → `(?<id>.*)` and `*` → `(?<splat>.*)` are distinct named groups.
-    // The validator must not reject this pattern as a duplicate-splat pattern.
     setup(
       JSON.stringify({
         routing: { rewrites: { '/users/:id*/files/*': '/v2/:id/files/:splat' } },
@@ -1078,24 +1074,22 @@ describe('duplicate "*" wildcards in rule sources', () => {
   });
 
   it('rejects a redirect with two ":name" tokens sharing an identifier', () => {
-    // `/:id/:id` would compile to `(?<id>...)/(?<id>...)`, which throws
-    // `SyntaxError: Duplicate capture group name` at request time. The
-    // validator must reject this at config-read time.
+    // Decision: `/:id/:id` would compile to `(?<id>...)/(?<id>...)`, which throws a duplicate capture group
+    // SyntaxError at request time, so the validator rejects it at config-read time.
     setup(JSON.stringify({ routing: { redirects: { '/:id/:id': '/x' } } }));
     expect(() => readConfig(tmpDir)).toThrow(/duplicate capture group name/);
     cleanup();
   });
 
   it('rejects a rewrite with ":splat" colliding with a bare "*"', () => {
-    // The bare `*` emits `(?<splat>.*)`; an explicit `:splat` token also
-    // emits a `<splat>` group. Both compile to a duplicate group name.
+    // Decision: The bare `*` emits `(?<splat>.*)` and an explicit `:splat` token also emits a `<splat>` group,
+    // so together they give a duplicate group name.
     setup(JSON.stringify({ routing: { rewrites: { '/:splat/*': '/x' } } }));
     expect(() => readConfig(tmpDir)).toThrow(/duplicate capture group name/);
     cleanup();
   });
 
   it('rejects a fallback with two ":name*" tokens sharing an identifier', () => {
-    // `/:rest{splat-suffix}/:rest{splat-suffix}` would emit two `<rest>` groups.
     setup(
       JSON.stringify({
         routing: { fallbacks: { '/api/:rest*/v2/:rest*': '/index.html' } },
@@ -1332,10 +1326,9 @@ describe('lintDestinationSplats', () => {
     warnMock.mockClear();
   });
 
-  // Platform `substituteParams` only replaces `:name` tokens — a literal `*`
-  // in a destination passes through unchanged, which is almost never what the
-  // author meant. Warn (not fail) so misuse surfaces at deploy-time without
-  // blocking otherwise-valid configs.
+  // Decision: Platform `substituteParams` replaces only `:name` tokens, so a literal `*` in a destination
+  // passes through unchanged, which is rarely what the author meant. Warn, don't fail, so misuse
+  // shows at deploy time without blocking otherwise valid configs.
   it('emits no warning when destinations only contain :splat / :name', async () => {
     const { lintDestinationSplats } = await import('../../src/cli/headers.ts');
     const rules = convertRewritesConfig({
@@ -1371,7 +1364,6 @@ describe('lintDestinationSplats', () => {
     expect(msg).toContain('/x/*');
     expect(msg).toContain('/c');
     expect(msg).toContain('/z/*');
-    // The rule with a clean `:splat` destination must not appear.
     expect(msg).not.toContain('/y/:splat');
   });
 
@@ -1546,8 +1538,7 @@ describe('top-level email config validation', () => {
     cleanup();
   });
 
-  // The same shapes `sendEmail()` refuses for `from`: no `@`, two addresses,
-  // a list, whitespace, a smuggled header, an `@` in the display name.
+  // Decision: These are the shapes `sendEmail()` refuses for `from`, so config validation matches it.
   it.each([
     'noreply',
     'noreply@',

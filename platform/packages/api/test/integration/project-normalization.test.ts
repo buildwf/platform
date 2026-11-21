@@ -124,7 +124,6 @@ test.each(['missing', 'conflicting', 'foreign', 'nonlive', 'unversioned'])(
         .update(deployments)
         .set({ status: 'failed' })
         .where(eq(deployments.project_id, project.id));
-      // Keep genuine live history, but point routing at the failed row.
       await env.db.update(deployments).set({ status: 'live' }).where(eq(deployments.id, older.id));
     }
     const response = await req(project.id, { dryRun: true });

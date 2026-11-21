@@ -53,7 +53,7 @@ export function platformBrowserError(
         returnUrl = url.href;
       }
     } catch {
-      /* No navigation link for an invalid configured dashboard URL. */
+      // Decision: No navigation link for an invalid configured dashboard URL.
     }
   }
   const action = returnUrl

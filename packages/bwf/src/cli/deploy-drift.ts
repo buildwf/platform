@@ -94,7 +94,7 @@ function runDrizzleKitGenerate(root: string, configPath: string): string {
   const result = spawnSync(process.execPath, [drizzleKitBin, 'generate', '--config', configPath], {
     cwd: root,
     encoding: 'utf-8',
-    // drizzle-kit runs project code, so it gets no credentials.
+    // Decision: drizzle-kit runs project code, so it gets no credentials.
     env: buildEnv(),
   });
   const stderr = (result.stderr ?? '').trim();
@@ -116,9 +116,9 @@ function runDrizzleKitGenerate(root: string, configPath: string): string {
 
 export function getDeploySchemaDriftMessage(root: string): string {
   const migrationsDir = readProjectPaths(root).migrationsDir;
-  // Hand-written SQL with no Drizzle journal or snapshot: Drizzle diffs the schema
-  // against nothing, so `bwf db generate` would emit a migration that recreates
-  // tables the existing SQL already creates (and fails the fresh-database replay).
+  // Decision: Hand-written SQL with no Drizzle journal or snapshot: Drizzle diffs the schema against nothing,
+  // so `bwf db generate` would emit a migration that recreates tables the existing SQL already
+  // creates (and fails the fresh-database replay).
   if (
     collectMigrations(migrationsDir).length > 0 &&
     !existsSync(join(migrationsDir, 'meta', '_journal.json')) &&
@@ -160,9 +160,9 @@ function createDeployDriftProject(root: string, driftProjectRoot: string): void 
     cpSync(source, target, { recursive: true });
   }
 
-  // The build-generated Better Auth schema participates in `bwf db generate`, so
-  // it must also participate in the isolated drift check. Copy only this known
-  // generated input; the rest of `.bwf` stays excluded.
+  // Decision: The build-generated Better Auth schema takes part in `bwf db generate`, so it has to take part in
+  // the isolated drift check too. Copy only this known generated input; the rest of `.bwf` stays
+  // excluded.
   const authSchemaPath = join(root, '.bwf', 'better-auth-schema.ts');
   if (existsSync(authSchemaPath)) {
     const target = join(driftProjectRoot, '.bwf', 'better-auth-schema.ts');
@@ -185,8 +185,7 @@ function cleanupDeployDriftCheckRoot(root: string): void {
       rmSync(driftCheckDir, { recursive: true, force: true });
     }
   } catch {
-    // Best-effort cleanup only. The deploy drift check must not mask
-    // the original Drizzle Kit error with a cleanup failure.
+    // Decision: Cleanup failures are ignored so they don't mask the original Drizzle Kit error.
   }
 }
 

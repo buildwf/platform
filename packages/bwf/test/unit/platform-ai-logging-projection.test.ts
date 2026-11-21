@@ -22,7 +22,6 @@ const NOW = 1_800_000_000_000;
 let database: PGlite;
 let connection: QueryConnection;
 
-/** An in-memory ROUTING namespace that records every bulk call. */
 function memoryKv(initial: Record<string, { value: string; metadata?: unknown }> = {}) {
   const store = new Map(Object.entries(initial));
   const calls: Array<string> = [];
@@ -55,7 +54,6 @@ function memoryKv(initial: Record<string, { value: string; metadata?: unknown }>
   return { kv, store, calls, expirations };
 }
 
-/** Records each statement so tests can check lock and transaction order. */
 function recording(statements: Array<string>, onStatement?: (sql: string) => void) {
   return {
     query: async (sql: string, values?: ReadonlyArray<unknown>) => {
@@ -70,7 +68,6 @@ async function seed(sql: string) {
   await database.exec(sql);
 }
 
-/** One free account with projects `ids`; `modes` saves overrides on some of them. */
 async function seedProjects(ids: ReadonlyArray<string>, modes: Record<string, string> = {}) {
   const overrides = Object.entries(modes).map(([id, mode]) => `('${id}', '${mode}')`);
   await seed(`
@@ -80,7 +77,6 @@ async function seedProjects(ids: ReadonlyArray<string>, modes: Record<string, st
   `);
 }
 
-/** Runs `change` on the real connection just before the projection takes its row locks. */
 function changeBeforeLock(client: QueryConnection, change: string) {
   return {
     query: async (sql: string, values?: ReadonlyArray<unknown>) => {
@@ -170,15 +166,15 @@ describe('installer AI logging projection', () => {
       'ai-logging:p-override': { value: 'off', metadata: { mode: 'off', at: NOW } },
       'ai-logging:p-plan': { value: 'metadata', metadata: { mode: 'metadata', at: NOW } },
       'ai-logging:p-wins': { value: 'full', metadata: { mode: 'full', at: NOW } },
-      // A plan ID missing from the catalog follows the default plan (custom on installs).
+      // Decision: A plan ID missing from the catalog follows the default plan (custom on installs).
       'ai-logging:p-legacy': { value: 'off', metadata: { mode: 'off', at: NOW } },
-      // Too young to call an orphan: its create transaction may still commit.
+      // Decision: Too young to call an orphan: its create transaction may still commit.
       'ai-logging:p-just-created': {
         value: 'off',
         metadata: { mode: 'off', at: NOW - AI_LOGGING_ORPHAN_GRACE_MS + 1_000 },
       },
       'ai-block:p-plan': { value: '1' },
-      // A project that now inherits leaves a short-lived marker so readback says pending.
+      // Decision: A project that now inherits leaves a short-lived marker so readback says pending.
       'ai-logging-cleared:p-stale': { value: 'inherit', metadata: { at: NOW } },
     });
     expect(Object.fromEntries(expirations)).toEqual({
@@ -188,7 +184,6 @@ describe('installer AI logging projection', () => {
 
   it('stamps keys with the database clock, not the operator machine clock', async () => {
     await seedProjects(['p1'], { p1: 'off' });
-    // An orphan the API wrote 5 minutes ago by its own clock: inside the grace period.
     const { kv, store } = memoryKv({
       'ai-logging:p-young': { value: 'off', metadata: { mode: 'off', at: NOW - 300_000 } },
     });
@@ -198,7 +193,6 @@ describe('installer AI logging projection', () => {
           ? { rows: [{ now: NOW }] }
           : connection.query(sql, values),
     } as QueryConnection;
-    // The operator machine runs an hour fast.
     vi.spyOn(Date, 'now').mockReturnValue(NOW + 3_600_000);
     try {
       await projectPlatformAiLoggingConnection(databaseClock, kv);
@@ -234,8 +228,8 @@ describe('installer AI logging projection', () => {
       },
       put: async (entries) => {
         order.push('kv put');
-        // The change the API saved while the projection waited for the lock is the
-        // one written, because the inputs are read again under the lock.
+        // Decision: The change the API saved while the projection waited for the lock is the one written,
+        // because the inputs are read again under the lock.
         expect(entries).toEqual([
           { key: 'ai-logging:p1', value: 'off', metadata: { mode: 'off', at: NOW } },
         ]);
@@ -250,7 +244,6 @@ describe('installer AI logging projection', () => {
         order.push('commit');
       }
     });
-    // Simulate the API saving a newer override just before the lock is granted.
     const lockingClient = changeBeforeLock(
       client,
       `UPDATE project_ai_logging SET mode = 'off' WHERE project_id = 'p1'`,
@@ -274,7 +267,6 @@ describe('installer AI logging projection', () => {
         ('plans:ai-logging', '{"modes":{"pro":"metadata"},"publish":null}');
     `);
     const { kv, store } = memoryKv();
-    // Simulate the API saving a newer plan default just before the lock is granted.
     const lockingClient = changeBeforeLock(
       connection,
       `UPDATE platform_settings SET value = '{"modes":{"pro":"off"},"publish":null}'
@@ -315,7 +307,7 @@ describe('installer AI logging projection', () => {
     expect(calls).toEqual(['list']);
   });
 
-  // The installer test checks that the KV calls reach the routing namespace.
+  // Decision: The installer test checks that the KV calls reach the routing namespace.
   it('does nothing when the database lock cannot publish', async () => {
     const client = { listKvKeys: vi.fn(), putKvBulk: vi.fn(), deleteKvBulk: vi.fn() };
     await expect(

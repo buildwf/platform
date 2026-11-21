@@ -26,7 +26,6 @@ const appAccessInput: PlatformDeploymentManifestInput = {
   appAccess: 'platform',
 };
 
-// Each input and the schema version it gets without minimal runtime logs.
 const inputs = [
   { name: 'plain', input: deploymentInput, version: 1 },
   { name: 'workers.dev', input: workersDevInput, version: 2 },

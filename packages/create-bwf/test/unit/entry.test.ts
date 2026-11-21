@@ -27,9 +27,9 @@ afterAll(() => {
 
 describe('create-bwf entry', () => {
   it('prints the runtime message before any other module links', () => {
-    // An old Node fails to link a module that imports a newer API (for example `styleText`
-    // from node:util in the bundled prompts). The hook makes every module other than the
-    // entry and the runtime check fail the same way, so the message must come first.
+    // Decision: An old Node fails to link a module that imports a newer API (for example `styleText` from
+    // node:util in the bundled prompts). The hook makes each module other than the entry and the
+    // runtime check fail the same way, so the message has to come first.
     const preload = join(root, 'old-node.mjs');
     writeFileSync(
       preload,
@@ -65,9 +65,8 @@ registerHooks({
   it.skipIf(process.platform === 'win32')(
     'installs the scoped CLI package and runs its bwf bin',
     () => {
-      // The unscoped `bwf` package on npm belongs to someone else, so the new
-      // project must depend on @builtbyfriends/bwf. Stub npm and npx to record
-      // what create-bwf asks them to do.
+      // Decision: The unscoped `bwf` package on npm belongs to someone else, so the new project has to
+      // depend on @builtbyfriends/bwf. Stub npm and npx to record what create-bwf asks them to do.
       const bin = join(root, 'bin');
       const log = join(root, 'calls.log');
       mkdirSync(bin, { recursive: true });

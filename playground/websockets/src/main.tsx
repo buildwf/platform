@@ -60,7 +60,7 @@ function App() {
   useEffect(() => {
     const update = () => setPath(location.pathname);
     addEventListener('popstate', update);
-    // Browser tests wait for this marker before they interact with the page.
+    // Decision: Browser tests wait for this marker before they use the page.
     document.getElementById('app')!.dataset.hydrated = 'true';
     return () => removeEventListener('popstate', update);
   }, []);

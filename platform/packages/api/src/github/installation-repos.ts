@@ -4,10 +4,9 @@ import type { GitHubInstallation } from '../types.ts';
 const GITHUB_API_BASE = 'https://api.github.com';
 const GITHUB_API_VERSION = '2026-03-10';
 
-// Shape of the `GET /installation/repositories` response we care about. The
-// per-repo `owner` is read to derive the installation's account metadata, and
-// the top-level `repository_selection` records whether the install grants every
-// repo (`all`) or only the cached set (`selected`).
+// Decision: The parts of the `GET /installation/repositories` response we use. The per-repo `owner` gives the
+// installation's account metadata, and the top-level `repository_selection` records whether the
+// install grants all repos (`all`) or only the cached set (`selected`).
 type InstallationRepositoriesResponse = Readonly<{
   repository_selection?: string;
   repositories: ReadonlyArray<{
@@ -67,16 +66,14 @@ export async function listInstallationRepositories(
 
     const data = (await res.json()) as InstallationRepositoriesResponse;
     if (page === 1) {
-      // `repository_selection` is a property of the installation, identical on
-      // every page; read it from the first. Only the literal `'all'` grants
-      // every repo — anything else is the safe `'selected'` default.
+      // Decision: `repository_selection` belongs to the installation and is the same on each page; read it from the
+      // first. Only the literal `'all'` grants all repos; anything else is the safe `'selected'` default.
       repositorySelection = data.repository_selection === 'all' ? 'all' : 'selected';
       owner = data.repositories[0]?.owner;
-      // The cached `repositories` array is never read for an `all` install —
-      // coverage checks short-circuit on `repository_selection = 'all'` and the
-      // connect route resolves ids live. Stop after page 1 rather than
-      // enumerating a large org, and return an empty `repositories` (what the
-      // webhook path also stores for `all`, where GitHub omits the list).
+      // Decision: The cached `repositories` array isn't read for an `all` install: coverage checks short-circuit on
+      // `repository_selection = 'all'` and the connect route resolves ids live. Stop after page 1 instead
+      // of listing a large org, and return an empty `repositories` (what the webhook path stores for
+      // `all`, where GitHub omits the list).
       if (repositorySelection === 'all') {
         break;
       }
@@ -84,7 +81,7 @@ export async function listInstallationRepositories(
     for (const repo of data.repositories) {
       repositories.push({ full_name: repo.full_name, id: repo.id });
     }
-    // GitHub returns up to `per_page` per page; a short page is the last one.
+    // Decision: GitHub returns up to `per_page` per page; a short page is the last one.
     if (data.repositories.length < 100) {
       break;
     }

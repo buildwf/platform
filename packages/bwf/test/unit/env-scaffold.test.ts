@@ -41,9 +41,7 @@ describe('inferHelperForValue', () => {
   });
 
   it('refuses suspicious numeric strings', () => {
-    // Leading zero suggests a code, not a number.
     expect(inferHelperForValue('0123')).toBe('string');
-    // Too long to be a meaningful port/size — likely an ID or phone number.
     expect(inferHelperForValue('123456')).toBe('string');
     expect(inferHelperForValue('-5')).toBe('string');
   });

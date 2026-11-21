@@ -167,7 +167,7 @@ const clientModule = (token: string): string => `if (import.meta.hot) {
  * `platform:new-binding` HMR events and shows a toast with a click-to-restart action.
  */
 export function restartPlugin(): Plugin {
-  // Browsers omit Fetch Metadata for plain-HTTP non-localhost origins
+  // Decision: Browsers omit Fetch Metadata for plain-HTTP non-localhost origins
   // (`bwf dev --host` on a LAN IP), so the navigation check alone lets any
   // page open `/__platform/restarting`, whose POST then carries our own Origin.
   // The token proves the navigation came from the toast. Each server instance
@@ -194,7 +194,7 @@ export function restartPlugin(): Plugin {
 
     configureServer(server) {
       let restartPending = false;
-      // This instance checks its own token; `load` serves the latest one.
+      // Decision: This instance checks its own token; `load` serves the latest one.
       const token = randomBytes(16).toString('base64url');
       restartToken = token;
 
@@ -236,7 +236,7 @@ export function restartPlugin(): Plugin {
           returnPath = params.get('return');
           presented = params.get('t');
         } catch {
-          // A request url that does not parse returns to `/` without restarting.
+          // Decision: A request url that does not parse returns to `/` without restarting.
         }
         res.writeHead(200, {
           'Content-Type': 'text/html',

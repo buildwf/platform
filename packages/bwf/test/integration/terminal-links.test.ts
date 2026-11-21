@@ -33,7 +33,7 @@ console.log(JSON.stringify({ url: formatUrl(url), named: formatLink('Dashboard',
 describe('terminal links (real capability detection)', () => {
   it.each([40, 80])('keeps the complete link destination in a %s-column box title', (columns) => {
     const output = render(true, columns);
-    // ansi-escapes uses BEL to delimit OSC 8 control sequences.
+    // Decision: ansi-escapes uses BEL to delimit OSC 8 control sequences.
     const opening = `\u001b]8;;${url}\u0007`;
     const closing = '\u001b]8;;\u0007';
     expect(output.url).toBe(`${opening}${url}${closing}`);

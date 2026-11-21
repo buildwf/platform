@@ -40,9 +40,6 @@ beforeEach(async () => {
   await clearTables(env.db);
 });
 
-// Seed an installation row so a membership references a real install (the table
-// keys on the numeric installation id as text with no FK, but the tests keep
-// the fixtures coherent).
 async function seedInstall(db: Db, installationId: string): Promise<void> {
   await upsertGitHubInstallation(db, {
     installationId,
@@ -73,8 +70,8 @@ describe('github_installation_members', () => {
     expect(row.github_account_id).toBe('gh-acct-1');
     expect(row.verified_at).not.toBeNull();
 
-    // Both timestamps use the DB clock. Compare there instead of interpreting
-    // a timestamp without timezone as the JavaScript process's local time.
+    // Decision: Both timestamps use the DB clock. Compare them in the DB, so a timestamp without a timezone
+    // isn't read as the JavaScript process's local time.
     const [lifetime] = await env.db
       .select({
         seconds: sql<string>`extract(epoch from (${githubInstallationMembers.expires_at} - ${githubInstallationMembers.verified_at}))`,
@@ -92,7 +89,7 @@ describe('github_installation_members', () => {
       installationId: '100',
       userId: user.id,
       githubAccountId: 'gh-acct-1',
-      ttlSeconds: 1, // short TTL so the refresh visibly moves expires_at forward
+      ttlSeconds: 1 /* Decision: A short TTL, so the refresh moves expires_at forward by an amount the test can see. */,
     });
 
     const second = await upsertGitHubInstallationMember(env.db, {
@@ -102,7 +99,6 @@ describe('github_installation_members', () => {
       ttlSeconds: MEMBERSHIP_TTL_SECONDS,
     });
 
-    // Same row (onConflict update, not a new insert).
     expect(second.id).toBe(first.id);
     expect(second.github_account_id).toBe('gh-acct-2');
     expect(new Date(second.verified_at).getTime()).toBeGreaterThanOrEqual(
@@ -120,10 +116,8 @@ describe('github_installation_members', () => {
     const user = await createTestUser(env.db);
     await seedInstall(env.db, '100');
 
-    // Absent.
     expect(await hasActiveInstallationMembership(env.db, '100', user.id)).toBe(false);
 
-    // Fresh.
     await upsertGitHubInstallationMember(env.db, {
       installationId: '100',
       userId: user.id,
@@ -132,7 +126,6 @@ describe('github_installation_members', () => {
     });
     expect(await hasActiveInstallationMembership(env.db, '100', user.id)).toBe(true);
 
-    // Expired: seed a row directly with a past expiry on a second install.
     await seedInstall(env.db, '200');
     await env.db.insert(githubInstallationMembers).values({
       id: generateId('ghm'),
@@ -190,7 +183,6 @@ describe('github_installation_members', () => {
         ttlSeconds: MEMBERSHIP_TTL_SECONDS,
       });
     }
-    // Bob shares install 100 — must survive a delete scoped to alice.
     await upsertGitHubInstallationMember(env.db, {
       installationId: '100',
       userId: bob.id,
@@ -198,7 +190,6 @@ describe('github_installation_members', () => {
       ttlSeconds: MEMBERSHIP_TTL_SECONDS,
     });
 
-    // Empty ids: no-op (alice's rows all intact).
     await deleteGitHubInstallationMembers(env.db, [], alice.id);
     expect(
       await env.db
@@ -207,7 +198,6 @@ describe('github_installation_members', () => {
         .where(eq(githubInstallationMembers.user_id, alice.id)),
     ).toHaveLength(3);
 
-    // Delete two of alice's three installs.
     await deleteGitHubInstallationMembers(env.db, ['100', '200'], alice.id);
     const aliceLeft = await env.db
       .select()
@@ -216,7 +206,6 @@ describe('github_installation_members', () => {
     expect(aliceLeft).toHaveLength(1);
     expect(aliceLeft[0]!.installation_id).toBe('300');
 
-    // Bob's membership on install 100 is untouched (scoped to alice).
     expect(await hasActiveInstallationMembership(env.db, '100', bob.id)).toBe(true);
   });
 
@@ -231,8 +220,6 @@ describe('github_installation_members', () => {
       ttlSeconds: MEMBERSHIP_TTL_SECONDS,
     });
 
-    // A second physical row for the same (installation_id, user_id) must be
-    // rejected by the unique index, proving onConflict is load-bearing.
     await expect(
       env.db.insert(githubInstallationMembers).values({
         id: generateId('ghm'),
@@ -252,8 +239,6 @@ describe('github_installation_members', () => {
     await seedInstall(env.db, '200');
     await seedInstall(env.db, '300');
 
-    // Alice: X-keyed membership under BOTH 100 and 200 (two different bearers can
-    // share the same browser-proof id) — both must be deleted when in scope.
     await upsertGitHubInstallationMember(env.db, {
       installationId: '100',
       userId: alice.id,
@@ -266,23 +251,18 @@ describe('github_installation_members', () => {
       githubAccountId: 'X',
       ttlSeconds: MEMBERSHIP_TTL_SECONDS,
     });
-    // Bob: X-keyed membership under 100 too — a DIFFERENT bearer of the same proof
-    // id, must also be deleted (helper keys on the github id, not the user id).
     await upsertGitHubInstallationMember(env.db, {
       installationId: '100',
       userId: bob.id,
       githubAccountId: 'X',
       ttlSeconds: MEMBERSHIP_TTL_SECONDS,
     });
-    // Carol: Z-keyed membership under 100 — a DIFFERENT proof id, must SURVIVE.
     await upsertGitHubInstallationMember(env.db, {
       installationId: '100',
       userId: carol.id,
       githubAccountId: 'Z',
       ttlSeconds: MEMBERSHIP_TTL_SECONDS,
     });
-    // Bob also holds a Y-keyed membership under 300 — out of scope and not
-    // X-keyed, must SURVIVE.
     await upsertGitHubInstallationMember(env.db, {
       installationId: '300',
       userId: bob.id,
@@ -290,41 +270,33 @@ describe('github_installation_members', () => {
       ttlSeconds: MEMBERSHIP_TTL_SECONDS,
     });
 
-    // Empty id list → no-op (never emits `WHERE ... IN ()`); nothing deleted.
     await deleteGitHubInstallationMembersByGithubAccount(env.db, [], 'X');
     expect(await getTestGitHubInstallationMembers(env.db, '100')).toHaveLength(3);
 
-    // Scope to [100,200]: deletes ALL X-keyed rows on those installs (alice@100,
-    // alice@200, bob@100), keyed by the github id regardless of bearer.
     await deleteGitHubInstallationMembersByGithubAccount(env.db, ['100', '200'], 'X');
 
-    // Install 100: only Carol's Z-keyed row survives.
     const m100 = await getTestGitHubInstallationMembers(env.db, '100');
     expect(m100).toHaveLength(1);
     expect(m100[0]!.user_id).toBe(carol.id);
     expect(m100[0]!.github_account_id).toBe('Z');
-    // Install 200: alice's X-keyed row is gone.
     expect(await getTestGitHubInstallationMembers(env.db, '200')).toHaveLength(0);
-    // Install 300: bob's Y-keyed row was out of scope AND not X-keyed → survives.
     const m300 = await getTestGitHubInstallationMembers(env.db, '300');
     expect(m300).toHaveLength(1);
     expect(m300[0]!.user_id).toBe(bob.id);
   });
 
   it('getGitHubAccountIdForUser returns the github provider_id and null otherwise', async () => {
-    // createTestUser seeds an oauth_accounts row for its provider, so a github
-    // user has a github oauth row and a google user does not.
+    // Decision: createTestUser seeds an oauth_accounts row for its provider, so a github user has a github
+    // oauth row and a google user doesn't.
     const ghUser = await createTestUser(env.db, 'octo', 'github', 'gh-provider-42');
     const googleUser = await createTestUser(env.db, 'goog', 'google', 'google-99');
 
     expect(await getGitHubAccountIdForUser(env.db, ghUser.id)).toBe('gh-provider-42');
     expect(await getGitHubAccountIdForUser(env.db, googleUser.id)).toBeNull();
-    // Unknown user id → null.
     expect(await getGitHubAccountIdForUser(env.db, 'user_does_not_exist')).toBeNull();
   });
 });
 
-// Seed an unowned installation with an explicit account (id + type).
 async function seedInstallForAccount(
   db: Db,
   installationId: string,
@@ -344,7 +316,6 @@ async function seedInstallForAccount(
 
 describe('github_installations account queries', () => {
   it('getGitHubInstallationsByAccount scopes by BOTH account_id and account_type', async () => {
-    // Two ORG1 org installs, one ORG2 org install, one ORG1 *User* install.
     await seedInstallForAccount(env.db, '100', 'ORG1', 'Organization');
     await seedInstallForAccount(env.db, '200', 'ORG1', 'Organization');
     await seedInstallForAccount(env.db, '300', 'ORG2', 'Organization');
@@ -352,8 +323,6 @@ describe('github_installations account queries', () => {
 
     const rows = await getGitHubInstallationsByAccount(env.db, 'ORG1', 'Organization');
 
-    // Exactly the two ORG1 org installs — the ORG2 row (account_id filter) and
-    // the ORG1/User row (account_type filter) are both excluded.
     expect(rows).toHaveLength(2);
     expect(new Set(rows.map((r) => r.installation_id))).toEqual(new Set(['100', '200']));
     expect(rows.every((r) => r.account_id === 'ORG1')).toBe(true);
@@ -364,14 +333,13 @@ describe('github_installations account queries', () => {
     await seedInstallForAccount(env.db, '100', 'ORG1', 'Organization');
 
     expect(await getGitHubInstallationsByAccount(env.db, 'ORG_NONE', 'Organization')).toEqual([]);
-    // Right account, wrong type → still empty (type filter bites).
     expect(await getGitHubInstallationsByAccount(env.db, 'ORG1', 'User')).toEqual([]);
   });
 });
 
 describe('github_installation_revocations — monotonic revocation tombstone', () => {
-  // The tombstone is keyed by the GitHub ACCOUNT id (X), NOT a Platform user id.
-  // These helpers take that github account id as their third arg.
+  // Decision: The tombstone is keyed by the GitHub account id, not a Platform user id. These helpers take
+  // that GitHub account id as their third argument.
   const X = 'gh-acct-42';
   const Y = 'gh-acct-99';
 
@@ -391,8 +359,6 @@ describe('github_installation_revocations — monotonic revocation tombstone', (
     expect(rows.every((r) => r.id.startsWith('ghr_'))).toBe(true);
     expect(new Set(rows.map((r) => r.installation_id))).toEqual(new Set(['100', '200']));
 
-    // revoked_at, read back as epoch ms, sits within the record window (allow a
-    // generous skew for the DB vs app clock).
     const at100 = await getInstallationRevocationAt(env.db, '100', X);
     expect(at100).not.toBeNull();
     expect(at100!).toBeGreaterThan(before - 60_000);
@@ -403,7 +369,6 @@ describe('github_installation_revocations — monotonic revocation tombstone', (
     await seedInstall(env.db, '100');
 
     expect(await getInstallationRevocationAt(env.db, '100', X)).toBeNull();
-    // Record for one install; a DIFFERENT install still reports null.
     await recordInstallationRevocations(env.db, ['100'], X);
     expect(await getInstallationRevocationAt(env.db, '999', X)).toBeNull();
   });
@@ -415,16 +380,14 @@ describe('github_installation_revocations — monotonic revocation tombstone', (
     const first = await getInstallationRevocationAt(env.db, '100', X);
     expect(first).not.toBeNull();
 
-    // A tiny wait so the DB clock advances measurably between the two now()s.
+    // Decision: Wait a little, so the DB clock moves forward by a measurable amount between the two now() calls.
     await new Promise((resolve) => setTimeout(resolve, 25));
 
     await recordInstallationRevocations(env.db, ['100'], X);
     const second = await getInstallationRevocationAt(env.db, '100', X);
     expect(second).not.toBeNull();
-    // Monotonic: never regresses, and here strictly advanced.
     expect(second!).toBeGreaterThan(first!);
 
-    // Still exactly one row (onConflict updated in place, not a second insert).
     const rows = await env.db
       .select({ id: githubInstallationRevocations.id })
       .from(githubInstallationRevocations)
@@ -437,10 +400,6 @@ describe('github_installation_revocations — monotonic revocation tombstone', (
     const dbNow = await getDbNowMs(env.db);
     const after = Date.now();
 
-    // A positive number of the same magnitude as JS epoch ms, sitting within a
-    // sane window of the test's own clock (a generous few-minute skew for the DB
-    // vs app clock) — proves the from-less `select extract(epoch from now())`
-    // executes and normalizes to a JS millisecond number (NOT a stray 0).
     expect(dbNow).toBeGreaterThan(before - 300_000);
     expect(dbNow).toBeLessThan(after + 300_000);
   });
@@ -450,8 +409,6 @@ describe('github_installation_revocations — monotonic revocation tombstone', (
 
     await recordInstallationRevocations(env.db, ['100'], X);
 
-    // Simulate a redelivery/reorder having already advanced the tombstone to a
-    // FUTURE instant (well ahead of the next call's transaction-start `now()`).
     await env.db
       .update(githubInstallationRevocations)
       .set({ revoked_at: sql`now() + interval '1 hour'` })
@@ -459,14 +416,10 @@ describe('github_installation_revocations — monotonic revocation tombstone', (
     const future = await getInstallationRevocationAt(env.db, '100', X);
     expect(future).not.toBeNull();
 
-    // A stale/reordered redelivery whose `now()` is EARLIER than the stored
-    // future value must NOT overwrite it — `greatest(existing, excluded)` keeps
-    // the newer high-water mark. A bare `now()` upsert would regress here.
     await recordInstallationRevocations(env.db, ['100'], X);
     const after = await getInstallationRevocationAt(env.db, '100', X);
     expect(after).toBe(future);
 
-    // Still exactly one row (onConflict updated in place).
     const rows = await env.db
       .select({ id: githubInstallationRevocations.id })
       .from(githubInstallationRevocations)
@@ -496,19 +449,15 @@ describe('github_installation_revocations — monotonic revocation tombstone', (
     await seedInstall(env.db, '200');
     await seedInstall(env.db, '300');
 
-    // Revoke 100 + 200 only; 300 has no tombstone.
     await recordInstallationRevocations(env.db, ['100', '200'], X);
 
     const map = await getInstallationRevocationsForAccount(env.db, ['100', '200', '300'], X);
     expect(map.size).toBe(2);
     expect(map.has('100')).toBe(true);
     expect(map.has('200')).toBe(true);
-    // No tombstone for 300 → absent from the Map.
     expect(map.has('300')).toBe(false);
-    // Values are epoch ms matching the single-row getter.
     expect(map.get('100')).toBe(await getInstallationRevocationAt(env.db, '100', X));
 
-    // Empty id list → empty Map.
     expect((await getInstallationRevocationsForAccount(env.db, [], X)).size).toBe(0);
   });
 
@@ -517,8 +466,6 @@ describe('github_installation_revocations — monotonic revocation tombstone', (
 
     await recordInstallationRevocations(env.db, ['100'], X);
 
-    // A second physical row for (installation_id, github_account_id) must be
-    // rejected by the unique index, proving onConflict is load-bearing.
     await expect(
       env.db.insert(githubInstallationRevocations).values({
         id: generateId('ghr'),

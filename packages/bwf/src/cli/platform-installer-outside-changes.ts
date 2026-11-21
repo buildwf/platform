@@ -30,11 +30,11 @@ import {
 import type { PlatformInstallPlan } from './platform-plan.ts';
 
 const OUTSIDE_SOURCES = {
-  // The Cloudflare CLI asks before it uploads a Worker last changed from one of
+  // Decision: The Cloudflare CLI asks before it uploads a Worker last changed from one of
   // these sources. Without a terminal it stops the upload, and no option skips that.
   dash: 'changed in the Cloudflare dashboard',
   api: 'changed in the Cloudflare API',
-  // The upgrade refuses an active version without bwf's record of its
+  // Decision: The upgrade refuses an active version without bwf's record of its
   // triggers. A run can stop after the Cloudflare CLI replaced a change and
   // before bwf deployed its own version, or restore the earlier version.
   // The Worker then shows no change, but that version stays active. bwf
@@ -50,7 +50,7 @@ const PLATFORM_WORKER_KEYS: ReadonlyArray<PlatformWorkerKey> = [
   'dispatch',
 ];
 
-// The lifecycle lock can change the database before this check. The check
+// Decision: The lifecycle lock can change the database before this check. The check
 // itself changes no Worker and does not pause traffic.
 const NO_WORKER_CHANGED =
   'No platform Worker changed. This command did not pause application traffic.';
@@ -156,7 +156,6 @@ export async function findPlatformWorkerOutsideChanges(
   installation: PlatformOutsideChangeInstallation,
 ): Promise<ReadonlyArray<PlatformWorkerOutsideChange>> {
   const workers = PLATFORM_WORKER_KEYS.flatMap((key) => {
-    // The installer does not upload an email gateway that the runtime does not include.
     if (key === 'emailGateway' && runtime.manifest.artifacts.emailGateway === undefined) {
       return [];
     }
@@ -171,7 +170,7 @@ export async function findPlatformWorkerOutsideChanges(
       : new Map<string, string>();
   const changes = await Promise.all(
     workers.map(async (worker): Promise<PlatformWorkerOutsideChange | null> => {
-      // A read that fails stops the run. Without the answer, the run can
+      // Decision: A read that fails stops the run. Without the answer, the run can
       // pause traffic and then fail in the Cloudflare CLI or the upgrade.
       const readCloudflare = (path: string) =>
         readPlatformWorker(worker.name, () => client.request<unknown>(path));
@@ -190,7 +189,7 @@ export async function findPlatformWorkerOutsideChanges(
             throw error;
           }),
       );
-      // No deployments. The installer finds a missing Worker itself, but a
+      // Decision: No deployments. The installer finds a missing Worker itself, but a
       // marker from outside bwf still makes the Cloudflare CLI stop.
       if (deployments === null) {
         return source === 'dash' || source === 'api' ? { ...worker, source } : null;
@@ -201,7 +200,7 @@ export async function findPlatformWorkerOutsideChanges(
           `platform: Cloudflare returned malformed deployment data for the platform Worker ${worker.name}, so bwf cannot find changes made outside bwf. ${NO_WORKER_CHANGED} Run the command again.`,
         );
       }
-      // The deploy and the restore of a stopped cutover need one active version.
+      // Decision: The deploy and the restore of a stopped cutover need one active version.
       if (active.kind === 'split') {
         throw new Error(
           `platform: The platform Worker ${worker.name} has no single version that gets 100% of traffic, for example after a gradual deployment. This command deploys a new version only when one version gets all traffic. ${NO_WORKER_CHANGED} In the Cloudflare dashboard, deploy one version of ${worker.name} to 100% of traffic. Then run this command once in a terminal, so that you can approve the dashboard change.`,
@@ -210,7 +209,7 @@ export async function findPlatformWorkerOutsideChanges(
       if (source === 'dash' || source === 'api') {
         return { ...worker, source };
       }
-      // The upgrade reads the active version. After a stopped cutover, the
+      // Decision: The upgrade reads the active version. After a stopped cutover, the
       // installer first makes the earlier version active again.
       const restoredVersion = restored.get(worker.name);
       const recorded = await Promise.all(
@@ -254,7 +253,7 @@ export async function readPlatformApiWorkerBillingVariables(
       throw error;
     }),
   );
-  // The outside-change review reports a missing, split or malformed deployment.
+  // Decision: The outside-change review already reports a missing, split or malformed deployment.
   const active = readActivePlatformWorkerDeployment(deployments);
   if (active.kind !== 'active') {
     return {};
@@ -434,7 +433,7 @@ export async function uploadPlatformWorkerOutsideChanges(
         runner,
         ...(input.accepted ? { interactive: false } : {}),
       });
-      // A refused upload can still exit with status 0, so read the source again.
+      // Decision: A refused upload can still exit with status 0, so read the source again.
       const source = await client.getWorkerLastDeployedFrom(String(config.account_id), name);
       if (uploaded.status !== 0 || source === 'dash' || source === 'api') {
         throw new Error(

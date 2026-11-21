@@ -55,7 +55,7 @@ describe('normalizeRunWranglerResult — signal / spawn-error handling', () => {
   });
 });
 
-// Windows cannot deliver a signal to another process: libuv maps it to `TerminateProcess`,
+// Decision: Windows can't deliver a signal to another process: libuv maps it to `TerminateProcess`,
 // which runs no handler. Tests that signal a real parent process are POSIX-only.
 const WINDOWS_NO_SIGNALS = 'signal delivery to another process is POSIX-only (see note above)';
 
@@ -80,13 +80,13 @@ describe('createDefaultRunWrangler — normal close confirms the whole GROUP', (
     mkdirSync(GROUP_CLOSE_TMP, { recursive: true });
   });
   afterEach(() => {
-    // Windows may retain the exited child's cwd handle briefly after the
-    // liveness assertion passes. Retry removal without weakening that assertion.
+    // Decision: Windows may keep the exited child's cwd handle briefly after the liveness assertion passes.
+    // Retry removal without weakening that assertion.
     rmSync(GROUP_CLOSE_TMP, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 });
   });
 
   it('an exit-0 leader that leaves a SAME-GROUP grandchild alive: the runner resolves only after the group is dead', async () => {
-    // `close` fires when the leader exits, but a same-group grandchild can outlive it.
+    // Decision: `close` fires when the leader exits, but a same-group grandchild can outlive it.
     const gcPidFile = join(GROUP_CLOSE_TMP, 'gc.pid');
     const gc = join(GROUP_CLOSE_TMP, 'gc.cjs');
     writeFileSync(
@@ -99,8 +99,8 @@ describe('createDefaultRunWrangler — normal close confirms the whole GROUP', (
       leader,
       `const { spawn } = require('child_process');\n` +
         `const fs = require('fs');\n` +
-        // Same process group (not detached), but its OWN stdio — so the leader's exit
-        // fires `close` while the grandchild lives on in the group.
+        // Decision: Same process group (not detached), but its own stdio, so the leader's exit fires `close`
+        // while the grandchild lives on in the group.
         `const c = spawn(process.execPath, [${JSON.stringify(gc)}], { stdio: 'ignore' });\n` +
         `c.unref();\n` +
         `setInterval(() => {\n` +
@@ -112,7 +112,6 @@ describe('createDefaultRunWrangler — normal close confirms the whole GROUP', (
       timeoutMs: 30_000,
     });
     const result = await run({ type: 'd1.list' }, { accountId: 'acct' });
-    // The clean exit is reported only after the grandchild was reaped.
     expect(result.status).toBe(0);
     expect(result.signal).toBeNull();
     const gcPid = Number(readFileSync(gcPidFile, 'utf-8'));
@@ -124,10 +123,8 @@ describe('createDefaultRunWrangler — normal close confirms the whole GROUP', (
       alive = false;
     }
     try {
-      process.kill(gcPid, 'SIGKILL'); // never leak on assertion failure
-    } catch {
-      // already gone
-    }
+      process.kill(gcPid, 'SIGKILL');
+    } catch {}
     expect(alive).toBe(false);
   }, 15_000);
 });
@@ -144,7 +141,7 @@ describe('createDefaultRunWrangler — signal-path kill failure quarantines the 
 
   it('SIGTERM + an injected kill FAILURE: the parent dies with mutex + sidecar RETAINED; the gate blocks until the child dies', async (ctx) => {
     ctx.skip(process.platform === 'win32', WINDOWS_NO_SIGNALS);
-    // After a failed kill the parent must quarantine before re-raising; otherwise
+    // Decision: After a failed kill the parent has to quarantine before re-raising; otherwise
     // proper-lockfile's exit hook removes the lock while the child still runs.
     const appRoot = join(SIGNAL_KILL_TMP, 'app');
     const pidFile = join(SIGNAL_KILL_TMP, 'child.pid');
@@ -187,7 +184,6 @@ describe('createDefaultRunWrangler — signal-path kill failure quarantines the 
     });
     let childPid: number | undefined;
     try {
-      // The hung child wrote its pid, so the provision holds the lock.
       childPid = await waitForPid(pidFile, 10_000);
       expect(childPid).toBeDefined();
       parent.kill('SIGTERM');
@@ -195,7 +191,6 @@ describe('createDefaultRunWrangler — signal-path kill failure quarantines the 
         parent.on('exit', (code, sig) => res([code, sig]));
       });
       expect(signal).toBe('SIGTERM');
-      // The quarantine ran before the re-raise, so the exit sweep left the lock on disk.
       const cfgReal = realpathSync(join(appRoot, 'wrangler.jsonc'));
       const lockMutex = `${cfgReal}.bwf-provision.lock.lock`;
       const sidecar = `${cfgReal}.bwf-provision.lock.quarantine.json`;
@@ -204,14 +199,13 @@ describe('createDefaultRunWrangler — signal-path kill failure quarantines the 
       const recorded = JSON.parse(readFileSync(sidecar, 'utf-8')) as Record<string, unknown>;
       expect(recorded.pid).toBe(childPid);
       expect(String(recorded.reason)).toMatch(/SIGTERM/);
-      // The child is still alive, so the gate fails closed even on a stale mutex.
+      // Decision: The child is still alive, so the gate fails closed even on a stale mutex.
       expect(() => process.kill(childPid!, 0)).not.toThrow();
       const old = new Date(Date.now() - 3_600_000);
       utimesSync(lockMutex, old, old);
       await expect(acquireProvisionLock(cfgReal, { stale: 2_000, retries: 0 })).rejects.toThrow(
         /QUARANTINED/,
       );
-      // Kill the recorded group; the next acquisition clears the quarantine + proceeds.
       try {
         process.kill(-childPid!, 'SIGKILL');
       } catch {
@@ -223,18 +217,13 @@ describe('createDefaultRunWrangler — signal-path kill failure quarantines the 
       await lock.release();
       expect(existsSync(lockMutex)).toBe(false);
     } finally {
-      // Never leak processes, even on assertion failure.
       try {
         parent.kill('SIGKILL');
-      } catch {
-        // already gone
-      }
+      } catch {}
       if (childPid !== undefined) {
         try {
           process.kill(childPid, 'SIGKILL');
-        } catch {
-          // already gone
-        }
+        } catch {}
       }
     }
   }, 30_000);
@@ -251,8 +240,8 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
   });
 
   it('a SECOND concurrently-active wrangler child is rejected PRE-SPAWN (at most one registrant)', async () => {
-    // Calls within a provision are sequential and one provision runs per process, so a
-    // second active child is a caller bug.
+    // Decision: Calls within a provision are sequential and one provision runs per process, so a second
+    // active child is a caller bug.
     const slowChild = join(COORDINATOR_TMP, 'slow-child.cjs');
     writeFileSync(
       slowChild,
@@ -263,7 +252,7 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
       timeoutMs: 30_000,
     });
     const first = runA({ type: 'd1.list' }, { accountId: 'acct' });
-    await new Promise((r) => setTimeout(r, 80)); // A's child is alive and registered
+    await new Promise((r) => setTimeout(r, 80));
     const runB = createDefaultRunWrangler(COORDINATOR_TMP, {
       launcher: [process.execPath, slowChild],
       timeoutMs: 30_000,
@@ -271,7 +260,6 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
     await expect(runB({ type: 'd1.list' }, { accountId: 'acct' })).rejects.toThrow(
       /another one is already active in this process/,
     );
-    // The first runner is unaffected and settles cleanly.
     const result = await first;
     expect(result.status).toBe(0);
     expect(result.signal).toBeNull();
@@ -353,17 +341,15 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
       for (const pid of pids) {
         try {
           process.kill(pid, 'SIGKILL');
-        } catch {
-          // already gone
-        }
+        } catch {}
       }
     }
   }, 20_000);
 
   it('one SIGTERM (+ a repeat mid-teardown) is coalesced: the parent re-raises only after the group is dead', async (ctx) => {
     ctx.skip(process.platform === 'win32', WINDOWS_NO_SIGNALS);
-    // The handler stays installed through the teardown, so a repeated signal cannot take
-    // Node's default action and kill the parent while the child is alive.
+    // Decision: The handler stays installed through the teardown, so a repeated signal can't take Node's
+    // default action and kill the parent while the child is alive.
     const pidFile = join(COORDINATOR_TMP, 'a.pid');
     const childScript = join(COORDINATOR_TMP, 'slow-exit-child.cjs');
     writeFileSync(
@@ -395,19 +381,15 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
       pid = await waitForPid(pidFile, 10_000);
       expect(pid).toBeDefined();
       parent.kill('SIGTERM');
-      // The repeat lands mid-teardown, while the child is still alive.
       setTimeout(() => {
         try {
           parent.kill('SIGTERM');
-        } catch {
-          // parent already gone (that itself would fail the assertions below)
-        }
+        } catch {}
       }, 120);
       const [, signal] = await new Promise<[number | null, NodeJS.Signals | null]>((res) => {
         parent.on('exit', (code, sig) => res([code, sig]));
       });
       expect(signal).toBe('SIGTERM');
-      // The slow child was already dead when the parent exited.
       let alive = true;
       try {
         process.kill(pid!, 0);
@@ -418,15 +400,11 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
     } finally {
       try {
         parent.kill('SIGKILL');
-      } catch {
-        // already gone
-      }
+      } catch {}
       if (pid !== undefined) {
         try {
           process.kill(pid, 'SIGKILL');
-        } catch {
-          // already gone
-        }
+        } catch {}
       }
     }
   }, 20_000);
@@ -452,8 +430,8 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
         `  launcher: [process.execPath, ${JSON.stringify(childScript)}, ${JSON.stringify(pidFile)}],\n` +
         `});\n` +
         `run({ type: 'd1.list' }, { accountId: 'acct' }).catch(() => {});\n` +
-        // A once-listener cannot swallow the later re-raise. The outcome is written
-        // synchronously so the re-raised signal cannot lose it.
+        // Decision: A once-listener can't swallow the later re-raise. The outcome is written synchronously so
+        // the re-raised signal can't lose it.
         `process.once('SIGTERM', () => {\n` +
         `  setTimeout(() => {\n` +
         `    run({ type: 'd1.list' }, { accountId: 'acct' }).then(\n` +
@@ -485,23 +463,19 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
     } finally {
       try {
         parent.kill('SIGKILL');
-      } catch {
-        // already gone
-      }
+      } catch {}
       if (pid !== undefined) {
         try {
           process.kill(pid, 'SIGKILL');
-        } catch {
-          // already gone
-        }
+        } catch {}
       }
     }
   }, 20_000);
 
   it('the coordinator-WIDE deadline bounds an unconfirmable teardown (quarantine + re-raise, never a wedge)', async (ctx) => {
     ctx.skip(process.platform === 'win32', WINDOWS_NO_SIGNALS);
-    // The child never dies and the runner would wait 60s, so only the 800ms teardown
-    // deadline can quarantine it and re-raise.
+    // Decision: The child never dies and the runner would wait 60s, so only the 800ms teardown deadline can
+    // quarantine it and re-raise.
     const pidFile = join(COORDINATOR_TMP, 'd.pid');
     const hangScript = join(COORDINATOR_TMP, 'hang-child.cjs');
     writeFileSync(
@@ -519,7 +493,7 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
         `  launcher: [process.execPath, ${JSON.stringify(hangScript)}, ${JSON.stringify(pidFile)}],\n` +
         `  confirmKillGraceMs: 60_000,\n` +
         `  signalTeardownDeadlineMs: 800,\n` +
-        `  killProcessGroup: () => {},\n` + // claims success, kills nothing
+        `  killProcessGroup: () => {},\n` +
         `});\n` +
         `run({ type: 'd1.list' }, { accountId: 'acct' }).catch(() => {});\n`,
     );
@@ -541,23 +515,18 @@ describe('createDefaultRunWrangler — ONE signal coordinator: repeated signals 
       expect(signal).toBe('SIGTERM');
       expect(elapsed).toBeGreaterThanOrEqual(700);
       expect(elapsed).toBeLessThan(15_000);
-      // The child is still alive, so the teardown ended through the deadline's quarantine.
       expect(() => process.kill(pid!, 0)).not.toThrow();
     } finally {
       try {
         parent.kill('SIGKILL');
-      } catch {
-        // already gone
-      }
+      } catch {}
       if (pid !== undefined) {
         try {
           process.kill(-pid, 'SIGKILL');
         } catch {
           try {
             process.kill(pid, 'SIGKILL');
-          } catch {
-            // already gone
-          }
+          } catch {}
         }
       }
     }
@@ -572,8 +541,8 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
     mkdirSync(POST_SPAWN_TMP, { recursive: true });
   });
   afterEach(async () => {
-    // A test deadline can interrupt the assertion before the runner's deadline.
-    // Wait for actual close before removing a directory a Windows child uses as cwd.
+    // Decision: A test deadline can interrupt the assertion before the runner's deadline. Wait for the
+    // actual close before removing a directory a Windows child uses as cwd.
     for (const child of spawnedChildren) {
       const closed = new Promise<void>((resolve) => child.once('close', () => resolve()));
       child.kill('SIGKILL');
@@ -594,7 +563,7 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
   }
 
   function writeHangScript(path: string): void {
-    // Ignores SIGTERM; only the machine's SIGKILL can end it.
+    // Decision: Ignores SIGTERM; only SIGKILL can end it.
     writeFileSync(
       path,
       `require('fs').writeFileSync(process.argv[2], String(process.pid));\n` +
@@ -613,9 +582,7 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
     } catch {
       try {
         process.kill(pid, 'SIGKILL');
-      } catch {
-        // already gone
-      }
+      } catch {}
     }
     return pid;
   }
@@ -625,8 +592,8 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
     pidFile: string,
     message: string,
   ): void {
-    // A fixed delay can fire before Node loads the child script on a busy runner.
-    // Wait until the child has written its PID so this is truly a post-spawn error.
+    // Decision: A fixed delay can fire before Node loads the child script on a busy runner. Wait until the
+    // child has written its PID so this is a real post-spawn error.
     void (async () => {
       const deadline = Date.now() + 5_000;
       while (!existsSync(pidFile) && Date.now() < deadline) {
@@ -655,8 +622,8 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
   });
 
   it('an early closed stdin rejects a buffered success envelope and confirms child termination', async (ctx) => {
-    // A live Node process on Windows keeps inherited pipe handles after closing fd 0.
-    // The peer-exit and Writable-error tests below cover Windows.
+    // Decision: A live Node process on Windows keeps inherited pipe handles after closing fd 0. The
+    // peer-exit and Writable-error tests below cover Windows.
     ctx.skip(
       process.platform === 'win32',
       'closing a live child stdin descriptor does not close inherited Windows pipe handles',
@@ -705,9 +672,9 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
       `const fs = require('fs');\n` +
         `fs.writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));\n` +
         `fs.writeSync(1, JSON.stringify({ operationResult: 1, data: { id: 'provider-id' } }));\n` +
-        // Exit closes every inherited handle on Windows as well as POSIX. The
-        // oversized unread input is still pending. Node may report a pipe
-        // error or silently destroy stdin; neither can count as success.
+        // Decision: Exit closes each inherited handle on Windows as well as POSIX. The oversized unread input is
+        // still pending. Node may report a pipe error or silently destroy stdin; neither can count as
+        // success.
         `process.exit(0);\n`,
     );
     let observedOutput = '';
@@ -738,15 +705,15 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
       failure = error;
     }
     if (failure !== undefined) {
-      // macOS can return EPERM when signalling an already-exiting process group.
-      // The runner must quarantine that unconfirmed group, never trust its output.
+      // Decision: macOS can return EPERM when signalling an already-exiting process group. The runner has to
+      // quarantine that unconfirmed group and not trust its output.
       expect(failure).toBeInstanceOf(WranglerQuarantineError);
       expect((failure as Error).message).toMatch(
         /post-spawn child error \(.*EPIPE.*\).*failed process-group kill/s,
       );
     } else {
       expect(result!.status).toBe(1);
-      // The stdin error owns termination even if exit 0 is concurrently observed.
+      // Decision: The stdin error owns termination even if exit 0 is observed at the same time.
       expect(result!.signal).toBe('SIGKILL');
       expect(result!.stderr).toMatch(/write EOF|EPIPE|broken pipe|closed stdin before/i);
       expect(result!.stdout).toContain('"operationResult":1');
@@ -769,8 +736,8 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
       launcher: [process.execPath, script],
       onSpawnedChild: (child) => {
         child.stdin!.on('error', () => stdinErrors++);
-        // Node destroys stdin when the child exits. A destroyed Writable need
-        // not emit an error, even when its input was never flushed.
+        // Decision: Node destroys stdin when the child exits. A destroyed Writable need not emit an error, even
+        // when its input was never flushed.
         child.stdin!.destroy();
       },
     });
@@ -827,8 +794,8 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
       timeoutMs: 30_000,
       onSpawnedChild: (child) => {
         child.stdout!.once('data', () => {
-          // Drive Node's real Writable error event after the runner buffered success.
-          // This separately covers the error path regardless of platform pipe behavior.
+          // Decision: Drive Node's real Writable error event after the runner buffered success. This covers the
+          // error path separately from platform pipe behavior.
           child.stdin!.destroy(Object.assign(new Error('write EPIPE'), { code: 'EPIPE' }));
         });
       },
@@ -866,7 +833,6 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
     expect(result.status).toBe(1);
     expect(result.signal).toBe('SIGKILL');
     expect(result.stderr).toContain('injected kill-delivery failure');
-    // The hung child was reaped before the promise settled.
     const pid = Number(readFileSync(pidFile, 'utf-8'));
     let alive = true;
     try {
@@ -874,7 +840,7 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
     } catch {
       alive = false;
     }
-    reapPidFile(pidFile); // never leak on assertion failure
+    reapPidFile(pidFile);
     expect(alive).toBe(false);
   }, 15_000);
 
@@ -902,7 +868,6 @@ describe('createDefaultRunWrangler — post-spawn child `error` events confirm/q
     expect((thrown as Error).message).toMatch(
       /post-spawn child error \(injected post-spawn failure\).*could not be signalled|post-spawn child error \(injected post-spawn failure\).*failed process-group kill/s,
     );
-    // The child is still alive; reap it and confirm it is gone.
     const pid = reapPidFile(pidFile);
     expect(pid).toBeDefined();
     expect(await waitForDead(pid!, 5_000)).toBe(true);

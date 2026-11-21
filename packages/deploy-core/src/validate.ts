@@ -5,18 +5,20 @@ export const MANIFEST_REDIRECT_RULE_STATUSES: ReadonlySet<number> = new Set([
   200, 301, 302, 303, 307, 308,
 ]);
 
-// Each rule compiles a regex per request in dispatch, so cap every list at deploy ingest.
+// Decision: Each rule compiles a regex per request in dispatch, so cap each list at deploy ingest.
 export const MAX_ROUTING_RULES = 2000;
-// Each distinct cron expression becomes one queue message and one Worker call per matching minute.
+// Decision: Each distinct cron expression becomes one queue message and one Worker call per matching
+// minute.
 const MAX_CRON_EXPRESSIONS = 100;
-// The scheduler parses every entry, shared expression or not, on each alarm.
+// Decision: The scheduler parses each entry, shared expression or not, on each alarm.
 const MAX_SCHEDULES = 1000;
 
 const LITERAL_HOSTNAME_REGEX = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 
 type RoutingRuleKind = 'redirectRules' | 'fallbackRules';
 
-// Lowercases `host` in place: dispatch compares the stored form with the lowercase `url.hostname`.
+// Decision: Lowercases `host` in place: dispatch compares the stored form with the lowercase
+// `url.hostname`.
 function validateRuleHost(
   rule: Record<string, unknown>,
   kind: RoutingRuleKind,
@@ -65,7 +67,7 @@ function validateRoutingRules(rules: unknown, kind: RoutingRuleKind): string | n
     if (!rewritesOnly && !MANIFEST_REDIRECT_RULE_STATUSES.has(rule.status)) {
       return `invalid manifest shape: ${kind} entry ${sourceRef} status must be one of ${[...MANIFEST_REDIRECT_RULE_STATUSES].join(', ')} (200 = rewrite, 3xx = redirect)`;
     }
-    // Rewrites (status 200) must stay internal: dispatch merges the request query itself, and
+    // Decision: Rewrites (status 200) have to stay internal: dispatch merges the request query itself, and
     // `//evil.com/x` parses cross-origin. 3xx redirects may carry a query and external Location.
     if (rule.status === 200) {
       const condition = rewritesOnly ? '' : ' when status is 200';
@@ -252,9 +254,9 @@ export function validateManifestShape(manifest: unknown): string | null {
       return 'invalid manifest shape: migrations must be an object';
     }
     const mig = manifest.migrations;
-    // `dialect` and `pending` are read unconditionally by the migration
-    // dispatch path (`manifest.migrations.pending > 0`). A wrong-typed value
-    // would reach the CF migration runner and crash mid-deploy.
+    // Decision: The migration dispatch path reads `dialect` and `pending` unconditionally
+    // (`manifest.migrations.pending > 0`). A wrong-typed value would reach the CF migration runner
+    // and crash mid-deploy.
     if (mig.dialect !== undefined) {
       const allowed = ['sqlite', 'postgresql', 'mysql'];
       if (typeof mig.dialect !== 'string' || !allowed.includes(mig.dialect)) {
@@ -298,9 +300,9 @@ export function validateManifestShape(manifest: unknown): string | null {
   }
 
   if (manifest.assetManifestVersion !== undefined) {
-    // Direct-to-R2 deploys require v2 (declares blake3 + md5 + size per asset).
-    // The handler enforces v2 with its own error message; this shape check
-    // accepts 1 here so the layered error is the one users see.
+    // Decision: Direct-to-R2 deploys require v2 (declares blake3 + md5 + size per asset). The handler
+    // enforces v2 with its own error message; this shape check accepts 1 so the layered error is
+    // the one users see.
     if (manifest.assetManifestVersion !== 1 && manifest.assetManifestVersion !== 2) {
       return 'invalid manifest shape: assetManifestVersion must be 1 or 2';
     }
@@ -315,9 +317,9 @@ export function validateManifestShape(manifest: unknown): string | null {
     }
   }
 
-  // Per-project worker limit overrides (bwf.json `worker.limits`). Shape-only
-  // here; the plan ceiling (`maxCpuMsPerRequest`) is enforced by the deploy
-  // handler once the authenticated user's plan is in scope.
+  // Decision: Per-project worker limit overrides (bwf.json `worker.limits`). Shape-only here; the deploy
+  // handler enforces the plan ceiling (`maxCpuMsPerRequest`) once the authenticated user's plan
+  // is in scope.
   if (manifest.limits !== undefined) {
     if (!isRecord(manifest.limits)) {
       return 'invalid manifest shape: limits must be an object';
@@ -442,7 +444,7 @@ export function validateManifestShape(manifest: unknown): string | null {
   }
 
   if (manifest.sandbox !== undefined) {
-    // Static and SPA deploys create no Worker script, so a sandbox could never be wired.
+    // Decision: Static and SPA deploys create no Worker script, so a sandbox could never be wired.
     if (manifest.type === 'static' || manifest.type === 'spa') {
       return 'sandbox is not supported for static/spa deployments';
     }

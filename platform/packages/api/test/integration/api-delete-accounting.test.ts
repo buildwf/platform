@@ -24,7 +24,7 @@ afterAll(async () => {
   await teardownEnv();
 });
 beforeEach(async () => {
-  // PostgreSQL ownership timestamps are stored without a zone; Workers interpret them in UTC.
+  // Decision: PostgreSQL ownership timestamps are stored without a zone; Workers read them as UTC.
   vi.stubEnv('TZ', 'UTC');
   skipOrphanSweepDelay();
   await clearTables(env.db);
@@ -131,7 +131,7 @@ it.each(['fresh', 'initialized'] as const)(
     const makeCounter = () => {
       const ctx = { storage };
       const counter = new UsageCounter(ctx as never, env as never);
-      // The integration fixture replaces only the Workers base class and storage.
+      // Decision: The integration fixture replaces only the Workers base class and storage.
       Object.assign(counter, { ctx, env });
       return counter;
     };

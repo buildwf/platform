@@ -12,17 +12,15 @@ import type { DeployEvent, DeployManifest } from './types.ts';
 import { listR2Objects, r2WorkerModule, type WorkerModule } from './worker-upload.ts';
 export type { DeploymentInput, DeploymentOperation } from './deployment-operation-types.ts';
 
-// Queue invocations have a 15-minute wall-clock limit. Recovery starts after
-// that invocation is gone, and never repeats its provider writes or SQL.
+// Decision: Queue invocations have a 15-minute wall-clock limit. Recovery starts after that invocation is
+// gone, and doesn't repeat its provider writes or SQL.
 const DEPLOYMENT_INVOCATION_MS = 15 * 60 * 1000;
 export const DEPLOYMENT_EXECUTION_LEASE_MS = 18 * 60 * 1000;
-// Worker uploads of a run (the application, then each custom Durable Object
-// host) end this long before the invocation does. Each host upload also leaves
-// time before then to replay the committed release onto every host the run has
-// moved, so a failed run can undo them. This reserve then covers restoring
-// routing, queues and cron, and an undo slower than the move it reverts. The
-// other 10 minutes cover the 8-minute application upload budget and the steps
-// before it.
+// Decision: Worker uploads of a run (the application, then each custom Durable Object host) end this long
+// before the invocation does. Each host upload also leaves time to replay the committed release onto
+// each host the run moved, so a failed run can undo them. The reserve then covers restoring
+// routing, queues and cron, and an undo slower than the move it reverts. The other 10 minutes cover
+// the 8-minute application upload budget and the steps before it.
 const DEPLOYMENT_COMPENSATION_RESERVE_MS = 5 * 60 * 1000;
 const MAX_PROGRESS_EVENTS = 1000;
 
@@ -33,8 +31,8 @@ export async function installationDeploymentAdmissionClosed(
   if (!installationId) {
     return false;
   }
-  // Lifecycle checkpoints UPDATE this row. The shared lock serializes new
-  // admissions with maintenance/downgrade while admitted jobs keep draining.
+  // Decision: Lifecycle checkpoints UPDATE this row. The shared lock serializes new admissions with
+  // maintenance or downgrade while admitted jobs keep draining.
   const result = await db.execute(sql`SELECT installation_id, lifecycle_manifest
     FROM public.__void_platform_installation WHERE singleton = true FOR SHARE`);
   const row = result.rows[0] as
@@ -67,8 +65,8 @@ export async function getDeploymentOperation(db: DbOrTx, id: string) {
   const [operation] = await db
     .select({
       ...getTableColumns(deploymentOperations),
-      // The stored lease is a timestamp without time zone. Resolve it in the
-      // SQL session's zone so observers receive an unambiguous UTC instant.
+      // Decision: The stored lease is a timestamp without time zone. Resolve it in the SQL session's zone so
+      // observers get an unambiguous UTC instant.
       lease_expires_at: sql<string | null>`to_char(
         ${deploymentOperations.lease_expires_at} AT TIME ZONE current_setting('TimeZone') AT TIME ZONE 'UTC',
         'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`,
@@ -140,7 +138,7 @@ function deploymentInputRecord(
     ...(credentialId ? { credentialId } : {}),
     ...(oauthApproval ? { oauthApproval } : {}),
   };
-  // Module bytes live in R2; the executor reads them from `modules`.
+  // Decision: Module bytes live in R2; the executor reads them from `modules`.
   delete input.body.workerFiles;
   delete input.body.workerInput;
   return input;
@@ -160,9 +158,9 @@ async function writeDeploymentInputReceipt(
   appType: DeployManifest['type'],
   moduleCount: number,
 ): Promise<void> {
-  // Attribute the existing staging write without extra requests. This marks
-  // prepared input, including no-op redeploys and later failures, not a live
-  // publication. Keep the parent prefix unchanged for cleanup and recovery.
+  // Decision: Attribute the existing staging write without extra requests. This marks prepared input (including
+  // no-op redeploys and later failures), not a live publication. Keep the parent prefix unchanged for
+  // cleanup and recovery.
   const kind = appType === 'spa' ? 'spa' : moduleCount > 0 ? 'worker' : 'static';
   await r2.put(`${prefix}receipt-platform-${kind}`, JSON.stringify({ createdAt: Date.now() }));
 }
@@ -177,9 +175,8 @@ export async function prepareDeploymentInput(
   const prefix = deploymentInputPrefix(projectId, crypto.randomUUID());
   const input = deploymentInputRecord(body, options);
   try {
-    // Hash one module at a time so at most one extra copy of module bytes is
-    // alive beside the decoded Blobs; a near-cap request already sits close
-    // to the isolate memory limit.
+    // Decision: Hash one module at a time so at most one extra copy of module bytes lives beside the decoded
+    // Blobs; a near-cap request is already close to the isolate memory limit.
     const modules: DeploymentInput['modules'] = [];
     for (let index = 0; index < files.length; index++) {
       const { name, content } = files[index]!;
@@ -192,12 +189,10 @@ export async function prepareDeploymentInput(
         size: content.size,
       });
     }
-    // The request has not answered yet, so upload the Blobs themselves in
-    // parallel. Workers let at most six R2 calls wait for a response at once
-    // (R2_CONCURRENCY); a larger pool would only queue inside the runtime.
-    // After the first failure no new put starts, and every started put
-    // settles before cleanup so none lands under the prefix after it was
-    // deleted.
+    // Decision: The request hasn't answered yet, so upload the Blobs in parallel. Workers let at most six R2 calls
+    // wait for a response at once (R2_CONCURRENCY); a bigger pool would only queue in the runtime. After
+    // the first failure no new put starts, and each started put settles before cleanup so none lands
+    // under the prefix after it's deleted.
     let next = 0;
     let failed = false;
     const workers = await Promise.allSettled(
@@ -346,8 +341,8 @@ export async function appendDeploymentEvent(
     return;
   }
   const terminal = event.event === 'done' || event.event === 'error';
-  // Heartbeats and excessive intermediate events are omitted. The terminal
-  // result always gets a sequence and is committed with the terminal state.
+  // Decision: Heartbeats and excess intermediate events are left out. The terminal result gets a sequence and
+  // is committed with the terminal state.
   await db.execute(sql`UPDATE deployment_operations SET
     events = events || jsonb_build_array(jsonb_build_object('seq', last_seq + 1, 'event', ${JSON.stringify(event)}::jsonb)),
     last_seq = last_seq + 1,
@@ -445,8 +440,8 @@ export async function dispatchDeploymentOperation(
   if (!env.DEPLOYMENTS_QUEUE) {
     throw new Error('Deployment Queue is unavailable');
   }
-  // Stamp before send: a lost send acknowledgement is harmless; the outbox
-  // sends again and the execution claim rejects duplicate deliveries.
+  // Decision: Stamp before sending: a lost send acknowledgement is harmless, because the outbox sends again and
+  // the execution claim rejects duplicate deliveries.
   await db
     .update(deploymentOperations)
     .set({ next_dispatch_at: sql`now() + interval '2 minutes'` })
@@ -616,11 +611,10 @@ export async function processDeploymentBatch(
         deploymentId: id,
         error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
       });
-      // A returned recovery failure has no deployment execution left to fence:
-      // it only reconciles the abandoned candidate. Match the retry interval
-      // used for an incomplete recovery instead of retaining its hard lifetime.
-      // An interrupted initial execution still needs the full lease because
-      // its provisioning or remotely committed SQL may be unresolved.
+      // Decision: A returned recovery failure has no execution left to fence: it only reconciles the abandoned
+      // candidate, so use the retry interval of an incomplete recovery, not its hard lifetime. An
+      // interrupted first execution still needs the full lease, because its provisioning or remotely
+      // committed SQL may be unresolved.
       if (operation.status === 'recovering') {
         await db
           .update(deploymentOperations)

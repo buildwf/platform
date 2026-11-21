@@ -117,17 +117,16 @@ export function snapshotBindingIdentities(
  * pre-build root.
  */
 export const DEPLOY_PASSTHROUGH_EXCLUDE_FIELDS: ReadonlySet<string> = new Set<string>([
-  // id-pinned by DEPLOY_BINDING_IDENTITY_FIELDS
+  // Decision: Id-pinned by DEPLOY_BINDING_IDENTITY_FIELDS.
   'd1_databases',
   'kv_namespaces',
   'r2_buckets',
   'hyperdrive',
-  // emitted by bwf
   'ai',
   'durable_objects',
   'assets',
   'vars',
-  // bundled content and self-metadata grant no external resource
+  // Decision: Bundled content and self-metadata grant no external resource.
   'data_blobs',
   'text_blobs',
   'wasm_modules',
@@ -206,7 +205,7 @@ export function snapshotPassthroughIdentities(
         entries.set(name, entry);
       }
     } catch {
-      // A malformed field records an EMPTY pin, so any emitted entry in it fails closed below.
+      // Decision: A malformed field records an empty pin, so any emitted entry in it fails closed below.
       entries.clear();
     }
     snapshot.set(field, entries);
@@ -291,9 +290,9 @@ export function reconstructExpectedDurableObjectState(
   bindings: Array<Record<string, unknown>>;
   migrations: Array<Record<string, unknown>>;
 } {
-  // classifyCloudflareDeployApp syncs WebSocket and authored Durable Object
-  // modules into the root config before this snapshot. The build starts with
-  // that same config, then may append its sandbox and live bindings.
+  // Decision: classifyCloudflareDeployApp syncs WebSocket and authored Durable Object modules into the root
+  // config before this snapshot. The build starts with that same config, then may append its sandbox
+  // and live bindings.
   const bindings = bindingEntriesForField('durable_objects', rootConfig.durable_objects).map(
     ({ entry }) => entry,
   );
@@ -524,7 +523,7 @@ export function verifyNoInjectedExternalDurableObject(
       rootByName.set(name, entry);
     }
   } catch {
-    // A malformed root records no pins, so any emitted EXTERNAL DO fails closed below.
+    // Decision: A malformed root records no pins, so any emitted external DO fails closed below.
     rootByName.clear();
   }
   for (const { name, entry } of emittedEntries) {

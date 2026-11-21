@@ -139,9 +139,8 @@ export async function pinActiveWorkerSecrets(options: {
       return false;
     }
   }
-  // The scripts upload API rejects a UUID inheritance source (10057). The
-  // version-aware API accepts one, so leave cf's Build Output untouched and
-  // carry the source only to that uploader.
+  // Decision: The scripts upload API rejects a UUID inheritance source (10057). The version-aware API accepts
+  // one, so leave cf's Build Output untouched and carry the source only to that uploader.
   options.output.activeSecrets = { versionId: activeVersionId, bindings: [...bindings] };
   return true;
 }
@@ -266,13 +265,13 @@ export function createCfCommand(options: {
     if (!options.verifyUploader()) {
       return failed('The Cloudflare uploader changed during deployment.');
     }
-    // Keep credentials in the verified CLI even if cwd resolves another cf.
+    // Decision: Keep credentials in the verified CLI even if cwd resolves another cf.
     const env: NodeJS.ProcessEnv = {
       ...options.env(options.accountId, options.apiBaseUrl),
       CF_DELEGATION: '1',
       CLI_VERSION: getCfCliVersion(),
-      // bwf owns the terminal UI. Keep cf's notices, progress, and telemetry out
-      // of successful deploys; retain its complete output for error diagnosis.
+      // Decision: bwf owns the terminal UI. Keep cf's notices, progress and telemetry out of successful deploys,
+      // and keep its full output for error diagnosis.
       CF_QUIET: '1',
       CF_NO_OSC_PROGRESS: '1',
       CF_SEND_TELEMETRY: 'false',
@@ -334,8 +333,8 @@ export function createCfCommand(options: {
               error = 'Cloudflare command timed out.';
               stop();
             }, run.timeoutMs);
-      // Version lists contain full Worker records. Preserve the previous 256 MiB
-      // limit while letting bwf's spinner animate during the network operation.
+      // Decision: Version lists hold full Worker records. Keep the previous 256 MiB limit while letting bwf's
+      // spinner animate during the network operation.
       const collect = (chunks: Array<Buffer>, chunk: Buffer) => {
         bytes += chunk.length;
         if (bytes > (run.maxOutputBytes ?? 256 * 1024 * 1024)) {
@@ -362,9 +361,9 @@ export function createCfCommand(options: {
         const code = completed
           ? (output + '\n' + diagnostic).match(/\[(?:code:\s*)?(\d{4,})\]/)?.[1]
           : undefined;
-        // The pinned cf uploader replaces its missing-Worker API error with a
-        // local diagnostic and drops code 10007. Decode it at this CLI boundary
-        // so the activation protocol can safely select its first-deploy path.
+        // Decision: The pinned cf uploader replaces its missing-Worker API error with a local diagnostic and drops
+        // code 10007. Decode it at this CLI boundary so the activation protocol can safely pick its
+        // first-deploy path.
         const missingUploadTarget =
           completed &&
           status !== 0 &&
@@ -432,10 +431,10 @@ export function createCfVersionRunner(options: {
         : undefined,
     };
   };
-  // Session bearer read before upload, so a deploy that cannot get one (Global API Key session,
-  // broken helper child) stops while traffic is unchanged. The pinned upload reuses it. The
-  // settings publisher, which runs after traffic moves, reads again so an OAuth token that
-  // expired during the deploy is refreshed, and falls back to this one if that read fails.
+  // Decision: The session bearer is read before upload, so a deploy that can't get one (Global API Key session,
+  // broken helper child) stops while traffic is unchanged. The pinned upload reuses it. The settings
+  // publisher, which runs after traffic moves, reads again so an OAuth token that expired during the
+  // deploy is refreshed, and falls back to this one if that read fails.
   let sessionToken: string | undefined;
   const readSessionToken = async (
     credentials: NonNullable<typeof options.pinnedUpload>,
@@ -684,7 +683,7 @@ export function createCfVersionRunner(options: {
       if (!record(version) || version.id !== operation.versionId) {
         return failed('The Cloudflare Worker version was not readable.');
       }
-      // Cloudflare omits `bindings` for a version that has none.
+      // Decision: Cloudflare omits `bindings` for a version that has none.
       const bindings = version.bindings === undefined ? [] : version.bindings;
       if (!Array.isArray(bindings)) {
         return failed('The Cloudflare Worker version was not readable.');
@@ -717,7 +716,7 @@ export function createCfVersionRunner(options: {
             'versions',
             'create',
             '--prebuilt',
-            // One argv item, so a message that starts with "-" is not read as a flag.
+            // Decision: One argv item, so a message that starts with "-" isn't read as a flag.
             ...(operation.message ? [`--message=${operation.message}`] : []),
             ...(operation.secretsFilePath ? ['--secrets-file', operation.secretsFilePath] : []),
             ...(operation.previewAlias ? ['--preview-alias', operation.previewAlias] : []),
@@ -798,7 +797,7 @@ export function createCfVersionRunner(options: {
           [
             'deploy',
             '--prebuilt',
-            // One argv item, so a message that starts with "-" is not read as a flag.
+            // Decision: One argv item, so a message that starts with "-" isn't read as a flag.
             ...(operation.message ? [`--message=${operation.message}`] : []),
             ...(operation.secretsFilePath ? ['--secrets-file', operation.secretsFilePath] : []),
           ],
@@ -846,9 +845,9 @@ export function createCfVersionRunner(options: {
             ? previous.filter((trigger) => record(trigger) && trigger.type === 'email')
             : []),
         ];
-        // Workflow schedules and settings live on exports, outside `triggers`.
-        // Replay the snapshot even during compensation or removal, when the
-        // candidate's workflow declarations describe the version being left.
+        // Decision: Workflow schedules and settings live on exports, outside `triggers`. Replay the snapshot even
+        // during compensation or removal, when the candidate's workflow declarations describe the version
+        // being left.
         for (const field of ['env', 'exports'] as const) {
           const previous = record(worker[field]) ? worker[field] : {};
           worker[field] = {
@@ -889,9 +888,9 @@ export function createCfVersionRunner(options: {
             return failed('The Cloudflare settings publisher is unavailable.');
           }
           try {
-            // Read again: the bearer read before upload may have expired while traffic moved.
-            // A recovery that replays the previous version's settings when the new version had
-            // none reads it here for the first time.
+            // Decision: Read again: the bearer read before upload may have expired while traffic moved. A recovery that
+            // replays the previous version's settings when the new version had none reads it here for the first
+            // time.
             const credential = await readFreshSessionToken(credentials);
             if (!credential.ok) {
               return credentialFailed(

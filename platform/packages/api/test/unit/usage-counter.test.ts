@@ -5,9 +5,6 @@ vi.mock('../../src/plans.ts', async () => {
   return { resolvePlanLimits: vi.fn(async (_db: unknown, plan: string) => getPlanLimits(plan)) };
 });
 
-// Mock db.ts so we can assert suspendUser / unsuspendUserIfReason calls without
-// touching Postgres. createDb returns a sentinel — the suspend helpers don't
-// inspect it because they're also mocked.
 const dbCalls = {
   suspend: [] as Array<{ id: string; reason: string }>,
   unsuspendIfReason: [] as Array<{ id: string; reason: string }>,
@@ -24,24 +21,19 @@ vi.mock('../../src/db.ts', () => ({
   unsuspendUserIfReason: vi.fn(async (_db: unknown, id: string, reason: string) => {
     dbCalls.unsuspendIfReason.push({ id, reason });
   }),
-  // The DO module also re-exports nothing else from db.ts at module scope,
-  // so a minimal mock is sufficient.
   getUser: vi.fn(async (_db: unknown, id: string) => ({ id, plan: 'pro' })),
   getProject: vi.fn(async (_db: unknown, id: string) => ({ id, user_id: 'u1', slug: id })),
   getProjectsByIds: vi.fn(async (_db: unknown, ids: ReadonlyArray<string>) =>
     ids.map((id) => ({ id, user_id: 'u1', slug: id })),
   ),
   getProjectOwnershipPeriodsByProjectIds: vi.fn(async () => []),
-  // routing.ts (imported transitively via setProjectsRoutingSuspension) reads a
-  // project's active domains here. Default to none so request-suspension tests
-  // that don't seed domains keep their slug-only behaviour.
   getDomainsByProjectIds: vi.fn(async () => new Map()),
 }));
 
 vi.mock('../../src/zero-trust/routing.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/zero-trust/routing.ts')>()),
-  // These counter tests use public projects and a DB sentinel; the integration
-  // routing tests cover authoritative protection reads under the project lock.
+  // Decision: These counter tests use public projects and a DB sentinel. The integration routing tests cover
+  // the authoritative protection reads under the project lock.
   resolveProjectZeroTrustRoutingForPublication: vi.fn(async () => null),
 }));
 
@@ -255,8 +247,6 @@ describe('evaluateSandboxRuntimeLimit', () => {
   });
 });
 
-// --- UsageCounter DO integration tests ---
-
 type KVCall = ['put' | 'delete', string, ...Array<unknown>];
 
 function makeFakeKV() {
@@ -371,7 +361,6 @@ const JWT_SECRET = 'usage-counter-secret';
 function makeCounter(initialState: Partial<CounterState> = {}) {
   const kv = makeFakeKV();
   const storage = makeFakeStorage();
-  // Seed initial state if requested
   if (Object.keys(initialState).length > 0) {
     storage.data.set('state', makeState(initialState));
   }
@@ -382,11 +371,9 @@ function makeCounter(initialState: Partial<CounterState> = {}) {
   };
   const ctx = { storage };
 
-  // Construct directly — we don't call super() because the mocked DurableObject
-  // is a noop base class.
   const counter = new UsageCounter(ctx as never, env as never);
-  // Vitest mock doesn't run super(); manually assign ctx/env which the real
-  // DO base class would normally set.
+  // Decision: The mocked DurableObject doesn't run super(), so ctx and env are assigned by hand as the real
+  // base class would.
   (counter as unknown as { ctx: unknown; env: unknown }).ctx = ctx;
   (counter as unknown as { ctx: unknown; env: unknown }).env = env;
   return { counter, kv, storage, env };
@@ -538,7 +525,6 @@ describe('UsageCounter.handleRecord — sandbox', () => {
 
   it('triggers sandbox suspension when crossing the plan limit', async () => {
     vi.mocked(getUser).mockResolvedValue({ id: 'u1', plan: 'solo' } as never);
-    // solo: sandboxRuntimeSecondsPerMonth = 30 * 3600 = 108_000
     const { counter, kv, storage } = makeCounter({
       plan: 'solo',
       totalSandboxSeconds: 30 * 3600 - 10,
@@ -559,11 +545,9 @@ describe('UsageCounter.handleRecord — sandbox', () => {
     const body = await res.json<{ sandboxRuntimeSuspended: boolean }>();
     expect(body.sandboxRuntimeSuspended).toBe(true);
 
-    // KV: sandbox-block:u1 was written with '1'
     expect(kv.store.get('sandbox-block:u1')).toBe('1');
     expect(kv.calls).toContainEqual(['put', 'sandbox-block:u1', '1']);
 
-    // DB: suspendUser called with REASON_SANDBOX_RUNTIME_EXCEEDED
     expect(dbCalls.suspend).toContainEqual({ id: 'u1', reason: 'sandbox_runtime_exceeded' });
 
     const persisted = storage.data.get('state') as CounterState;
@@ -591,10 +575,9 @@ describe('UsageCounter.handleRecord — sandbox', () => {
     const callsAfterFirst = kv.calls.length;
     const suspendCountAfterFirst = dbCalls.suspend.length;
 
-    // Second over-limit batch
     await counter.fetch(recordRequest(events, 'u1', 'solo'));
-    expect(kv.calls.length).toBe(callsAfterFirst); // no new KV writes
-    expect(dbCalls.suspend.length).toBe(suspendCountAfterFirst); // no new DB call
+    expect(kv.calls.length).toBe(callsAfterFirst);
+    expect(dbCalls.suspend.length).toBe(suspendCountAfterFirst);
   });
 
   it('does not suspend or write KV when below the limit', async () => {
@@ -618,15 +601,12 @@ describe('UsageCounter.handleRecord — sandbox', () => {
 
   it('is retry-safe when the sandbox-block KV write fails (latch not set until the block is written)', async () => {
     vi.mocked(getUser).mockResolvedValue({ id: 'u1', plan: 'solo' } as never);
-    // The sandbox latch is flipped only AFTER the block KV put + DB
-    // suspend succeed. getState() caches and returns the same object on a queue
-    // retry; flipping first then throwing on the put would make the retry skip the
-    // (now-true) branch and persist `sandboxRuntimeSuspended: true` with NO
-    // sandbox-block key written — and there is no `/init` restamp for sandbox, so
-    // the over-budget account would serve sandbox traffic unblocked (fail-open).
+    // Decision: The sandbox latch flips only after the block KV put and DB suspend succeed. getState() returns
+    // the same cached object on a queue retry, so flipping first and then failing the put would skip
+    // the branch on retry. There's no /init restamp for sandbox, so the account would stay unblocked.
     const { counter, kv, storage } = makeCounter({
       plan: 'solo',
-      totalSandboxSeconds: 31 * 3600, // already over solo's 30h
+      totalSandboxSeconds: 31 * 3600,
     });
 
     let failNextPut = true;
@@ -646,12 +626,10 @@ describe('UsageCounter.handleRecord — sandbox', () => {
       requests: 0,
       responseBytes: 0,
     };
-    // First attempt fails mid-suspend; the latch must NOT persist as suspended.
     await expect(counter.fetch(recordRequest([event], 'u1', 'solo'))).rejects.toThrow(
       'transient KV put failure',
     );
 
-    // Retry (put now works) re-enters the sandbox-suspend branch and writes the block.
     const res = await counter.fetch(recordRequest([event], 'u1', 'solo'));
     expect(res.status).toBe(200);
 
@@ -673,8 +651,8 @@ describe('UsageCounter.handleRecord — sandbox', () => {
     });
 
     await counter.fetch(recordRequest([interval(intervalStart, intervalStart + 30_000)], 'u1'));
-    // Same persisted start with a later end models queue publish succeeding
-    // before the lease counter's state write fails and gets retried.
+    // Decision: Same persisted start with a later end models the queue publish succeeding before the lease
+    // counter's state write fails and is retried.
     await counter.fetch(recordRequest([interval(intervalStart, intervalStart + 45_000)], 'u1'));
     await counter.fetch(recordRequest([interval(intervalStart, intervalStart + 30_000)], 'u1'));
 
@@ -725,24 +703,20 @@ describe('UsageCounter.handleRollover — sandbox', () => {
       sandboxRuntimeSuspended: true,
       billingPeriodStart: '2026-01-01T00:00:00Z',
     });
-    // Seed the KV key as if it had been written by the previous period's suspension
     kv.store.set('sandbox-block:u1', '1');
 
     const res = await counter.fetch(rolloverRequest('2026-02-01T00:00:00Z', 'solo', 'u1'));
     const body = await res.json<{ rolled: boolean }>();
     expect(body.rolled).toBe(true);
 
-    // KV deleted
     expect(kv.store.has('sandbox-block:u1')).toBe(false);
     expect(kv.calls).toContainEqual(['delete', 'sandbox-block:u1']);
 
-    // DB unsuspension called
     expect(dbCalls.unsuspendIfReason).toContainEqual({
       id: 'u1',
       reason: 'sandbox_runtime_exceeded',
     });
 
-    // State reset
     const persisted = storage.data.get('state') as CounterState;
     expect(persisted.totalSandboxSeconds).toBe(0);
     expect(persisted.sandboxRuntimeSuspended).toBe(false);
@@ -760,18 +734,16 @@ describe('UsageCounter.handleRollover — sandbox', () => {
 
     await counter.fetch(rolloverRequest('2026-02-01T00:00:00Z', 'free', 'u1'));
 
-    // Without this, the alarm never clears them (it needs aiSuspended still true,
-    // and returns early for unlimited-AI plans), so the proxy keeps 429ing AI.
+    // Decision: The rollover has to delete these keys itself: the alarm needs aiSuspended still true and returns
+    // early for unlimited-AI plans, so it wouldn't clear them and the proxy would keep returning 429.
     expect(kv.store.has('ai-block:p1')).toBe(false);
     expect(kv.store.has('ai-block:p2')).toBe(false);
   });
 
   it('is retry-safe when an ai-block delete fails mid-rollover (no short-circuit, no stranded keys)', async () => {
-    // The rollover runs all external cleanup BEFORE mutating the cached
-    // state. getState() caches and returns the same object on a retry, and the
-    // rollover guard keys on billingPeriodStart — so mutating it before a throwing
-    // delete would make the retry short-circuit as `rolled: false` and strand the
-    // remaining ai-block keys.
+    // Decision: The rollover runs all external cleanup before changing the cached state. getState() returns the
+    // same object on retry and the rollover guard keys on billingPeriodStart, so changing it before a
+    // throwing delete would make the retry return `rolled: false` and strand ai-block keys.
     const { counter, kv, storage } = makeCounter({
       plan: 'free',
       aiSuspended: true,
@@ -791,7 +763,6 @@ describe('UsageCounter.handleRollover — sandbox', () => {
       return realDelete(key);
     };
 
-    // First attempt fails mid-cleanup; billingPeriodStart must NOT be persisted.
     await expect(
       counter.fetch(rolloverRequest('2026-02-01T00:00:00Z', 'free', 'u1')),
     ).rejects.toThrow('transient KV delete failure');
@@ -799,7 +770,6 @@ describe('UsageCounter.handleRollover — sandbox', () => {
       '2026-01-01T00:00:00Z',
     );
 
-    // Retry re-enters the rollover (guard still sees the old period) and finishes.
     const res = await counter.fetch(rolloverRequest('2026-02-01T00:00:00Z', 'free', 'u1'));
     const body = await res.json<{ rolled: boolean }>();
     expect(body.rolled).toBe(true);
@@ -820,7 +790,6 @@ describe('UsageCounter.handleRollover — sandbox', () => {
     const res = await counter.fetch(rolloverRequest('2026-02-01T00:00:00Z', 'solo', 'u1'));
     expect(res.status).toBe(200);
 
-    // No KV delete and no DB unsuspend
     expect(
       kv.calls.find(([op, key]) => op === 'delete' && key === 'sandbox-block:u1'),
     ).toBeUndefined();
@@ -839,7 +808,7 @@ describe('UsageCounter.handleRollover — sandbox', () => {
     const res = await counter.fetch(rolloverRequest('2026-01-01T00:00:00Z', 'solo', 'u1'));
     const body = await res.json<{ rolled: boolean }>();
     expect(body.rolled).toBe(false);
-    expect(kv.store.has('sandbox-block:u1')).toBe(true); // untouched
+    expect(kv.store.has('sandbox-block:u1')).toBe(true);
     expect(dbCalls.unsuspendIfReason).toEqual([]);
   });
 });
@@ -874,10 +843,9 @@ describe('UsageCounter.handleReevaluateSandbox', () => {
   });
 
   it('is retry-safe when an ai-block delete fails mid-cleanup (latch stays set until all keys gone)', async () => {
-    // The cleanup deletes the ai-block keys BEFORE flipping the cached
-    // `aiSuspended` latch. getState() caches and returns the same object on the
-    // retry, so flipping first then throwing mid-delete would make the retry skip
-    // the (now-false) branch and persist `aiSuspended: false` with keys stranded.
+    // Decision: The cleanup deletes ai-block keys before flipping the cached aiSuspended latch. getState()
+    // returns the same object on retry, so flipping first and then failing a delete would skip the
+    // branch on retry and strand the keys.
     const { counter, kv, storage } = makeCounter({
       plan: 'free',
       aiSuspended: true,
@@ -886,7 +854,6 @@ describe('UsageCounter.handleReevaluateSandbox', () => {
     kv.store.set('ai-block:p1', '1');
     kv.store.set('ai-block:p2', '1');
 
-    // First delete throws (transient KV failure), then deletes work normally.
     let failNextDelete = true;
     const realDelete = kv.delete;
     kv.delete = async (key: string) => {
@@ -897,12 +864,10 @@ describe('UsageCounter.handleReevaluateSandbox', () => {
       return realDelete(key);
     };
 
-    // First attempt fails mid-cleanup; the latch must NOT be persisted false.
     await expect(counter.fetch(reevaluateRequest('sponsored'))).rejects.toThrow(
       'transient KV delete failure',
     );
 
-    // Retry (deletes now succeed) re-enters the branch and finishes the cleanup.
     const res = await counter.fetch(reevaluateRequest('sponsored'));
     expect(res.status).toBe(200);
 
@@ -913,8 +878,8 @@ describe('UsageCounter.handleReevaluateSandbox', () => {
   });
 
   it('also clears the requestsSuspended latch (plan change optimistically lifts BOTH usage latches)', async () => {
-    // A capped user request-suspended last period, upgraded via the admin plan
-    // change. The latch must drop too, or the next `/init` re-stamps the routes.
+    // Decision: After an admin plan upgrade the request-suspension latch has to drop too, or the next /init
+    // stamps the routes again.
     const { counter, storage } = makeCounter({
       plan: 'solo',
       requestsSuspended: true,
@@ -929,7 +894,6 @@ describe('UsageCounter.handleReevaluateSandbox', () => {
   });
 
   it('clears sandboxRuntimeSuspended and updates plan when upgrade lifts the limit', async () => {
-    // Was suspended on solo (30h). Upgrade to pro (200h). totalSandboxSeconds is below pro's limit.
     const { counter, storage } = makeCounter({
       plan: 'solo',
       totalSandboxSeconds: 30 * 3600,
@@ -961,9 +925,8 @@ describe('UsageCounter.handleReevaluateSandbox', () => {
 
   it('still clears the in-memory flag when usage exceeds the new plan (next handleRecord re-suspends)', async () => {
     vi.mocked(getUser).mockResolvedValue({ id: 'u1', plan: 'solo' } as never);
-    // On pro (200h), suspended. Downgrade to solo (30h) while usage is between the two.
-    // The DO clears the flag optimistically; the next handleRecord re-evaluates and re-suspends
-    // (writing KV + DB).
+    // Decision: The DO clears the flag optimistically on a downgrade; the next handleRecord re-evaluates and
+    // suspends again (writing KV and DB).
     const { counter, storage, kv } = makeCounter({
       plan: 'pro',
       totalSandboxSeconds: 100 * 3600,
@@ -975,8 +938,6 @@ describe('UsageCounter.handleReevaluateSandbox', () => {
     expect(persisted.plan).toBe('solo');
     expect(persisted.sandboxRuntimeSuspended).toBe(false);
 
-    // Now simulate the next batch — even a zero-second event triggers re-evaluation
-    // because totalSandboxSeconds (100h) > solo limit (30h).
     const events: Array<UsageEvent> = [
       { projectId: 'p1', userId: 'u1', slug: 's1', requests: 0, responseBytes: 0 },
     ];
@@ -1004,9 +965,8 @@ describe('UsageCounter.handleClearSuspension', () => {
     const persisted = storage.data.get('state') as CounterState;
     expect(persisted.requestsSuspended).toBe(false);
     expect(persisted.sandboxRuntimeSuspended).toBe(false);
-    // AI self-heals via the alarm when usage drops; the admin unsuspend does not touch it.
+    // Decision: AI recovers by itself through the alarm when usage drops; the admin unsuspend doesn't touch it.
     expect(persisted.aiSuspended).toBe(true);
-    // Counters are untouched — this is a latch reset, not a billing rollover.
     expect(persisted.totalRequests).toBe(999);
   });
 });
@@ -1020,9 +980,7 @@ describe('UsageCounter.handleRecord — request suspension fans out to custom do
 
   it('stamps suspended on the slug AND active domain routes when crossing the request cap', async () => {
     vi.mocked(getUser).mockResolvedValue({ id: 'u1', plan: 'free' } as never);
-    // free.requestsPerMonth = 3_000_000
     const { counter, kv } = makeCounter({ plan: 'free', totalRequests: 3_000_000 });
-    // Seed the routes a deploy publisher would have written for this project.
     kv.store.set('s1', JSON.stringify({ workerName: 'w', projectId: 'p1' }));
     kv.store.set('domain:custom.com', JSON.stringify({ workerName: 'w', projectId: 'p1' }));
 
@@ -1054,8 +1012,8 @@ describe('UsageCounter.handleRecord — request suspension fans out to custom do
       if (key === 's1' && JSON.parse(value).suspended === 'requests_exceeded') {
         suspensionWrites += 1;
         if (suspensionWrites === 1) {
-          // A transfer republish read the old user row and landed after the
-          // edge-first stamp but before suspendUser settled.
+          // Decision: Models a transfer republish that read the old user row and landed after the edge-first stamp
+          // but before suspendUser settled.
           kv.store.set('s1', JSON.stringify(route));
         }
       }
@@ -1075,7 +1033,6 @@ describe('UsageCounter.handleRecord — request suspension fans out to custom do
 
   it('does NOT downgrade an existing admin suspension on the route when crossing the request cap', async () => {
     const { counter, kv } = makeCounter({ plan: 'free', totalRequests: 3_000_000 });
-    // An admin already suspended this user — the route carries `admin_suspended`.
     kv.store.set(
       's1',
       JSON.stringify({ workerName: 'w', projectId: 'p1', suspended: 'admin_suspended' }),
@@ -1086,8 +1043,8 @@ describe('UsageCounter.handleRecord — request suspension fans out to custom do
     ];
     await counter.fetch(recordRequest(events, 'u1', 'free'));
 
-    // The admin reason outranks the usage reason — the usage suspend must not
-    // overwrite it, or the next admin unsuspend would silently un-block.
+    // Decision: The admin reason outranks the usage reason. If the usage suspend overwrote it, the next admin
+    // unsuspend would quietly unblock the user.
     expect(JSON.parse(kv.store.get('s1')!).suspended).toBe('admin_suspended');
   });
 
@@ -1285,8 +1242,8 @@ describe('UsageCounter ownership changes', () => {
           slug: 'next-app',
           billingPeriodStart: '2026-01-01T00:00:00Z',
           ownershipStartedAt: startedAt,
-          // Simulate the transfer caller's pre-plan-change snapshot. The DO
-          // must use PostgreSQL's current `pro` plan from the getUser mock.
+          // Decision: Models the transfer caller's snapshot from before the plan change; the DO has to use the current
+          // `pro` plan from PostgreSQL (the getUser mock).
           plan: 'free',
         }),
       }),
@@ -1728,7 +1685,6 @@ describe('UsageCounter ownership changes', () => {
     expect(await storage.getAlarm()).toEqual(expect.any(Number));
     const restarted = new UsageCounter({ storage } as never, env as never);
     Object.assign(restarted, { ctx: { storage }, env });
-    // Exhaust the native retry count: the durable schedule must still survive.
     for (let attempt = 0; attempt < 7; attempt++) {
       await storage.setAlarm(0);
       await expect(restarted.alarm()).rejects.toThrow('analytics unavailable');
@@ -2047,7 +2003,6 @@ describe('UsageCounter ownership changes', () => {
 });
 
 describe('UsageCounter operation ordering and persistence', () => {
-  // Free sandbox use already at its monthly limit, so the next recorded second suspends.
   const freeSandboxLimit = getPlanLimits('free').sandboxRuntimeSecondsPerMonth;
 
   beforeEach(() => {
@@ -2147,7 +2102,7 @@ describe('UsageCounter operation ordering and persistence', () => {
     const read = counter.fetch(new Request('https://do/state')).then(() => {
       stateRead = true;
     });
-    // Let a prematurely rejected Promise.all and its queued read settle.
+    // Decision: Lets a rejected Promise.all and its queued read settle before the assertions.
     for (let i = 0; i < 20; i++) {
       await Promise.resolve();
     }
@@ -2313,8 +2268,8 @@ describe('UsageCounter durable sandbox receipts', () => {
     const event = sandboxInterval(from, from + 10_000);
     await counter.fetch(recordRequest([event], 'u1'));
     const originalKey = Array.from(storedWatermarks(storage).keys())[0]!;
-    // Seed the same durable record shape at scale; avoid 10,000 simulated
-    // network requests merely to establish the old eviction threshold.
+    // Decision: Seeds the durable record shape directly, so the test doesn't need 10,000 simulated requests to
+    // reach the old eviction threshold.
     for (let i = 0; i < 10_000; i++) {
       storage.data.set(`${prefix}${i.toString(16).padStart(64, '0')}`, now);
     }
@@ -2372,7 +2327,6 @@ describe('UsageCounter durable sandbox receipts', () => {
       plan: 'sponsored',
       billingPeriodStart: new Date(from - 60_000).toISOString(),
     });
-    // Bill a generation while its initial interval is still inside retention.
     vi.setSystemTime(from + 30_000);
     const old = sandboxInterval(from, from + 20_000);
     await counter.fetch(recordRequest([old], 'u1'));
@@ -2383,8 +2337,6 @@ describe('UsageCounter durable sandbox receipts', () => {
     expect(storedWatermarks(storage).size).toBe(0);
     await counter.fetch(recordRequest([old], 'u1'));
     expect((storage.data.get('state') as CounterState).totalSandboxSeconds).toBe(20);
-    // A fresh cumulative frame can span an expired prefix after a delivery
-    // outage; only its retained suffix is eligible after that receipt is gone.
     await counter.fetch(recordRequest([sandboxInterval(from, now)], 'u1'));
     expect((storage.data.get('state') as CounterState).totalSandboxSeconds).toBe(
       20 + SANDBOX_USAGE_RETENTION_MS / 1000,

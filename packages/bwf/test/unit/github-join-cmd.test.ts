@@ -5,7 +5,6 @@ import { runGithubJoin } from '../../src/cli/github-cmd.ts';
 import * as output from '../../src/cli/output.ts';
 import { browserCallback, throwOnProcessExit } from '../helpers/github-cli.ts';
 
-// Keep openBrowser from launching a real browser.
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
 
 type FakeClient = Pick<PlatformClient, 'getGithubJoinUrl' | 'completeGithubJoin'>;
@@ -21,7 +20,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Runs runGithubJoin and sends the callback redirect that `callbackQuery` builds. */
 function drive(opts: {
   completeGithubJoin: FakeClient['completeGithubJoin'];
   callbackQuery: (callbackUrl: URL) => URL;
@@ -43,7 +41,7 @@ describe('runGithubJoin', () => {
     await drive({
       completeGithubJoin,
       callbackQuery: (cb) => {
-        const hit = new URL(cb); // already carries the command's state
+        const hit = new URL(cb);
         hit.searchParams.set('join_code', 'jc-123');
         return hit;
       },
@@ -109,7 +107,6 @@ describe('runGithubJoin', () => {
     await expect(
       drive({
         completeGithubJoin,
-        // valid state, but no join_code in the query
         callbackQuery: (cb) => new URL(cb),
       }),
     ).rejects.toThrow('did not return a join code');
@@ -119,9 +116,9 @@ describe('runGithubJoin', () => {
 
   it('exits(1) with a friendly message when org sharing is not configured (503)', async () => {
     const errorSpy = vi.spyOn(log, 'error').mockImplementation(() => {});
-    // getGithubJoinUrl (buildAuthUrl) rejects fail-closed; awaitBrowserCallback
-    // tears down the localhost server and rejects WITHOUT firing a callback, so
-    // no simulated browser redirect is needed here.
+    // Decision: getGithubJoinUrl (buildAuthUrl) rejects fail-closed; awaitBrowserCallback tears down the
+    // localhost server and rejects without firing a callback, so no simulated browser redirect is
+    // needed here.
     const getGithubJoinUrl = vi.fn(async () => {
       throw new PlatformApiError(
         'Failed to start GitHub join',

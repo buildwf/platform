@@ -48,7 +48,6 @@ let errorSpy: ReturnType<typeof vi.spyOn>;
 const originalIsTTY = process.stdin.isTTY;
 
 beforeEach(() => {
-  // Force the non-interactive (non-TTY) path so tests never hit clack prompts.
   (process.stdin as { isTTY?: boolean }).isTTY = false;
   exitSpy = throwOnProcessExit();
   successSpy = vi.spyOn(output, 'printSuccess').mockImplementation(() => {});
@@ -203,8 +202,8 @@ describe('runGithubUpdate (non-TTY)', () => {
     expect(errorSpy).toHaveBeenCalledWith(
       'update: Nothing to update. Pass --branch <name>, --executor <container|github_actions>, and/or --workflow <.github/workflows/...>.',
     );
-    // The missing-flags guard must run BEFORE project resolution / connection
-    // reads, so this usage error never depends on API state.
+    // Decision: The missing-flags guard runs before project resolution and connection reads, so this usage
+    // error doesn't depend on API state.
     expect(listProjects).not.toHaveBeenCalled();
     expect(getGithubConnection).not.toHaveBeenCalled();
     expect(updateGithubConnection).not.toHaveBeenCalled();

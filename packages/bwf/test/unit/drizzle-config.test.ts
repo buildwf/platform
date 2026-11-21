@@ -192,7 +192,7 @@ describe('withPrivateDrizzleConfig', () => {
 const packageRoot = fileURLToPath(new URL('../..', import.meta.url));
 const drizzleKitBin = join(fileURLToPath(import.meta.resolve('drizzle-kit')), '..', 'bin.cjs');
 
-// Real drizzle-kit processes; Windows CI can take over five seconds for one.
+// Decision: Real drizzle-kit processes; Windows CI can take over five seconds for one.
 describe(
   'drizzle-kit generate with database.casing',
   {
@@ -202,7 +202,7 @@ describe(
     let root: string;
 
     beforeEach(() => {
-      // drizzle-kit loads the schema, which must resolve drizzle-orm from the package.
+      // Decision: drizzle-kit loads the schema, which has to resolve drizzle-orm from the package.
       root = mkdtempSync(join(packageRoot, '.tmp-drizzle-casing-'));
       mkdirSync(join(root, 'db'));
     });
@@ -277,7 +277,7 @@ describe(
       expect(migrations[0].sql).toContain('`created_at` integer NOT NULL');
       expect(migrations[0].sql).toContain('`emailVerified` integer');
       expect(migrations[0].sql).not.toContain('email_verified');
-      // The deploy gate compares the SQL with the tables Better Auth reads and writes.
+      // Decision: The deploy gate compares the SQL with the tables Better Auth reads and writes.
       await expect(validateAuthMigrationSchema(root, migrations)).resolves.toBeUndefined();
     });
   },

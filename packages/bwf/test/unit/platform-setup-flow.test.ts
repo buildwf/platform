@@ -63,7 +63,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('@voidzero-dev/vite-plus-prompts', async (original) => ({
   ...(await original<typeof import('@voidzero-dev/vite-plus-prompts')>()),
-  // These fixtures retain GitHub-only setup; Access choices have their own matrix.
+  // Decision: These fixtures keep GitHub-only setup; the Access choices have their own matrix.
   confirm: (input: { message: string }) =>
     input.message === 'Also protect the platform UI and APIs with Cloudflare Access?'
       ? Promise.resolve(false)
@@ -756,7 +756,7 @@ describe('platform credential onboarding', () => {
         ...readPendingInstallationSecrets(manifest),
         managementApiToken: 'saved-management-secret',
       });
-      // An explicit runtime token would replace the saved one.
+      // Decision: An explicit runtime token would replace the saved one.
       const { PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN: _runtime, ...resumeEnvironment } = environment;
       for (const [key, value] of Object.entries(resumeEnvironment)) {
         vi.stubEnv(key, value);
@@ -1222,7 +1222,7 @@ describe('platform credential onboarding', () => {
     expect(info).toHaveBeenCalledWith(
       'API URL: https://platform-test-setup-api.account.workers.dev',
     );
-    // Spinner cancellation must not swallow the CLI's cancellation signal.
+    // Decision: Spinner cancellation mustn't swallow the CLI's cancellation signal.
     const emit = vi.spyOn(process, 'emit').mockReturnValueOnce(true);
     mocks.spinner.mock.calls[0]![0].onCancel();
     expect(emit).toHaveBeenCalledWith('SIGINT');
@@ -1268,7 +1268,6 @@ describe('platform credential onboarding', () => {
     const manifest = listInstallationManifests()[0]!;
     const saved = readPendingInstallationSecrets(manifest)!.databaseUrl;
 
-    // A resume reuses the saved URL without asking for it again.
     info.mockClear();
     mocks.password.mockClear();
     mocks.database.mockRejectedValueOnce(
@@ -1318,7 +1317,7 @@ describe('platform credential onboarding', () => {
     const info = vi.spyOn(log, 'info').mockImplementation(() => {});
     mocks.install.mockImplementationOnce(async (_plan, secrets, manifest, dependencies) => {
       await dependencies.claimDatabase?.(secrets.databaseUrl, manifest.id, manifest.ownershipNonce);
-      // Later checkpoints save the values without the claim state.
+      // Decision: Later checkpoints save the values without the claim state.
       writePendingInstallationSecrets(manifest, { databaseUrl: secrets.databaseUrl });
       throw new Error('App access token rejected');
     });
@@ -1475,7 +1474,7 @@ describe('platform credential onboarding', () => {
         githubClientId: environment.PLATFORM_GITHUB_CLIENT_ID,
         r2SecretAccessKey: environment.PLATFORM_R2_SECRET_ACCESS_KEY,
       });
-      // Only the token is an update; the other values are not replacements.
+      // Decision: Only the token is an update; the other values aren't replacements.
       expect(mocks.install.mock.calls[0]![1].workerSecretUpdates).toEqual({
         CF_API_TOKEN: replacement,
       });
@@ -1495,7 +1494,7 @@ describe('platform credential onboarding', () => {
 
     it('sends no update when no token was saved to compare with', async () => {
       const manifest = await interruptedInstall();
-      // Another machine: the pending file holds no runtime token.
+      // Decision: Another machine: the pending file holds no runtime token.
       const { cloudflareApiToken: _saved, ...pending } = readPendingInstallationSecrets(manifest)!;
       writePendingInstallationSecrets(manifest, pending);
       stubEnvironment(replacement);
@@ -1513,7 +1512,6 @@ describe('platform credential onboarding', () => {
         schema: 1,
         updates: { CF_API_TOKEN: replacement },
       };
-      // The installer saved the replacement and its update before it stopped.
       writePendingInstallationSecrets(manifest, {
         ...readPendingInstallationSecrets(manifest),
         cloudflareApiToken: replacement,
@@ -2125,7 +2123,6 @@ describe('platform credential onboarding', () => {
     const initialApi = mocks.plan.mock.results[0]!.value;
     mocks.password.mockImplementation(normalPassword);
     mocks.open.mockClear();
-    // A bare invocation resumes only after selecting the named saved setup.
     await runPlatformLifecycleCommand(parsePlatformArgs(['install']));
     const final = listInstallationManifests()[0]!;
     expect(final.deployment.resources).toEqual(first.deployment.resources);
@@ -2230,7 +2227,7 @@ describe('platform credential onboarding', () => {
     const source = vi
       .spyOn(PlatformCloudflareClient.prototype, 'getWorkerLastDeployedFrom')
       .mockResolvedValue('api');
-    // The deploy needs one active version, so the check reads the deployments.
+    // Decision: The deploy needs one active version, so the check reads the deployments.
     const request = vi
       .spyOn(PlatformCloudflareClient.prototype, 'request')
       .mockImplementation(async (path: string) => {
@@ -2307,8 +2304,8 @@ describe('platform credential onboarding', () => {
     });
     mocks.progress.pause.mockImplementation(() => events.push('progress-pause'));
     mocks.progress.resume.mockImplementation(() => events.push('progress-resume'));
-    // Like the installer: it creates a resource, uploads the Workers changed
-    // outside bwf with the configs that the run deploys, then pauses traffic.
+    // Decision: Like the installer: it creates a resource, uploads the Workers changed outside bwf with the
+    // configs that the run deploys, then pauses traffic.
     mocks.install.mockImplementation(async (_plan, _secrets, existing, dependencies) => {
       events.push('installer-start', 'create:isr-cache-kv');
       await dependencies.uploadOutsideChanges([
@@ -2370,8 +2367,8 @@ describe('platform credential onboarding', () => {
     withApiWorker('update');
     const apiWorker = manifest.deployment.resources.apiWorker;
     const version = '11111111-1111-4111-8111-111111111111';
-    // An earlier run stopped after the Cloudflare CLI replaced the change, so
-    // the marker shows the Cloudflare CLI. The active version has no bwf record.
+    // Decision: An earlier run stopped after the Cloudflare CLI replaced the change, so the marker shows the
+    // Cloudflare CLI. The active version has no bwf record.
     vi.spyOn(PlatformCloudflareClient.prototype, 'getWorkerLastDeployedFrom').mockResolvedValue(
       'cf_cli',
     );
@@ -2439,9 +2436,8 @@ describe('platform credential onboarding', () => {
       queueConsumers: [],
       workflows: [],
     };
-    // An earlier run agreed to replace a change made outside bwf, made
-    // bwf's version active and stopped before the cutover finished. The
-    // installer first restores the earlier version.
+    // Decision: An earlier run agreed to replace a change made outside bwf, made bwf's version active and
+    // stopped before the cutover finished. The installer first restores the earlier version.
     writeInstallationManifest(
       recordWorkerCutoverStage(
         manifest,

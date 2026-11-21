@@ -66,7 +66,7 @@ function printRequest(entry: RequestEntry): void {
   console.log(`${dim(time)} ${method} ${coloredStatus} ${dim(entry.type)} ${duration}`.trimEnd());
 }
 
-// Analytics Engine returns `YYYY-MM-DD HH:MM:SS` in UTC (no zone); parse as UTC
+// Decision: Analytics Engine returns `YYYY-MM-DD HH:MM:SS` in UTC (no zone); parse as UTC
 // and render in the local timezone, matching `project logs`.
 function formatTime(ts: string): string {
   const d = new Date(`${ts.replace(' ', 'T')}Z`);

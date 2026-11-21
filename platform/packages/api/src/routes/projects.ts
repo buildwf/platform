@@ -74,9 +74,8 @@ import { reconcileManagedDurableObjects } from '../provisioning/durable-objects.
 import {
   addDestination,
   listDestinations,
-  // This module has its own `isAlreadyExistsError` for CF resource
-  // provisioning (see the bottom of this file); alias the Email Routing one
-  // rather than shadowing it — they match different CF error wordings.
+  // Decision: This file has its own `isAlreadyExistsError` for CF resource provisioning. Alias the Email
+  // Routing one instead of shadowing it: they match different CF error wordings.
   isAlreadyExistsError as isDestinationAlreadyExistsError,
 } from '../provisioning/email-routing.ts';
 import { isManagedSandbox, verifySandboxController } from '../provisioning/sandbox-controller.ts';
@@ -108,26 +107,16 @@ const DESTRUCTIVE_PATTERNS = [
   /\bDROP\s+INDEX\b/i,
   /\bDROP\s+TRIGGER\b/i,
   /\bDROP\s+COLUMN\b/i,
-  // Match all three destructive RENAME forms SQLite accepts: `RENAME TO …`
-  // (table rename), `RENAME COLUMN …` (column rename), and the legacy
-  // naked-column form `RENAME <old_col> TO <new_col>` (no `COLUMN` keyword).
-  // The `[^;\s]+\s+TO\b` branch covers the legacy form — any non-whitespace
-  // non-semicolon token stands in for the old column name; because the
-  // tokenizer replaces quoted identifiers with `"_"` / `` `_` `` / `[_]`,
-  // quoted forms match the same pattern. `[^;]` on both lookaheads guards
-  // against crossing a statement boundary. The legacy form is rare in
-  // drizzle/modern SQL but still accepted by the engine, so skipping it
-  // leaves a bypass. False positives on benign additive migrations like
-  // `ALTER TABLE x ADD COLUMN rename TEXT` are avoided because the legacy
-  // branch requires a following `TO` keyword — a trailing column-type
-  // token never matches.
+  // Decision: Match all three destructive RENAME forms SQLite accepts: `RENAME TO`, `RENAME COLUMN`, and the
+  // legacy `RENAME <old_col> TO <new_col>`. The legacy form is rare but the engine accepts it, so
+  // skipping it leaves a bypass. Quoted identifiers are already replaced by placeholders, so they
+  // match too. `[^;]` keeps the match inside one statement. Requiring a following `TO` avoids false
+  // positives like `ADD COLUMN rename TEXT`.
   /\bALTER\s+TABLE\b[^;]*?\bRENAME\s+(?:TO\b|COLUMN\b|[^;\s]+\s+TO\b)/i,
   /\bTRUNCATE\b/i,
-  // Destructive DML forms requiring the same pragma opt-in as DDL:
-  // `INSERT OR REPLACE INTO …` silently deletes any row whose primary key
-  // collides with the insert, dressed up as an insert. Unbounded DELETE and
-  // UPDATE checks are statement-aware below so a later statement or nested
-  // subquery WHERE cannot mask an unbounded write.
+  // Decision: Destructive DML needs the same pragma as DDL: `INSERT OR REPLACE` silently deletes rows whose
+  // primary key collides. Unbounded DELETE and UPDATE are checked per statement below, so a later
+  // statement or a subquery WHERE can't hide an unbounded write.
   /\bINSERT\s+OR\s+REPLACE\b/i,
 ];
 
@@ -188,9 +177,7 @@ async function getProjectAccessErrorBody(
             : fallback.message,
       };
     }
-  } catch {
-    // Preserve the established fallback if a future access response is not JSON.
-  }
+  } catch {}
   return fallback;
 }
 
@@ -234,7 +221,6 @@ async function resolveRollbackProxyToken(
       `rollback: could not read __PLATFORM_PROXY_TOKEN from worker "${workerName}": ${lookup.error.message}`,
     );
   }
-  // lookup.kind === 'missing' — legacy worker.
   console.warn(
     `[rollback] worker "${workerName}" has no __PLATFORM_PROXY_TOKEN binding; falling back to current-secret derivation. If JWT_SECRET has rotated since this deployment was live, you must redeploy the project instead.`,
   );
@@ -303,11 +289,8 @@ function stripSqlStringsAndComments(sql: string): {
         code += sql.slice(seg.start, seg.end);
         break;
       case 'line-comment': {
-        // Walk backwards from the `--` to the previous newline (or start of
-        // input). The comment is "standalone" iff every character in that
-        // raw-source prefix is whitespace — anything else (a SQL token, the
-        // closing `*/` of a block comment, a string literal, etc.) means the
-        // pragma is sharing its line with content and must not authorize.
+        // Decision: The comment is standalone only if everything before `--` on its raw line is whitespace. Anything
+        // else (a SQL token, a closing `*/`, a string) shares the line, and the pragma mustn't authorize.
         let standalone = true;
         for (let k = seg.start - 1; k >= 0; k--) {
           const ch = sql[k];
@@ -319,39 +302,23 @@ function stripSqlStringsAndComments(sql: string): {
             break;
           }
         }
-        // Capture the line comment text without the trailing newline so
-        // callers can compare exact directive forms.
         lineComments.push({ text: sql.slice(seg.start, seg.end), standalone });
         break;
       }
       case 'block-comment':
-        // Replace the block comment with a single space so token boundaries
-        // are preserved — `DROP/**/TABLE` must NOT collapse to `DROPTABLE`,
-        // which would slip past the destructive regex entirely. The space
-        // is sufficient because every destructive pattern requires `\b` /
-        // `\s+` between keywords.
+        // Decision: Replace a block comment with one space so `DROP/**/TABLE` doesn't collapse to `DROPTABLE` and
+        // slip past the destructive regex. One space is enough because each pattern needs `\b` or `\s+`
+        // between keywords.
         code += ' ';
         break;
       case 'string':
         code += "''";
         break;
       case 'ident-quote': {
-        // Replace the quoted identifier body with a neutral placeholder `_`
-        // rather than copying the raw slice. Two bypasses hinge on this:
-        //
-        //   1. A semicolon inside an identifier — `ALTER TABLE "user;data"
-        //      RENAME TO x` — would survive into the code stream and
-        //      truncate the `[^;]*?` lookahead in the destructive ALTER
-        //      RENAME regex, stopping the match at the `;` before `RENAME`
-        //      and letting the destructive DDL through unauthorized.
-        //   2. A destructive keyword inside an identifier — `CREATE TABLE
-        //      "DROP TABLE users" (x INT)` — would false-positive against
-        //      the `/\bDROP\s+TABLE\b/` regex and block a benign migration.
-        //
-        // The placeholder keeps the opening and closing quote characters so
-        // token boundaries (`ALTER TABLE "foo" RENAME` → four tokens)
-        // remain intact, but the body is fixed to `_` which cannot contain
-        // semicolons or destructive keywords.
+        // Decision: Replace the quoted identifier body with `_` instead of copying it. A `;` inside an identifier
+        // (`ALTER TABLE "user;data" RENAME TO x`) would cut the `[^;]*?` match and let the RENAME through,
+        // and a keyword inside one (`CREATE TABLE "DROP TABLE users"`) would block a benign migration. The
+        // quote characters stay so token boundaries hold.
         const close = seg.open === '[' ? ']' : seg.open;
         code += seg.open + '_' + close;
         break;
@@ -420,13 +387,9 @@ function hasUnauthorizedDestructive(
     if (!isDestructive) {
       continue;
     }
-    // The pragma is only honored when it appears as a standalone line-comment
-    // directive: it must be the sole content of its raw source line (only
-    // whitespace before the `--`), and the comment body — after the `--` and
-    // surrounding whitespace — must be exactly `platform:allow-destructive`. A
-    // trailing pragma like `CREATE TABLE t(id); -- platform:allow-destructive`
-    // does not authorize, and neither does a documentation comment like
-    // `-- see platform:allow-destructive for details`.
+    // Decision: Honor the pragma only as a standalone line comment: nothing but whitespace before `--`, and a
+    // body of exactly `platform:allow-destructive`. A trailing pragma after a statement doesn't
+    // authorize, and neither does a comment like `-- see platform:allow-destructive for details`.
     const authorized = lineComments.some(
       (line) => line.standalone && line.text.trim() === DESTRUCTIVE_PRAGMA,
     );
@@ -455,7 +418,6 @@ function toBuildSummary(build: Build) {
 
 const app = new Hono<ApiEnv>()
 
-  // Request cancellation of an active deployment
   .post('/:id/deployments/:deploymentId/cancel', async (context) => {
     const projectId = context.req.param('id');
     const deploymentId = context.req.param('deploymentId');
@@ -488,7 +450,6 @@ const app = new Hono<ApiEnv>()
     });
   })
 
-  // Rollback to a previous deployment
   .post('/:id/rollback', async (context) => {
     const projectId = context.req.param('id');
     const access = await requireProjectRouteCapability(context, projectId, 'deploy');
@@ -513,9 +474,8 @@ const app = new Hono<ApiEnv>()
       }
     }
 
-    // Pre-lock sanity check: reject fast if the deployment plainly does
-    // not belong to this project. The authoritative check runs inside
-    // the lock below against a freshly-read row.
+    // Decision: Reject fast when the deployment plainly isn't in this project. The real check runs under the
+    // lock below against a freshly read row.
     const preCheck = await getDeployment(context.get('db'), deploymentId);
     if (!preCheck || preCheck.project_id !== projectId) {
       return context.json({ error: 'deployment not found' }, 404);
@@ -542,11 +502,10 @@ const app = new Hono<ApiEnv>()
       }
     }
 
-    // A committed rollback lease blocks deploys and other rollbacks while
-    // the cutover transaction commits or external compensation runs. Keeping
-    // this fence outside the cutover transaction is essential: if PostgreSQL
-    // rejects COMMIT after the callback returns, the lease still exists while
-    // we restore KV, cron, and queue state from the callback's undo log.
+    // Decision: A committed rollback lease blocks deploys and other rollbacks while the cutover commits or
+    // external compensation runs. The fence has to live outside the cutover transaction: if PostgreSQL
+    // rejects COMMIT after the callback returns, the lease still holds while we restore KV, cron and
+    // queue state from the callback's undo log.
     let rollbackLeaseId: string | undefined;
     const rollbackOwnerId = crypto.randomUUID();
     const externalUndo: Array<(zeroTrust: ProjectZeroTrustRouting | null) => Promise<void>> = [];
@@ -560,24 +519,11 @@ const app = new Hono<ApiEnv>()
     let rollbackErrorToThrow: unknown;
     let leaseReleaseError: AggregateError | undefined;
 
-    // The entire rollback cutover runs inside a single row-locked tx so
-    // concurrent rollbacks / applies / renames serialize and no external
-    // state is written before the pg flip. Ordering invariants:
-    //
-    //   - pg flip runs FIRST inside the lock; external writes run AFTER.
-    //     If the pg flip throws, the tx rolls back and no external writes
-    //     have happened yet → caller sees 500, state is consistent.
-    //
-    //   - If an external write throws after the pg flip, the tx rolls
-    //     back (reverting active_deployment_id), but some earlier
-    //     external writes may have already landed. The caller sees 500
-    //     and retries; KV PUTs and cron/queue routes are idempotent
-    //     under the same payload.
-    //
-    // target.applied_migrations (and retained, manifest) are re-read
-    // inside the lock because a concurrent /rename can rewrite every
-    // deployment's applied_migrations via
-    // renameAppliedMigrationsForProject.
+    // Decision: The rollback cutover runs in one row-locked transaction, so concurrent rollbacks, applies and
+    // renames serialize and no external state is written before the pg flip. The pg flip runs first in
+    // the lock and external writes after it; if the flip throws, nothing external has changed yet.
+    // Re-read target.applied_migrations (and retained, manifest) inside the lock: a concurrent /rename
+    // can rewrite them through renameAppliedMigrationsForProject.
     let rollbackResult: { migrationDiff: ReadonlyArray<string> } | undefined;
     try {
       const rollbackLease = await context.get('db').transaction(async (tx) => {
@@ -662,7 +608,7 @@ const app = new Hono<ApiEnv>()
                 return { id: activeDeploy.id, adopted: true, appliedResult: undefined };
               }
             } catch {
-              // Legacy/corrupt leases retain the normal in-progress behavior.
+              // Decision: A legacy or corrupt lease keeps the normal in-progress behavior.
             }
           }
           throw new RollbackError(409, `deploy in progress: ${activeDeploy.id}`);
@@ -690,10 +636,8 @@ const app = new Hono<ApiEnv>()
 
       if (!rollbackCommitted) {
         rollbackResult = await context.get('db').transaction(async (tx) => {
-          // Lock the project row via `SELECT … FOR UPDATE` — per-project,
-          // collision-free, released automatically at tx end. MUST be the
-          // first statement in the locked section so serialization is
-          // established before any subsequent read or write.
+          // Decision: Lock the project row with SELECT ... FOR UPDATE as the first statement in the locked section,
+          // so serialization holds before any later read or write.
           await tx.execute(drizzleSql`SELECT id FROM projects WHERE id = ${projectId} FOR UPDATE`);
           const lockedAccess = await requireProjectRouteCapability(
             context,
@@ -711,10 +655,8 @@ const app = new Hono<ApiEnv>()
             );
           }
 
-          // Re-read target INSIDE the lock. applied_migrations can be
-          // rewritten by a concurrent /rename; manifest and retained are
-          // stable in practice but re-reading is cheap and removes every
-          // time-of-check / time-of-use hazard on this row.
+          // Decision: Re-read the target inside the lock: a concurrent /rename can rewrite applied_migrations, and
+          // re-reading removes time-of-check/time-of-use hazards on this row.
           const target = await getDeployment(tx, deploymentId);
           if (!target || target.project_id !== projectId) {
             throw new RollbackError(404, 'deployment not found');
@@ -754,11 +696,9 @@ const app = new Hono<ApiEnv>()
             }
           }
 
-          // Re-read project so `active_deployment_id` and `type` reflect
-          // any concurrent rollback / deploy that committed before the
-          // lock was acquired. `type` and `user_id` are effectively
-          // immutable but re-reading keeps the computed routing JSON
-          // consistent with the exact row the flip will reference.
+          // Decision: Use the project row read under the lock, so `active_deployment_id` and `type` reflect any
+          // rollback or deploy that committed before the lock, and the routing JSON matches the row the flip
+          // references.
           const lockedProject = lockedAccess.project;
           if (lockedProject.status === 'deleting') {
             throw new RollbackError(409, 'project is being deleted');
@@ -774,7 +714,7 @@ const app = new Hono<ApiEnv>()
               const lease = JSON.parse(activeDeploy.manifest) as { ownerId?: unknown };
               ownsRollbackLease = lease.ownerId === rollbackOwnerId;
             } catch {
-              // A corrupt or legacy lease is never treated as owned.
+              // Decision: A corrupt or legacy lease isn't treated as owned.
             }
           }
           if (!ownsRollbackLease) {
@@ -800,38 +740,22 @@ const app = new Hono<ApiEnv>()
                 : [];
           const diff = currentMigrations.filter((m) => !targetMigrations.includes(m));
 
-          // Reject destructive rollbacks server-side unless the caller
-          // explicitly opts in. `diff` holds migrations the CURRENT active
-          // has run that the TARGET does not know about — typically
-          // forward-only DDL (DROP TABLE, ALTER, etc.) applied after the
-          // target was built. Flipping traffic to the target in this state
-          // leaves the worker code expecting the OLD schema while D1 still
-          // carries the evolved schema, which silently corrupts queries.
-          //
-          // The override is snapshot-bound, NOT a blanket boolean: the
-          // caller must echo the exact set of migration names they were
-          // shown at confirmation time, and the server-computed diff must
-          // match that set exactly (same elements, same size). This closes
-          // a TOCTOU where a concurrent deploy flips `currentActive`
-          // between the caller's preflight `listDeployments` read and our
-          // locked `diff` re-read — set-equality means any drift forces a
-          // fresh confirmation against the new state.
-          //
-          // The check runs BEFORE the pg flip and any external write so a
-          // rejected rollback mutates nothing.
+          // Decision: Reject destructive rollbacks unless the caller opts in. `diff` holds migrations the current
+          // active deployment ran that the target doesn't know (often forward-only DDL). Moving traffic to the
+          // target then runs code that expects the old schema against the newer one and corrupts queries.
+          // The opt-in is bound to a snapshot, not a boolean: the caller echoes the exact migration names
+          // they were shown, and the server diff has to match that set exactly. This closes a TOCTOU where a
+          // concurrent deploy changes the active deployment between the caller's preflight and this locked
+          // re-read. The check runs before the pg flip and any external write, so a rejection changes nothing.
           if (diff.length > 0) {
             const confirmed = allowDestructive ?? [];
             const confirmedSet = new Set(confirmed);
             const snapshotMatches =
               confirmed.length === diff.length && diff.every((m) => confirmedSet.has(m));
             if (!snapshotMatches) {
-              // Migration names are arbitrary non-empty strings (see
-              // /rename), so interpolating them raw into prose with hand-
-              // rolled quoting can produce invalid JSON hints when a name
-              // contains quotes / backslashes / newlines. JSON.stringify
-              // the diff for the example, and expose it structurally via
-              // `destructiveMigrations` so programmatic callers echo the
-              // authoritative array rather than re-parsing the message.
+              // Decision: Migration names are arbitrary non-empty strings (see /rename), so hand-quoted prose can make
+              // invalid JSON hints. JSON.stringify the diff for the example, and expose it as
+              // `destructiveMigrations` so callers echo the real array instead of parsing the message.
               throw new RollbackError(
                 400,
                 `Rollback is destructive: current deployment has migration(s) the target does not include: ${JSON.stringify(diff)}. Retry with \`allowDestructive: ${JSON.stringify(diff)}\` to confirm this exact set.`,
@@ -840,7 +764,6 @@ const app = new Hono<ApiEnv>()
             }
           }
 
-          // Build routing JSON from the freshly-read target manifest.
           const manifest: DeployManifest | null = target.manifest
             ? JSON.parse(target.manifest)
             : null;
@@ -848,12 +771,9 @@ const app = new Hono<ApiEnv>()
             await resolvePlanLimits(tx, lockedAccess.owner.plan),
             manifest?.limits,
           );
-          // Rollback external-write pass depends only on authoritative
-          // persistent sources (pg deployments table for queue activation
-          // history; target's manifest + unconditional DO reconciliation
-          // for crons), not on the potentially-stale currentActive manifest
-          // snapshot or the eagerly-written resources table. See queue
-          // sweep below for why the union uses `deployed_at IS NOT NULL`.
+          // Decision: The external writes depend only on authoritative sources (the pg deployments table for queue
+          // history; the target manifest plus unconditional DO reconciliation for crons), not on the possibly
+          // stale currentActive manifest or the eagerly written resources table.
           const workerName = getProjectDeploymentWorkerName(lockedProject.slug, target.id);
           const existingRouting = await context.env.ROUTING.get(projectRouteKey(lockedProject));
           const existingEntry = existingRouting ? JSON.parse(existingRouting) : null;
@@ -924,8 +844,8 @@ const app = new Hono<ApiEnv>()
             });
           }
 
-          // PG flip FIRST. If this throws, no external state is mutated
-          // yet — the tx rolls back cleanly and the caller can retry.
+          // Decision: pg flip first. If it throws, no external state has changed, the transaction rolls back and the
+          // caller can retry.
           await updateProjectType(tx, projectId, targetType);
           await requestRotationIfReplacingUntrustedCode(tx, projectId, target.id);
           await setActiveDeployment(tx, projectId, target.id);
@@ -963,8 +883,8 @@ const app = new Hono<ApiEnv>()
           };
           const putRouting = async (key: string, value: string): Promise<void> => {
             await snapshotRoutingKey(key);
-            // Record before awaiting KV so a committed write whose acknowledgement
-            // is lost is still included in the rollback undo pass.
+            // Decision: Record before awaiting KV, so a write that committed but lost its acknowledgement is still in
+            // the undo pass.
             routingValuesWritten.set(key, value);
             await context.env.ROUTING.put(key, value);
           };
@@ -974,9 +894,8 @@ const app = new Hono<ApiEnv>()
             await context.env.ROUTING.delete(key);
           };
 
-          // External writes SECOND, inside the same lock. Every write is
-          // preceded by an exact snapshot and compensated in reverse order
-          // before the transaction releases the project lock.
+          // Decision: External writes come second, inside the same lock. Each write is preceded by an exact snapshot
+          // and compensated in reverse order before the transaction releases the project lock.
           try {
             await reconcileManagedDurableObjects(
               context.env,
@@ -988,29 +907,19 @@ const app = new Hono<ApiEnv>()
             );
             await putRouting(projectRouteKey(lockedProject), routingJson);
 
-            // Resolve the target worker's baked __PLATFORM_PROXY_TOKEN once if
-            // either cron or queues need it. Re-fetching on each path would
-            // double the CF API round-trips AND widen the failure window
-            // between cron DO sync and queue KV write: a transient CF 429
-            // on the second fetch would abort the transaction after cron
-            // state was already committed to the DO. The framework's
-            // /__platform/scheduled and /__platform/queue handlers both validate
-            // against the SAME __PLATFORM_PROXY_TOKEN binding, so one lookup
-            // is authoritative for both.
-            // The target may hold an older generation than the issued one;
-            // its copies get the token it holds.
+            // Decision: Resolve the target worker's __PLATFORM_PROXY_TOKEN once for both cron and queues. A second
+            // lookup doubles CF API calls and widens the failure window: a transient 429 on it would abort the
+            // transaction after cron state was already written to the DO. /__platform/scheduled and
+            // /__platform/queue both check the same binding. The target may hold an older generation than the
+            // issued one; its copies get the token it holds.
             const needsProxyToken = !!manifest?.schedules?.length || !!manifest?.queues?.length;
             const targetProxyToken = needsProxyToken
               ? await resolveRollbackProxyToken(context.env, workerName, projectId)
               : null;
 
-            // Sync cron scheduler to point at the rollback target.
-            //
-            // When target has no schedules, `/clear` is called unconditionally
-            // (it's idempotent — see cron-scheduler.ts `handleClear`). A
-            // prior failed cutover could leave the DO holding schedules that
-            // no pg manifest still mentions, and a guarded clear would let
-            // that stale DO state persist across every future rollback.
+            // Decision: When the target has no schedules, call `/clear` anyway (it's idempotent, see cron-scheduler.ts
+            // `handleClear`). A failed earlier cutover can leave schedules in the DO that no manifest mentions,
+            // and a guarded clear would let them persist across later rollbacks.
             const previousCronState = await snapshotCronScheduler(context.env, projectId);
             externalUndo.push(() =>
               restoreCronScheduler(context.env, projectId, previousCronState),
@@ -1025,7 +934,6 @@ const app = new Hono<ApiEnv>()
               await clearCronScheduler(context.env, projectId);
             }
 
-            // Update custom domain routing
             const projectDomains = await getDomainsByProjectId(tx, projectId);
             for (const domain of projectDomains) {
               if (domain.status === 'active') {
@@ -1033,22 +941,12 @@ const app = new Hono<ApiEnv>()
               }
             }
 
-            // Update queue routing. Rewrite every queue route that target
-            // binds AND delete any queue route left over from older
-            // deployments that target does not bind. Without the deletion
-            // pass, messages arriving on a queue A had bound but B does not
-            // would still hit `queue:<q>` in KV and dispatch would forward
-            // them to A's (now evicted) worker.
-            //
-            // Sweep source is the UNION of:
-            //   - Deployments that have ever been live (`deployed_at IS NOT NULL`).
-            //   - Terminal-failed/canceled deployments (`deployed_at = null`).
-            //
-            // The second set catches deploys that wrote `queue:<name>` KV
-            // routes at step 2b and then failed before the routing flip.
-            // In-flight deploys (status not in the terminal-failed set) are
-            // excluded, so rollback does not clobber KV routes an in-flight
-            // deploy is provisioning.
+            // Decision: Rewrite each queue route the target binds and delete queue routes from older deployments that
+            // the target doesn't bind. Otherwise messages on a queue the old deployment bound would still hit
+            // `queue:<q>` in KV and go to an evicted worker.
+            // The sweep covers deployments that were ever live (`deployed_at IS NOT NULL`) and terminal
+            // failed/canceled ones, which can have written `queue:<name>` routes at step 2b before failing.
+            // In-flight deploys are left out, so rollback doesn't clobber routes they're provisioning.
             const [activatedDeployments, terminalFailedDeployments] = await Promise.all([
               getActivatedDeployments(tx, projectId),
               getTerminalFailedDeployments(tx, projectId),
@@ -1063,17 +961,15 @@ const app = new Hono<ApiEnv>()
               try {
                 depManifest = JSON.parse(d.manifest);
               } catch {
-                // Skip deployments with unparseable manifests rather than
-                // blowing up the whole rollback.
+                // Decision: Skip deployments with unparseable manifests instead of failing the whole rollback.
                 continue;
               }
               for (const q of depManifest?.queues ?? []) {
                 sweepQueueNames.add(q.name);
               }
             }
-            // Include target's own queue names in the union so the delete
-            // pass's complement is always `union \ target`, i.e. we never
-            // accidentally delete a route we're about to rewrite below.
+            // Decision: Add the target's own queue names to the union so the delete pass (union minus target) can't
+            // delete a route we're about to rewrite.
             const targetQueueNames = new Set((manifest?.queues ?? []).map((q) => q.name));
             for (const name of targetQueueNames) {
               sweepQueueNames.add(name);
@@ -1185,10 +1081,9 @@ const app = new Hono<ApiEnv>()
             throw externalError;
           }
 
-          // This owned lease transition commits atomically with the project flip
-          // and is the durable witness for ambiguous COMMIT acknowledgements.
-          // `active_deployment_id` alone is insufficient when the requested
-          // rollback target was already active before this transaction began.
+          // Decision: This owned lease transition commits atomically with the project flip and is the durable
+          // witness when the COMMIT acknowledgement is ambiguous. `active_deployment_id` alone isn't enough
+          // when the target was already active before this transaction.
           const witnessed = await updateRollbackLeaseState(
             tx,
             rollbackLeaseId!,
@@ -1207,11 +1102,9 @@ const app = new Hono<ApiEnv>()
         rollbackCommitted = true;
       }
     } catch (err) {
-      // COMMIT acknowledgement can be lost after PostgreSQL durably applied
-      // the project flip. The owned lease's `applied` transition commits in
-      // the same transaction and is the authoritative witness, including a
-      // rollback whose target was already active before the request. A still-
-      // `running` lease proves the transaction did not commit.
+      // Decision: The COMMIT acknowledgement can be lost after PostgreSQL applied the flip. The owned lease's
+      // `applied` transition commits in the same transaction and is the witness, including when the
+      // target was already active. A lease still `running` proves the transaction didn't commit.
       let ambiguousCommitOutcome: 'committed' | 'not_committed' | 'unknown' | undefined;
       if (!rollbackCommitted && !externalCompensated && externalUndo.length > 0) {
         let durableReadSucceeded = false;
@@ -1233,8 +1126,7 @@ const app = new Hono<ApiEnv>()
               }
             }
           } catch {
-            // Preserve on an unreadable outcome; the original error remains
-            // the one returned to the caller below.
+            // Decision: Keep state on an unreadable outcome; the original error is still the one returned below.
           }
           if (attempt < 2) {
             await new Promise((resolve) => setTimeout(resolve, 25 * 2 ** attempt));
@@ -1263,7 +1155,7 @@ const app = new Hono<ApiEnv>()
                   const lease = JSON.parse(activeLease.manifest) as { ownerId?: unknown };
                   stillOwnsLease = lease.ownerId === rollbackOwnerId;
                 } catch {
-                  // Corrupt or replaced ownership always suppresses stale undo.
+                  // Decision: Corrupt or replaced ownership suppresses the stale undo.
                 }
               }
               if (!stillOwnsLease) {
@@ -1278,15 +1170,11 @@ const app = new Hono<ApiEnv>()
                 }
               }
 
-              // A domain activation can commit after the failed rollback's
-              // transaction released this project lock but before this outer
-              // compensation acquired it. That hostname was not in the earlier
-              // snapshot, and activation may have copied the rollback target's
-              // temporary slug route into its domain key. Reconcile the complete
-              // current domain inventory to the now-restored slug route before
-              // releasing the rollback lease. Pending rows are deleted too: KV
-              // may have been written immediately before activation's final
-              // database status update was interrupted.
+              // Decision: A domain activation can commit after the failed rollback released the project lock but before
+              // this compensation took it. That hostname wasn't in the snapshot, and activation may have copied
+              // the target's temporary slug route into its domain key. Reconcile all current domains to the
+              // restored slug route before releasing the lease. Delete pending rows too: KV may have been written
+              // just before activation's final status update was interrupted.
               let restoredProjectRouting: string | null = null;
               try {
                 const rawRouting = await context.env.ROUTING.get(projectRouteKey(project));
@@ -1313,9 +1201,8 @@ const app = new Hono<ApiEnv>()
               }
             });
           } catch (compensationTransactionError) {
-            // This includes failure to acquire/commit the lock and DB reads
-            // inside it. No such outcome proves compensation completed, so the
-            // rollback lease must remain as a fail-closed fence.
+            // Decision: This includes failing to take or commit the lock and DB reads inside it. None of these prove
+            // compensation finished, so the rollback lease stays as a fail-closed fence.
             compensationErrors.push(compensationTransactionError);
           }
           if (compensationErrors.length > 0) {
@@ -1329,8 +1216,7 @@ const app = new Hono<ApiEnv>()
                 rollbackOwnerId,
                 rollbackOwnerId,
               ).catch(() => {
-                // The owned running lease is still a fail-closed fence when
-                // the retryable state write is unavailable.
+                // Decision: The owned running lease is still a fail-closed fence when the retryable state write fails.
               });
             }
             throw new AggregateError(
@@ -1340,21 +1226,15 @@ const app = new Hono<ApiEnv>()
           }
         } else if (ambiguousCommitOutcome === 'unknown') {
           releaseRollbackLease = false;
-          // Do not overwrite the witness while PostgreSQL is unreadable. An
-          // `applied` lease lets a retry finish success; a `running` lease
-          // remains a fail-closed fence until it can be reconciled.
+          // Decision: Don't overwrite the witness while PostgreSQL is unreadable. An `applied` lease lets a retry
+          // finish as success; a `running` lease stays a fail-closed fence until it's reconciled.
         }
       }
-      if (rollbackCommitted) {
-        // Continue through finally so the rollback lease is released, then
-        // return the normal success response below.
-      } else {
-        // An adopted lease represents an earlier rollback whose PostgreSQL
-        // outcome was unreadable while external state may already point at
-        // the target. A failed retry snapshots that possibly-divergent state,
-        // so even successful compensation cannot prove it matches the active
-        // deployment in PostgreSQL. Keep the original fence until a retry
-        // durably confirms the target as active.
+      if (!rollbackCommitted) {
+        // Decision: An adopted lease stands for an earlier rollback whose PostgreSQL outcome was unreadable while
+        // external state may already point at the target. A failed retry snapshots that possibly divergent
+        // state, so even a good compensation can't prove it matches PostgreSQL. Keep the fence until a retry
+        // confirms the target as active.
         if (rollbackLeaseId && adoptedRollbackLease && ambiguousCommitOutcome !== 'unknown') {
           releaseRollbackLease = false;
           await updateRollbackLeaseState(
@@ -1365,8 +1245,8 @@ const app = new Hono<ApiEnv>()
             rollbackOwnerId,
             rollbackOwnerId,
           ).catch(() => {
-            // A failed state write leaves the lease in `running`, which is a
-            // stronger non-adoptable fence until its stale timeout elapses.
+            // Decision: A failed state write leaves the lease `running`, a stronger non-adoptable fence until its stale
+            // timeout passes.
           });
         }
       }
@@ -1410,7 +1290,7 @@ const app = new Hono<ApiEnv>()
             rollbackOwnerId,
             rollbackOwnerId,
           ).catch(() => {
-            // Preserve the running fence if PostgreSQL remains unavailable.
+            // Decision: Keep the running fence if PostgreSQL stays unavailable.
           });
           leaseReleaseError = new AggregateError(
             [releaseError],
@@ -1439,7 +1319,6 @@ const app = new Hono<ApiEnv>()
     });
   })
 
-  // Get migration status for a project
   .get('/:id/migrations', async (context) => {
     const access = await requireProjectRouteCapability(context, context.req.param('id'), 'read');
     if (access instanceof Response) {
@@ -1474,29 +1353,12 @@ const app = new Hono<ApiEnv>()
       return context.json({ applied: [] });
     }
 
-    // Torn-read safety across an in-flight legacy → _void_migrations upgrade.
-    //
-    // The upgrade sequence is three non-atomic D1 calls:
-    //   1. CREATE TABLE _void_migrations
-    //   2. INSERT OR IGNORE ... FROM _migrations
-    //   3. DROP TABLE _migrations
-    //
-    // Reading _void_migrations first and _migrations second is unsafe: a GET
-    // that sees an empty _void_migrations (pre-upgrade) and then races past
-    // step 3 sees _migrations missing too — and returns `{ applied: [] }`
-    // even though migrations are applied.
-    //
-    // Reading _migrations FIRST is race-free because of the upgrade invariant:
-    // _migrations can only disappear AFTER its rows were copied into
-    // _void_migrations. So:
-    //
-    //   - If legacy read succeeds, we captured the pre-upgrade state.
-    //   - If legacy is missing, either it never existed or the upgrade is
-    //     past step 2, so _void_migrations is authoritative.
-    //
-    // Dedup uses a name → applied_at map with last-write-wins, and
-    // _void_migrations is always read second so its timestamps win on
-    // overlaps.
+    // Decision: Read _migrations before _void_migrations, to be safe during an in-flight legacy upgrade. The
+    // upgrade is three non-atomic D1 calls: CREATE TABLE _void_migrations, INSERT OR IGNORE ... FROM
+    // _migrations, DROP TABLE _migrations. Reading the new table first can see it empty, then race past
+    // the DROP and find _migrations gone too, returning `{ applied: [] }`. _migrations only disappears
+    // after its rows were copied, so if the legacy read fails, _void_migrations is authoritative.
+    // Dedup is last-write-wins by name, and _void_migrations is read second so its timestamps win.
     const byName = new Map<string, string>();
 
     try {
@@ -1541,7 +1403,6 @@ const app = new Hono<ApiEnv>()
     return context.json({ applied });
   })
 
-  // Apply migrations to a project's remote D1 database
   .post('/:id/migrations/apply', async (context) => {
     const projectId = context.req.param('id');
     const access = await requireProjectRouteCapability(context, projectId, 'configure');
@@ -1581,19 +1442,15 @@ const app = new Hono<ApiEnv>()
       return context.json({ error: planValidationError }, 400);
     }
 
-    // Serialize /apply and /rename per project via a pg transaction-scoped
-    // row lock on the `projects` row. The critical section holds a pg
-    // connection open across remote D1 HTTP calls — not ideal for pool
-    // pressure, but these are low-QPS operator flows and correctness
-    // trumps efficiency here. The lock prevents an /apply that landed
-    // in D1 but has not yet appended to pg metadata from being
-    // overtaken by a /rename whose snapshot misses the unwritten row,
-    // which would leave D1 and pg permanently diverged.
+    // Decision: Serialize /apply and /rename per project with a transaction-scoped row lock on `projects`. This
+    // holds a pg connection across remote D1 HTTP calls, which costs pool capacity, but these are
+    // low-QPS operator flows and correctness comes first. Without it, an /apply that landed in D1 but
+    // hasn't yet written pg metadata can be overtaken by a /rename whose snapshot misses that row, and
+    // D1 and pg stay diverged.
     try {
       const outcome = await context.get('db').transaction(async (tx) => {
-        // Per-project row lock. Must be the first statement so all
-        // subsequent reads/writes serialize against any concurrent
-        // /apply, /rename, or /rollback holding the same row.
+        // Decision: The row lock has to be the first statement so later reads and writes serialize against a
+        // concurrent /apply, /rename or /rollback.
         await tx.execute(drizzleSql`SELECT id FROM projects WHERE id = ${projectId} FOR UPDATE`);
         const lockedAccess = await requireProjectRouteCapability(
           context,
@@ -1614,7 +1471,6 @@ const app = new Hono<ApiEnv>()
           return { status: 400 as const, body: { error: 'no D1 database found for this project' } };
         }
 
-        // Filter to pending-only before validating destructive patterns
         const applied = await ensureTrackingTable(
           context.env.CF_ACCOUNT_ID,
           context.env.CF_API_TOKEN,
@@ -1641,34 +1497,16 @@ const app = new Hono<ApiEnv>()
           applied,
         );
 
-        // Re-read the project inside the lock so active_deployment_id
-        // reflects any concurrent rollback / setActive commit that landed
-        // while we were blocked on the lock.
+        // Decision: Use the project read under the lock, so active_deployment_id reflects a rollback or setActive
+        // that committed while we waited.
         const locked = lockedAccess.project;
-        // Append the UNION of applied + skipped, not just applied.
-        //
-        // If a previous /apply landed the migration in D1 but the pg
-        // metadata write failed, the D1 tracking row is already present.
-        // A retry with the same payload then classifies the name as
-        // `skipped` (not `applied`). Gating the metadata write on
-        // `applied.length > 0` would leave pg permanently missing the
-        // name despite D1 having it — corrupting future rollback diffs
-        // and rename operations.
-        //
-        // `appendAppliedMigrations` de-dupes via `SELECT ... FOR UPDATE`
-        // + union, so passing names already present in pg is a safe
-        // no-op. Passing `skipped` makes the retry reconcile pg from the
-        // source of truth (D1's `_void_migrations`).
-        //
-        // `result.failed` may be set when a mid-batch migration threw —
-        // the runner returns the committed prefix (applied + skipped)
-        // that DID land in D1 along with the failing pair, and we append
-        // the prefix to pg metadata before surfacing the error. The
-        // prefix MUST be persisted inside the locked tx so a retry with
-        // the same payload sees pg matching D1 and heals idempotently.
-        // Returning a non-200 outcome is load-bearing: `return` commits
-        // the tx (preserving the healing write) while a `throw` would
-        // roll it back.
+        // Decision: Append applied and skipped names, not only applied. If an earlier /apply landed in D1 but the
+        // pg write failed, a retry sees the name as `skipped`; gating on `applied` would leave pg missing it
+        // and corrupt later rollback diffs and renames. appendAppliedMigrations de-dupes, so known names are
+        // a no-op, and this lets a retry heal pg from D1's `_void_migrations`.
+        // When a mid-batch migration fails, the runner returns the committed prefix; persist it in this
+        // locked transaction so a retry heals. Return a non-200 outcome instead of throwing: `return`
+        // commits the heal, `throw` rolls it back.
         const effectiveNames = [...result.applied, ...result.skipped];
         if (effectiveNames.length > 0) {
           await appendProjectMigrations(
@@ -1726,7 +1564,6 @@ const app = new Hono<ApiEnv>()
     }
   })
 
-  // Rename migration records in a project's remote D1 database
   .post('/:id/migrations/rename', async (context) => {
     const projectId = context.req.param('id');
     const access = await requireProjectRouteCapability(context, projectId, 'configure');
@@ -1745,10 +1582,9 @@ const app = new Hono<ApiEnv>()
       return context.json({ error: 'each rename must have non-empty string "from" and "to"' }, 400);
     }
 
-    // Batch-level validation: the remote UPDATEs are non-atomic, so any
-    // partial commit on a PK collision leaves `_void_migrations` half-renamed
-    // with no automatic rollback. Rejecting ambiguous or self-conflicting
-    // batches up front means a clean DB can never hit a collision mid-batch.
+    // Decision: The remote UPDATEs aren't atomic, so a PK collision mid-batch leaves `_void_migrations`
+    // half-renamed with no rollback. Rejecting ambiguous or self-conflicting batches up front means a
+    // clean DB can't hit a collision mid-batch.
     const fromSet = new Set<string>();
     const toSet = new Set<string>();
     for (const { from } of body.renames) {
@@ -1763,10 +1599,8 @@ const app = new Hono<ApiEnv>()
       }
       toSet.add(to);
     }
-    // Chains and cycles (`a→b, b→c` or `a→b, b→a`) would need two-phase
-    // renames across non-atomic D1 calls to avoid a mid-batch PK collision.
-    // Rejecting them forces the caller to split the work into separate
-    // requests and keeps this handler's execution path strictly linear.
+    // Decision: Chains and cycles (`a→b, b→c` or `a→b, b→a`) would need two-phase renames across non-atomic D1
+    // calls. Rejecting them makes the caller split the work and keeps this path linear.
     for (const { to } of body.renames) {
       if (fromSet.has(to)) {
         return context.json(
@@ -1779,17 +1613,13 @@ const app = new Hono<ApiEnv>()
       }
     }
 
-    // Serialize /apply and /rename per project via a pg transaction-scoped
-    // row lock on the `projects` row. Holding the lock across the D1
-    // HTTP calls is what prevents the /apply-vs-/rename interleave where
-    // /apply writes a row to D1, /rename then snapshots D1 + rewrites pg
-    // (missing the new row), and /apply finally appends the pre-rename
-    // name to pg.
+    // Decision: Hold the per-project row lock across the D1 calls. That prevents the interleave where /apply
+    // writes a D1 row, /rename snapshots D1 and rewrites pg without it, and /apply then appends the
+    // pre-rename name to pg.
     try {
       const outcome = await context.get('db').transaction(async (tx) => {
-        // Per-project row lock. Must be the first statement so all
-        // subsequent reads/writes serialize against any concurrent
-        // /apply, /rename, or /rollback holding the same row.
+        // Decision: The row lock has to be the first statement so later reads and writes serialize against a
+        // concurrent /apply, /rename or /rollback.
         await tx.execute(drizzleSql`SELECT id FROM projects WHERE id = ${projectId} FOR UPDATE`);
         const lockedAccess = await requireProjectRouteCapability(
           context,
@@ -1813,28 +1643,18 @@ const app = new Hono<ApiEnv>()
           return { status: 400 as const, body: { error: 'no D1 database found for this project' } };
         }
 
-        // Ensure tracking table exists and upgrade legacy _migrations if needed.
-        // The returned set is the current applied state — reused for validation
-        // below so we don't issue a redundant SELECT.
         const existing = await ensureTrackingTable(
           context.env.CF_ACCOUNT_ID,
           context.env.CF_API_TOKEN,
           d1Resource.cf_id,
         );
 
-        // DB-state validation. The semantics below exist so that retries after
-        // a partial failure are safe and idempotent, not just fresh batches:
-        //
-        //   - unknown `from` AND unknown `to`  → 400 (genuine operator error)
-        //   - unknown `from` AND known   `to`  → ambiguous: only treat as an
-        //     already-landed rename when pg metadata still references `from`
-        //     somewhere (the fingerprint of a legitimate retry after a prior
-        //     D1-succeeded / pg-failed run). Otherwise 400 — see below.
-        //   - known   `from` AND known   `to`  → 400 (would collide on UPDATE,
-        //     unless the existing `to` row is itself also being renamed away —
-        //     but batch-level validation already rejects chains, so that case
-        //     cannot occur here)
-        //   - known   `from` AND unknown `to`  → proceed (normal case)
+        // Decision: These rules make retries after a partial failure safe, not only fresh batches:
+        // - unknown from, unknown to: 400 (operator error)
+        // - unknown from, known to: an already-landed rename only when pg still references `from` (a retry
+        // after D1 succeeded and pg failed); otherwise 400
+        // - known from, known to: 400 (would collide; chains are already rejected)
+        // - known from, unknown to: proceed
         const missingFrom: Array<string> = [];
         const collidingTo: Array<string> = [];
         const effective: Array<{ from: string; to: string }> = [];
@@ -1847,34 +1667,14 @@ const app = new Hono<ApiEnv>()
             continue;
           }
           if (!fromExists && toExists) {
-            // The `!fromExists && toExists` branch must NOT unconditionally
-            // classify as an idempotent retry. A request targeting an
-            // unrelated existing migration (e.g., pg has `001_init.sql`
-            // and D1 happens to have `002_add_email.sql` from a different
-            // deploy) would silently rewrite pg to a wrong target.
-            //
-            // The fingerprint of a legitimate retry after a prior
-            // D1-succeeded / pg-failed run is: D1 has `to`, D1 lacks `from`
-            // (already renamed in D1), and pg STILL has `from` on the
-            // ACTIVE deployment (the failed pg write left it stale).
-            //
-            // Corroboration is restricted to the ACTIVE deployment.
-            // Stale retained rows from older code paths could be
-            // historically inaccurate and are not trustworthy corroboration.
-            //
-            // A second corroboration source (the `migration_renames` audit
-            // log) is required because partial-failure heal writes pg's
-            // `applied_migrations` BEFORE surfacing the later pair's
-            // failure — so once an earlier pair's committed prefix is
-            // persisted, the active deployment no longer references
-            // `from`. A same-payload retry that exercises the
-            // still-failing pair must still be able to pass the
-            // committed prefix through the classifier idempotently, or
-            // the operator is wedged with no way to retry. The audit log
-            // is written in the same locked tx as the heal, so a matching
-            // row is durable proof that this exact (project_id, from, to)
-            // rename was already committed here — which fat-finger
-            // requests will never have.
+            // Decision: Don't treat `!fromExists && toExists` as a retry by default: a request naming an unrelated
+            // existing migration would rewrite pg to the wrong target. A real retry after D1 succeeded and pg
+            // failed looks like: D1 has `to`, D1 lacks `from`, and pg still has `from` on the active deployment
+            // (older retained rows aren't trusted).
+            // The `migration_renames` audit log is a second source: a partial-failure heal already rewrote the
+            // active deployment, so a same-payload retry needs it to pass the committed prefix, or the operator
+            // is stuck. The log is written in the same locked transaction as the heal, so a matching row proves
+            // this exact (project_id, from, to) rename committed here.
             const stalePg = await activeDeploymentContainsMigration(tx, projectId, from);
             const auditLogged = stalePg
               ? false
@@ -1890,8 +1690,8 @@ const app = new Hono<ApiEnv>()
                 },
               };
             }
-            // Already-landed rename — idempotent no-op, but still record the
-            // pair so pg metadata gets rewritten if it is stale.
+            // Decision: An already-landed rename is a no-op in D1, but record the pair so stale pg metadata gets
+            // rewritten.
             alreadyLanded.push({ from, to });
             continue;
           }
@@ -1914,41 +1714,16 @@ const app = new Hono<ApiEnv>()
           };
         }
 
-        // After validation, no clean-DB batch can hit a PK collision. Network
-        // failures mid-batch can still leave partial state, but retries with
-        // the same payload are safe because every already-landed rename is
-        // detected by the validation block above and skipped.
-        //
-        // meta.changes is inspected on every UPDATE. When two concurrent
-        // /rename requests both pass pre-validation against the same
-        // `from`, only one UPDATE actually changes a row — the loser sees
-        // `changes === 0`. We re-query `_void_migrations` to classify the
-        // zero-changes case:
-        //
-        //   - if the row we wanted (`to`) is already present AND `from` is
-        //     gone, a concurrent winner achieved the same end state and we
-        //     treat this pair as already-landed (skip in D1, still rewrite
-        //     pg metadata so stale entries get fixed).
-        //   - otherwise the winner redirected `from` to some OTHER target,
-        //     so our rename lost a race to a conflicting target → return
-        //     409 and do NOT append this pair to the pg rewrite set.
-        //
-        // Only pairs whose D1 UPDATE actually changed a row (or that
-        // classified as already-landed via the recheck) are forwarded to
-        // `renameAppliedMigrationsForProject`.
-        // Committed pairs MUST be persisted to pg even when a later pair
-        // in the same batch fails. Earlier iterations landed their UPDATE
-        // in D1 — that state is durable and cannot be rolled back by
-        // throwing. Throwing would also bubble out of the locked tx and
-        // roll back any pg rewrite, leaving pg's applied_migrations arrays
-        // pointing at the old names while D1 already holds the new names.
-        //
-        // So: stash the per-pair failure, STOP the loop (continuing past
-        // a 409 risks later pairs being misclassified against the winner's
-        // rewritten rows), persist the committed prefix via
-        // `renameAppliedMigrationsForProject` inside the same locked tx,
-        // and then `return` a 409/500 outcome. A `return` commits the tx
-        // (preserving the heal); a `throw` would roll it back.
+        // Decision: After validation, a clean-DB batch can't hit a PK collision. A network failure mid-batch can
+        // leave partial state, but a same-payload retry is safe because validation skips landed renames.
+        // Check meta.changes on each UPDATE: when two concurrent renames pass validation for the same
+        // `from`, the loser sees 0 changes. Re-query to classify it: if `to` is present and `from` is gone,
+        // the winner reached the same state (treat as landed); otherwise return 409 and don't forward the
+        // pair.
+        // Persist committed pairs to pg even when a later pair fails: their D1 UPDATEs are durable, and a
+        // throw would roll back the pg rewrite. So stop the loop on a failure (going on risks misclassifying
+        // against the winner's rows), persist the prefix in this locked transaction, and `return` a 409/500.
+        // `return` commits the heal; `throw` rolls it back.
         const committed: Array<{ from: string; to: string }> = [...alreadyLanded];
         type PairFailure =
           | { kind: 'conflict'; from: string; to: string }
@@ -1979,9 +1754,6 @@ const app = new Hono<ApiEnv>()
             committed.push({ from, to });
             continue;
           }
-          // Zero rows affected — a concurrent rename already moved `from`.
-          // Re-check the tracking table to see whether the winner landed on
-          // the same `to` we wanted (benign) or a different target (conflict).
           let recheck: Awaited<ReturnType<typeof queryD1>>;
           try {
             recheck = await queryD1(
@@ -2004,7 +1776,6 @@ const app = new Hono<ApiEnv>()
           }
           const names = new Set(recheck.results.map((r) => r.name as string));
           if (!names.has(from) && names.has(to)) {
-            // Winner happened to pick the same target — our end state holds.
             committed.push({ from, to });
             continue;
           }
@@ -2012,32 +1783,15 @@ const app = new Hono<ApiEnv>()
           break;
         }
 
-        // Rewrite applied_migrations for EVERY deployment of this project,
-        // not just the active one — retained and inactive deployments would
-        // otherwise keep the old names and break rollback diffs that compare
-        // `applied_migrations` arrays across deployments. Only renames whose
-        // D1 UPDATE actually committed (or that we classified as an already-
-        // landed retry) are forwarded — conflicted pairs never reach here.
-        //
-        // This runs BEFORE surfacing any pair-level failure so the
-        // committed prefix is persisted atomically with the `return` below.
-        //
-        // The `migration_renames` audit log entry is the durable second
-        // corroboration source that lets a same-payload retry after a
-        // partial-failure heal classify already-committed pairs as
-        // idempotent — `renameAppliedMigrationsForProject` has just erased
-        // any `from` reference from the active deployment, so the
-        // `activeDeploymentContainsMigration` check would otherwise reject
-        // the committed prefix on retry and wedge the operator.
-        //
-        // Before recording each committed pair, invalidate any prior audit
-        // rows whose `to_name` matches the new pair's `from`. Those rows
-        // claim "some earlier rename landed at `from`", but `from` is now
-        // being renamed AWAY — the landing claim is no longer valid, and
-        // a fat-fingered retry quoting a recycled lineage must not be
-        // corroborated by the stale row. Invalidation runs inside the
-        // same locked tx as the heal/record, so a rollback unwinds all
-        // three together.
+        // Decision: Rewrite applied_migrations for each deployment of the project, not only the active one:
+        // retained and inactive deployments would keep old names and break rollback diffs. Only committed
+        // or already-landed pairs get here. It runs before any pair failure is returned, so the prefix
+        // commits with the `return`.
+        // The `migration_renames` audit row lets a same-payload retry treat committed pairs as idempotent,
+        // since this rewrite removes `from` from the active deployment.
+        // Before recording a pair, invalidate older audit rows whose `to_name` is this pair's `from`: `from`
+        // is being renamed away, and a retry quoting a recycled lineage mustn't be backed by the stale row.
+        // All three run in the same locked transaction, so a rollback undoes them together.
         if (committed.length > 0) {
           await renameProjectMigrations(tx, projectId, committed);
           await renameAppliedMigrationsForProject(tx, projectId, committed);
@@ -2079,7 +1833,6 @@ const app = new Hono<ApiEnv>()
     }
   })
 
-  // Fetch logs for a project
   .get('/:id/logs', async (context) => {
     const access = await requireProjectRouteCapability(context, context.req.param('id'), 'read');
     if (access instanceof Response) {
@@ -2102,11 +1855,9 @@ const app = new Hono<ApiEnv>()
       return context.json({ error: 'invalid deploymentId format' }, 400);
     }
 
-    // Optional level filter applied at the AE SQL layer so sparse error rows
-    // are not hidden behind successful invocations by the LIMIT clause. The
-    // 'all' value is treated as absence; any other value must be in the fixed
-    // allowlist (allowlist check, not regex, so future code can't widen this
-    // accidentally and let a tainted value reach the SQL string).
+    // Decision: Filter by level in the AE SQL, so sparse error rows aren't hidden behind successful calls by the
+    // LIMIT. 'all' means no filter. Other values have to be in the fixed allowlist (an allowlist, not a
+    // regex, so later code can't widen it and let a tainted value reach the SQL string).
     const levelParam = context.req.query('level');
     const ALLOWED_LEVELS = ['error', 'warn', 'info', 'log', 'debug'] as const;
     type LogLevel = (typeof ALLOWED_LEVELS)[number];
@@ -2124,8 +1875,8 @@ const app = new Hono<ApiEnv>()
     }
 
     const workerName = `user-${project.slug}`;
-    // A slug can be reused after deletion, so rows from before this project
-    // existed belong to an earlier owner.
+    // Decision: A slug can be reused after deletion, so rows from before this project existed belong to an
+    // earlier owner.
     const createdAtMs = databaseTimestampMs(project.created_at) ?? 0;
     const startMs = Math.max(Date.now() - sinceMs, createdAtMs);
     const sinceStr = new Date(startMs).toISOString().replace('T', ' ').slice(0, 19);
@@ -2134,18 +1885,16 @@ const app = new Hono<ApiEnv>()
     const deployFilter = deploymentId ? `\n        AND blob7 = '${deploymentId}'` : '';
     let levelFilter = '';
     if (level === 'error') {
-      // Catch non-ok outcomes (blob1), captured exceptions (blob3 non-empty
-      // array), console.error logs (blob2 has level:"error"), and 5xx responses
-      // (blob6 statusCode) even when the worker neither threw nor logged.
+      // Decision: Catch non-ok outcomes (blob1), captured exceptions (blob3 not '[]'), console.error logs (blob2
+      // level "error") and 5xx responses (blob6) even when the worker neither threw nor logged.
       levelFilter = `\n        AND (blob1 != 'ok' OR blob3 != '[]' OR blob2 LIKE '%"level":"error"%' OR blob6 LIKE '5%')`;
     } else if (level !== null) {
       levelFilter = `\n        AND blob2 LIKE '%"level":"${level}"%'`;
     }
 
-    // `timestamp` is when the row was written, in whole seconds, and keeps the
-    // scan short. An earlier owner's invocation can start before this project
-    // was created and still be written after, so also bound its start time
-    // (`double1`, in ms).
+    // Decision: `timestamp` is when the row was written, in whole seconds, and keeps the scan short. An earlier
+    // owner's invocation can start before this project was created and be written after, so also bound
+    // its start time (`double1`, in ms).
     const query = `
       SELECT
         blob1 as outcome,
@@ -2183,10 +1932,8 @@ const app = new Hono<ApiEnv>()
       );
     }
 
-    // CF's Analytics Engine API normally returns JSON, but a 2xx response can
-    // carry an HTML error page during edge incidents (status pages, DDoS
-    // interstitials). Parse defensively so the handler returns a clean 502
-    // instead of throwing an uncaught SyntaxError that Hono maps to a 500.
+    // Decision: CF's Analytics Engine API can return an HTML error page with a 2xx during edge incidents. Parse
+    // defensively so the handler returns 502 instead of an uncaught SyntaxError that Hono maps to 500.
     let result: {
       data: ReadonlyArray<{
         outcome: string;
@@ -2214,8 +1961,7 @@ const app = new Hono<ApiEnv>()
       );
     }
 
-    // Query newest-first to match the admin log path, then return entries in
-    // chronological order for CLI readability.
+    // Decision: Query newest-first to match the admin log path, then return entries oldest-first for the CLI.
     const data = [...(result.data ?? [])].reverse().map((row) => ({
       timestamp: row.ts,
       outcome: row.outcome,
@@ -2228,11 +1974,9 @@ const app = new Hono<ApiEnv>()
 
     return context.json({ data, ...runtimeLogsField(context.env) });
   })
-  // Fetch request-level metering for a project. Unlike /logs (which only has
-  // user-worker tail rows), this reads the dispatch request-metering dataset,
-  // so it also surfaces 5xx that dispatch generated itself (missing manifest,
-  // static-asset/SSR timeouts) and requests to static/SPA projects that never
-  // invoke a worker.
+  // Decision: Unlike /logs (user-worker tail rows only), this reads the dispatch request-metering dataset, so
+  // it also shows 5xx that dispatch made itself (missing manifest, static or SSR timeouts) and requests
+  // to static or SPA projects that don't run a worker.
   .get('/:id/requests', async (context) => {
     const access = await requireProjectRouteCapability(context, context.req.param('id'), 'read');
     if (access instanceof Response) {
@@ -2251,16 +1995,15 @@ const app = new Hono<ApiEnv>()
       return context.json({ error: 'invalid limit parameter, use a positive integer' }, 400);
     }
 
-    // Optional status filter: a class like `5xx` (LIKE '5%') or an exact 3-digit
-    // code (equality). Validated so no tainted value reaches the SQL string.
+    // Decision: The status filter takes a class like `5xx` (LIKE '5%') or an exact 3-digit code. It's validated
+    // so no tainted value reaches the SQL string.
     const statusParam = context.req.query('status');
     let statusFilter = '';
     if (statusParam !== undefined && statusParam !== 'all') {
       if (/^[1-5]xx$/.test(statusParam)) {
         statusFilter = `\n        AND blob4 LIKE '${statusParam[0]}%'`;
       } else if (/^[1-5]\d{2}$/.test(statusParam)) {
-        // Range-bounded so a typo like `600` errors instead of silently
-        // matching nothing.
+        // Decision: Bound the range so a typo like `600` is an error instead of matching nothing.
         statusFilter = `\n        AND blob4 = '${statusParam}'`;
       } else {
         return context.json(
@@ -2273,8 +2016,8 @@ const app = new Hono<ApiEnv>()
     const sinceStr = new Date(Date.now() - sinceMs).toISOString().replace('T', ' ').slice(0, 19);
     const dataset = getRequestsDataset(context.env);
 
-    // platform_requests columns (see dispatch recordRequest): blob2 type, blob3
-    // method, blob4 status, blob5 slug; double2 responseBytes, double3 durationMs.
+    // Decision: platform_requests columns (see dispatch recordRequest): blob2 type, blob3 method, blob4 status,
+    // blob5 slug; double2 responseBytes, double3 durationMs.
     const query = `
       SELECT
         blob2 as type,
@@ -2337,7 +2080,6 @@ const app = new Hono<ApiEnv>()
       );
     }
 
-    // Query newest-first (matches /logs), return chronological for readability.
     const data = [...(result.data ?? [])].reverse().map((row) => ({
       timestamp: row.timestamp,
       type: row.type,
@@ -2350,7 +2092,6 @@ const app = new Hono<ApiEnv>()
     return context.json({ data });
   })
 
-  // List recent builds for a project.
   .get('/:id/builds', async (context) => {
     const access = await requireProjectRouteCapability(context, context.req.param('id'), 'read');
     if (access instanceof Response) {
@@ -2362,9 +2103,8 @@ const app = new Hono<ApiEnv>()
     const rows = await getProjectBuilds(context.get('db'), project.id, limit);
     return context.json({ builds: rows.map(toBuildSummary) });
   })
-  // Build logs for one of a project's builds. Fronts the
-  // BuildManager DO for container builds; github_actions builds return their
-  // external GitHub Actions URL (no DO log store exists for them).
+  // Decision: Container builds read logs from the BuildManager DO. github_actions builds have no DO log store,
+  // so they return their GitHub Actions URL.
   .get('/:id/builds/:buildId/logs', async (context) => {
     const access = await requireProjectRouteCapability(context, context.req.param('id'), 'read');
     if (access instanceof Response) {
@@ -2401,21 +2141,17 @@ const app = new Hono<ApiEnv>()
       terminal?: boolean;
       logsComplete?: boolean | null;
     };
-    // Claiming a container build durably sets started_at. Only a terminal row
-    // that was never claimed can prove completion without a producer marker.
+    // Decision: Claiming a container build durably sets started_at, so only a terminal row that was never
+    // claimed can prove completion without a producer marker.
     const logsComplete = body.logsComplete ?? (terminal && build.started_at === null ? true : null);
-    // The DO holds the authoritative live status. A completion path sets the DO
-    // terminal FIRST, then does the Postgres CAS write — so if that PG write
-    // throws, the PG `build.status` row can lag ACTIVE until the stale reaper.
-    // OR the two terminal signals (terminal is never resurrected) so a follower
-    // can finish once the DO also confirms its final log drain.
+    // Decision: The DO holds the live status. Completion sets the DO terminal first, then does the Postgres CAS
+    // write, so if that write throws, PG can show active until the stale reaper. OR the two terminal
+    // signals (terminal isn't undone) so a follower can finish once the DO confirms its last log drain.
     const doTerminal = body.terminal === true;
     if (doTerminal && !terminal) {
-      // Snapshot was non-terminal but the DO is terminal. Two cases:
-      //  (a) a concurrent terminalizer committed cancelled/failed after our
-      //      snapshot — Postgres is authoritative, use the fresh status; or
-      //  (b) the genuine stale-active window (PG terminal write threw) — PG is
-      //      still non-terminal, so trust the DO's local terminal status.
+      // Decision: The snapshot wasn't terminal but the DO is. Either a concurrent terminalizer committed after our
+      // snapshot (Postgres is authoritative, so use the fresh status), or the PG terminal write threw (PG
+      // is still non-terminal, so trust the DO's status).
       const fresh = await getBuild(context.get('db'), build.id);
       return context.json({
         lines: body.lines,
@@ -2450,7 +2186,7 @@ function parseDuration(input: string): number | null {
   const ms = value * multipliers[unit];
   if (ms > 7 * 86_400_000) {
     return null;
-  } // cap at 7d
+  }
   return ms;
 }
 
@@ -2532,10 +2268,9 @@ async function autoAddOwnerDestination(
   address: string,
   ownerUserId: string,
 ): Promise<void> {
-  // Set the moment Cloudflare holds an account-level address for us — on the
-  // fresh-create path AND on the already-exists recovery path, which adopts an
-  // address the account already carries. Everything after that point can fail
-  // with the address still allocated and no row pointing at it.
+  // Decision: Set as soon as Cloudflare holds an account-level address for us, on both the create path and the
+  // already-exists path. Anything after that can fail with the address allocated and no row pointing
+  // at it.
   let allocatedTag: string | null = null;
   try {
     let cfRow;
@@ -2554,12 +2289,10 @@ async function autoAddOwnerDestination(
     }
     allocatedTag = cfRow.tag;
     const status = cfRow.verified ? 'verified' : 'pending';
-    // `address` was the owner's email when the request came in, before the
-    // Cloudflare calls above. Inheriting CF's `verified` flag is only sound
-    // while that is STILL true, and the helper checks it under a lock that
-    // serializes with the login-side email change — a plain re-read here
-    // would not see that change until it commits. A `pending` row inherits
-    // nothing, so it needs no such check.
+    // Decision: `address` was the owner's email when the request arrived, before the Cloudflare calls. Inheriting
+    // CF's `verified` flag is sound only while that's still true, and the helper checks it under a lock
+    // that serializes with the login-side email change; a plain re-read wouldn't see that change until it
+    // commits. A `pending` row inherits nothing, so it needs no check.
     const { row, ownerEmailChanged } = await tryCreateEmailDestination(
       db,
       projectId,
@@ -2574,39 +2307,27 @@ async function autoAddOwnerDestination(
       },
     );
     if (ownerEmailChanged) {
-      // The owner's address moved while CF was answering. The consent this
-      // row would inherit belongs to a mailbox they no longer hold, and no
-      // later login would revisit it (they compare the stored address with
-      // the provider's, and those now agree). Best-effort means they can
-      // add a recipient by hand; the rollback below releases the tag if
-      // nothing else references it.
+      // Decision: The owner's address changed while CF was answering. The consent this row would inherit belongs
+      // to a mailbox they no longer hold, and no later login revisits it. This path is best effort, so they
+      // can add a recipient by hand; the rollback below releases the tag if nothing else uses it.
       throw new Error('owner email changed while the address was being registered');
     }
     if (!row) {
-      // The helper's hard-error outcome: a manual add for the same address
-      // won the ON CONFLICT race, and its row was deleted before the
-      // read-back. That deleter released the tag only if it counted itself
-      // as the last reference — teardown's cascade window, or an upstream
-      // delete that failed, leaves the tag live with no row pointing at it,
-      // which is exactly what the rollback below exists for. No retry, unlike
-      // the POST route: the owner just removed this address on purpose, and
-      // re-inserting it here would resurrect a row they revoked. Best-effort
-      // means they can re-add it.
+      // Decision: The helper's hard-error case: a manual add for the same address won the ON CONFLICT race and its
+      // row was deleted before the read-back. That deleter released the tag only if it was the last
+      // reference, so the tag can be live with no row, which the rollback below handles. Don't retry like
+      // the POST route does: the owner just removed this address, and re-inserting it would bring back a
+      // row they revoked.
       throw new Error('owner destination row vanished between insert and read-back');
     }
   } catch (err) {
     console.error('[projects] auto-add owner email destination failed:', err);
     if (allocatedTag) {
-      // Roll back on ANY error, not just the foreign-key violation that
-      // project teardown's cascade raises. This path is best-effort and runs
-      // after the 201, so nothing retries it and nothing reports it: once CF
-      // has allocated the address, any failure past that point means no row
-      // persisted to reference it, and an unreferenced address is invisible
-      // to teardown's cleanup while still costing the shared 200-per-account
-      // cap. Rolling back unconditionally is simpler and safer than an
-      // FK-only check. The `refs === 0` guard inside `rollbackCfDestination`
-      // is what stops it revoking a recipient a sibling project still uses —
-      // including the already-exists path, where the address predates us.
+      // Decision: Roll back on any error, not only the FK violation from project teardown's cascade. This runs after
+      // the 201, so nothing retries or reports it: once CF allocated the address, a failure means no row
+      // references it, which teardown can't see and which still counts toward the shared 200-per-account
+      // cap. The `refs === 0` guard in `rollbackCfDestination` keeps it from revoking a recipient a
+      // sibling project still uses, including on the already-exists path.
       await rollbackCfDestination(db, accountId, apiToken, allocatedTag);
     }
   }
@@ -2648,15 +2369,15 @@ type CreateProjectContext = {
 
 /** Creates a project for `user`; throws `ProjectCreateError` for every refusal. */
 export async function createProjectForUser(context: CreateProjectContext, slug: string) {
-  // Lowercase alphanumeric with dashes, short enough to fit in front of `+noreply@`
-  // in a 64-octet SMTP local-part, and not reserved. The CLI treats this 400 as
-  // re-promptable.
+  // Decision: Lowercase alphanumeric with dashes, short enough to fit before `+noreply@` in a 64-octet SMTP
+  // local-part, and not reserved. The CLI treats this 400 as re-promptable.
   const nameError = projectNameError(slug, 'slug');
   if (nameError) {
     throw new ProjectCreateError('SLUG_INVALID', nameError);
   }
 
-  // Preserve short-slug eligibility when an administrator copies or renames a plan.
+  // Decision: Check the plan's allowShortSlugs flag, not its name, so short-slug eligibility survives when an
+  // administrator copies or renames a plan.
   if (slug.length <= 5) {
     if (!(await resolvePlan(context.db, context.user.plan)).allowShortSlugs) {
       throw new ProjectCreateError(
@@ -2666,8 +2387,8 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
     }
   }
 
-  // A slug is also a mailbox on the shared mail domain, so it may not equal
-  // another project's email alias either.
+  // Decision: A slug is also a mailbox on the shared mail domain, so it can't equal another project's email
+  // alias either.
   const existing =
     (await getProjectBySlug(context.db, slug)) ?? (await getProjectByEmailAlias(context.db, slug));
   if (existing) {
@@ -2676,15 +2397,15 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
 
   const userId = context.user.id;
   try {
-    // `bwf platform uninstall --purge-resources` holds this lock across its last
-    // check for projects and records the uninstall before releasing it, so a
-    // project either commits before that check or is refused here.
+    // Decision: `bwf platform uninstall --purge-resources` holds this lock across its last check for projects
+    // and records the uninstall before releasing it, so a project either commits before that check or is
+    // refused here.
     const project = await context.db.transaction(async (tx) => {
       await lockZeroTrustConfiguration(tx, 'shared');
       await lockNewProjectAiLoggingInputs(tx);
       const created = await createProject(tx, userId, slug);
-      // A plan AI logging default applies from the first request. A KV failure
-      // rolls the create back, so a retry starts clean.
+      // Decision: A plan's AI logging default applies from the first request. A KV failure rolls the create back,
+      // so a retry starts clean.
       await publishProjectAiLogging(tx, context.env.ROUTING, created.id, {
         trigger: 'project_create',
         initialPlanDefault: initialPlanDefaultFor(context.env),
@@ -2704,16 +2425,10 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
         error,
       });
     }
-    // Pre-seed the owner's own address as a destination so mail to
-    // themselves works from the first deploy. CF sends them a verification
-    // link; the row stays `pending` until they click it.
-    //
-    // Gated on the `email` platform capability AND EMAIL_SENDER_DOMAIN:
-    // the row's only purpose is to allow-list a recipient for sends from
-    // `<slug>[+tag]@<domain>`, so on a platform that does not enable email
-    // (its `/email/*` routes answer 501) or in an environment with no
-    // platform mail domain there is nothing it could ever authorize — and
-    // registering it would still cost CF a verification email to the owner.
+    // Decision: Pre-seed the owner's own address as a destination so mail to themselves works from the first
+    // deploy; it stays `pending` until they click CF's verification link. Gate it on the `email`
+    // capability and EMAIL_SENDER_DOMAIN: without them the row could authorize nothing, and registering
+    // it would still cost the owner a CF verification email.
     const ownerEmail = context.user.email;
     if (
       getPlatformCapabilities(context.env).email &&
@@ -2722,10 +2437,8 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
       !isSyntheticProviderEmail(ownerEmail)
     ) {
       const address = ownerEmail.toLowerCase();
-      // Off the response path: CF Email Routing has no timeout in
-      // `cfFetch`, and project creation must not wait on it. Nothing
-      // downstream depends on the row existing yet — a pending row emits
-      // no allowlist entry either way.
+      // Decision: Run this off the response path: CF Email Routing has no timeout in `cfFetch`, and project
+      // creation mustn't wait on it. Nothing depends on the row yet; a pending row adds no allowlist entry.
       await context.schedule(
         autoAddOwnerDestination(
           context.env.CF_ACCOUNT_ID,
@@ -2736,12 +2449,9 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
           userId,
         ),
       );
-      // Tell the caller WHICH address is being registered, and nothing
-      // more: whether CF mails a verification link (fresh address) or
-      // adopts one the owner already verified is decided by the add above,
-      // which has not run yet. The CLI prints this so the verification
-      // email that may follow is explained; `bwf email destinations`
-      // shows the outcome.
+      // Decision: Return only which address is being registered. Whether CF mails a verification link or adopts an
+      // address the owner already verified is decided by the add above, which hasn't run yet. The CLI
+      // prints this to explain the email that may follow.
       return {
         ...project,
         owner_email_destination: { address },
@@ -2755,8 +2465,7 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
       ...(zeroTrustWarning ? { warnings: [zeroTrustWarning] } : {}),
     };
   } catch (err) {
-    // Only the configuration lock above throws this here: the uninstall
-    // record exists.
+    // Decision: Only the configuration lock above throws this here: the uninstall record exists.
     if (err instanceof AiLoggingPublishError) {
       throw new ProjectCreateError(
         'AI_LOGGING_UNAVAILABLE',
@@ -2769,8 +2478,8 @@ export async function createProjectForUser(context: CreateProjectContext, slug: 
         'The platform is being uninstalled, so new projects cannot be created.',
       );
     }
-    // Unique constraint violation: the slug, or an alias with that name, was
-    // taken between check and insert.
+    // Decision: Unique violation: the slug, or an alias with that name, was taken between the check and the
+    // insert.
     if (hasSqlState(err, '23505')) {
       throw new ProjectCreateError('SLUG_TAKEN', 'slug already taken');
     }

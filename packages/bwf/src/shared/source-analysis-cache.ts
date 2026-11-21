@@ -26,7 +26,7 @@ export function deriveFromSource<T>(path: string, kind: string, derive: (source:
   const stat = statSync(key, { bigint: true, throwIfNoEntry: false });
 
   if (!stat) {
-    // Keep the read error callers already handle.
+    // Decision: Keep the read error callers already handle.
     return derive(readFileSync(key, 'utf-8'));
   }
 

@@ -30,7 +30,7 @@ if (import.meta.main) {
         : 'Staging kitchen-sink secrets are already configured.',
     );
   } catch (error) {
-    // API errors can include response bodies. Never echo them or plaintext values.
+    // Decision: API errors can include response bodies, so neither they nor plaintext values are echoed.
     const status = error instanceof PlatformApiError ? ` (HTTP ${error.status})` : '';
     console.error(
       `Staging kitchen-sink fixture setup failed. Failed while ${step}${status}. Check the staging credentials, project access, and env.ts schema.`,

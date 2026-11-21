@@ -35,10 +35,6 @@ export interface CapturedMessage {
 
 export type EmailSink = (message: CapturedMessage) => void;
 
-// ---------------------------------------------------------------------------
-// Cross-process capture protocol (workerd -> Vite dev server)
-// ---------------------------------------------------------------------------
-
 /** Mount point of the dev inbox on the Vite dev server. */
 export const DEV_INBOX_PREFIX: string = '/__platform/inbox';
 /** Capture endpoint, relative to {@link DEV_INBOX_PREFIX} (connect strips the mount). */
@@ -198,7 +194,7 @@ interface SinkRegistry {
   sinks: Set<EmailSink>;
 }
 
-// Shared across module instances in the dev server's isolate.
+// Decision: Shared across module instances in the dev server's isolate.
 const inboxGlobal = globalThis as typeof globalThis & {
   [SINK_KEY]?: SinkRegistry;
   [BUFFER_KEY]?: DevBuffer;
@@ -224,7 +220,7 @@ export function dispatchToSinks(message: CapturedMessage): void {
     try {
       sink(message);
     } catch (err) {
-      // Sinks are best-effort observers — never let one break send, but
+      // Decision: Sinks are best-effort observers — never let one break send, but
       // surface the error so a misbehaving sink is noticed.
       console.warn('[email-dev-inbox] sink error:', err);
     }
@@ -254,7 +250,7 @@ export function pushToDevBuffer(message: CapturedMessage): void {
   const b = getDevBuffer();
   b.items.push(message);
   b.bytes += messageBytes(message);
-  // Oldest-first on either bound. The `items.length > 1` guard keeps the
+  // Decision: Oldest-first on either bound. The `items.length > 1` guard keeps the
   // newest message even when it alone blows the budget: a send the developer
   // just made must always be visible in the inbox.
   while (
@@ -279,7 +275,7 @@ export function findDevMessage(id: string): CapturedMessage | undefined {
 export function clearDevBuffer(): void {
   const b = getDevBuffer();
   b.items.length = 0;
-  // Without this the counter goes stale and the buffer silently collapses to a
+  // Decision: Without this the counter goes stale and the buffer silently collapses to a
   // single item on every later push.
   b.bytes = 0;
 }

@@ -21,7 +21,6 @@ describe('compileWorkerClient', () => {
   });
 });
 
-// Evaluate the emitted module with only its import boundary substituted.
 describe('worker fetch runtime behavior', () => {
   const requestContext = new AsyncLocalStorage<{
     request: Request;
@@ -31,7 +30,6 @@ describe('worker fetch runtime behavior', () => {
     };
   }>();
 
-  // Mock app.fetch — records calls and returns configurable responses
   let mockAppFetch: ReturnType<typeof vi.fn<(...args: Array<unknown>) => Promise<Response>>>;
   let mockEnv: Record<string, unknown>;
 
@@ -236,7 +234,6 @@ describe('worker fetch runtime behavior', () => {
     };
     expect(passedCtx.waitUntil).toBeTypeOf('function');
     expect(passedCtx.passThroughOnException).toBeTypeOf('function');
-    // Should not throw
     passedCtx.waitUntil();
     passedCtx.passThroughOnException();
   });

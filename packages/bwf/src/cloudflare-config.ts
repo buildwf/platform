@@ -121,7 +121,7 @@ function readState(root: string): CloudflareState | undefined {
   }
   const state = value as CloudflareState;
   if (!isDeepStrictEqual(parseCloudflareText(state.text, BWF_LOCK_FILE), state.resolved)) {
-    // `resolved` is the editable checked-in state. Rebuild the materialized text after an edit.
+    // Decision: `resolved` is the editable checked-in state. Rebuild the materialized text after an edit.
     state.text = `${provenance(state.text)}${JSON.stringify(state.resolved, null, 2)}\n`;
   }
   return state;
@@ -136,7 +136,7 @@ function writeState(root: string, state: CloudflareState): void {
         return;
       }
     } catch {
-      // Replace an invalid lock only after the caller has validated its state.
+      // Decision: Replace an invalid lock only after the caller has validated its state.
     }
   }
   writeFileAtomic(path, content);

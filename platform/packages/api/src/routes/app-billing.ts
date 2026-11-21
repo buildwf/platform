@@ -47,7 +47,7 @@ async function standing(context: BillingContext, person: string) {
       ),
     );
   const usedNow = { aiNeurons: used?.ai_neurons ?? 0, sandboxSeconds: used?.sandbox_seconds ?? 0 };
-  // 0 means unlimited in a plan's limits.
+  // Decision: 0 means unlimited in a plan's limits.
   const within = (limit: number, value: number) => limit === 0 || value < limit;
   const aiWithinCap = within(limits.aiNeuronsPerMonth, usedNow.aiNeurons);
   const sandboxWithinCap = within(limits.sandboxRuntimeSecondsPerMonth, usedNow.sandboxSeconds);
@@ -93,8 +93,8 @@ export const appBillingRoutes = new Hono<ApiEnv>()
       return context.json({ error: 'bad_person' }, 400);
     }
     const { subscriptionId, ...now } = await standing(context, body.person);
-    // A paid plan renews on its own Stripe date, not on the first of the month when the meters
-    // reset. If Stripe can't be reached, the answer leaves renewsAt out instead of failing.
+    // Decision: A paid plan renews on its own Stripe date, not on the first of the month when the meters reset. If
+    // Stripe can't be reached, the answer leaves renewsAt out instead of failing.
     const renewsAt = subscriptionId
       ? await subscriptionRenewsAt(context.env, subscriptionId).catch(() => null)
       : null;
@@ -123,7 +123,7 @@ export const appBillingRoutes = new Hono<ApiEnv>()
     const db = context.get('db');
     const clientId = context.get('billingClient');
     await db.transaction(async (tx) => {
-      // With an id, a report sent again after a timeout counts once.
+      // Decision: With an id, a report sent again after a timeout counts once.
       if (id !== undefined) {
         const fresh = await tx
           .insert(appUsageEvents)

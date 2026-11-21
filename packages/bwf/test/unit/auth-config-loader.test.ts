@@ -41,7 +41,7 @@ describe('loadBwfAuthConfig', () => {
     });
   });
 
-  // The Worker imports only the default export.
+  // Decision: The Worker imports only the default export.
   it.each(['auth', 'config'])('rejects a config with only an `%s` export', async (name) => {
     const dir = createTempDir();
     const path = join(dir, 'auth.ts');
@@ -51,7 +51,7 @@ describe('loadBwfAuthConfig', () => {
     );
   });
 
-  // Vitest resolves the native `import()` itself; plain Node is what `bwf prepare` runs in.
+  // Decision: Vitest resolves the native `import()` itself; plain Node is what `bwf prepare` runs in.
   // `bwf prepare` boots no Vite: it never evaluates vite.config, whose plugins write files
   // when constructed. `@fields` comes from tsconfig `paths`, `@schema` from bwf's own alias.
   it('resolves extensionless, tsconfig paths and @schema imports in bwf prepare without vite.config', () => {

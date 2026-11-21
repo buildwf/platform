@@ -292,7 +292,7 @@ export async function verifyPlatformWorkerCutoverVersions(
     'dispatch',
   ],
 ): Promise<void> {
-  // Shared email setup commits the retained Worker set before its provider
+  // Decision: Shared email setup commits the retained Worker set before its provider
   // mutations. Final verification must still inspect that exact generation.
   const cutover = workerCutoverGenerations(manifest).get(generation);
   if (!cutover || cutover.resolution === 'restored' || cutover.staged.size !== workerKeys.length) {
@@ -351,7 +351,7 @@ export function stablePublicEndpointState(existing: PlatformInstallationManifest
   if (!existing) {
     return false;
   }
-  // `bwf platform disable` removes traffic without redeploying Workers, so it
+  // Decision: `bwf platform disable` removes traffic without redeploying Workers, so it
   // does not create a Worker cutover marker. Its durable desired state is
   // authoritative over the last successful install/upgrade marker.
   if (existing.status === 'disabled' || existing.desiredState === 'disabled') {
@@ -366,7 +366,7 @@ export function stablePublicEndpointState(existing: PlatformInstallationManifest
   if (latest) {
     return latest.state === 'enabled';
   }
-  // Older manifests do not have a Worker traffic marker. Only a completed
+  // Decision: Older manifests do not have a Worker traffic marker. Only a completed
   // install proves that their endpoints were ever intentionally published.
   // Fresh and interrupted installs begin with desiredState=enabled, so using
   // desired state here would let a resume bypass the initial traffic gate.
@@ -381,7 +381,7 @@ export function resolvePlatformPreviousTriggerConfig(
   if (publicEndpoints) {
     return versionSnapshot;
   }
-  // Disable removes public traffic without uploading a new immutable Worker
+  // Decision: Disable removes public traffic without uploading a new immutable Worker
   // version, so the active version message can still describe the last enabled
   // routes. The durable lifecycle state owns those three traffic fields while
   // the version message remains authoritative for cron, queue, and workflow

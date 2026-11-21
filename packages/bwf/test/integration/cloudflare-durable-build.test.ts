@@ -117,7 +117,7 @@ export default defineDurableState({ initialState: { count: 0 }, methods: { incre
         const config = readConfig(root);
         const analysis = analyzeApplicationSync(root, { config });
         const configPath = materializeCloudflareConfig(root);
-        // Native classification retains pre-existing WebSocket/class history; the build appends
+        // Decision: Native classification retains pre-existing WebSocket/class history; the build appends
         // Sandbox and Live.
         syncWranglerBindings(
           root,
@@ -168,7 +168,7 @@ export default defineDurableState({ initialState: { count: 0 }, methods: { incre
           return JSON.parse(readFileSync(join(root, 'dist/ssr/wrangler.json'), 'utf8'));
         };
         const emitted = build();
-        // Exercise worker/cloudflare overlap through the actual provider plugin,
+        // Decision: Exercise worker/cloudflare overlap through the actual provider plugin,
         // alongside the existing native build rather than booting another one.
         if (options.name === 'native') {
           expect(emitted.compatibility_flags).toEqual([

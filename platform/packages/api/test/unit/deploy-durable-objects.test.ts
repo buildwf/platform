@@ -119,9 +119,7 @@ describe('enrichWebSocketManifest', () => {
     );
 
     expect(result.changed).toBe(true);
-    // No version bump — no migration step needed (no new classes)
     expect(result.nextVersion).toBe(1);
-    // Class list updated but no new migration appended
     expect(result.manifest.websocket?.classes).toEqual(['ChatRoom']);
     expect(result.manifest.websocket?.migrations).toEqual([
       { tag: 'ws-v1', newClasses: ['ChatRoom', 'LegacyRoom'] },
@@ -143,7 +141,6 @@ describe('enrichWebSocketManifest', () => {
 
     expect(result.changed).toBe(true);
     expect(result.nextVersion).toBe(1);
-    // No new migration — nothing for CF to do
     expect(result.manifest.websocket?.migrations).toEqual([
       { tag: 'ws-v1', newClasses: ['ChatRoom'] },
     ]);
@@ -151,14 +148,14 @@ describe('enrichWebSocketManifest', () => {
   });
 
   it('does not re-emit newClasses for a class that was previously created then removed', () => {
-    // Scenario: class created in v1, removed in deploy 2, re-added in deploy 3
-    // The class namespace already exists in CF — must NOT appear in newClasses again
+    // Decision: A class removed and then re-added keeps its namespace in Cloudflare, so it mustn't appear in
+    // newClasses again.
     const previousManifest: DeployManifest = {
       version: 3,
       bindings: {},
       websocket: {
         routes: [],
-        classes: [], // was removed in a previous deploy
+        classes: [],
         migrations: [{ tag: 'ws-v1', newClasses: ['ChatRoom'] }],
       },
     };
@@ -169,7 +166,7 @@ describe('enrichWebSocketManifest', () => {
         bindings: {},
         websocket: {
           routes: [],
-          classes: ['ChatRoom'], // re-added
+          classes: ['ChatRoom'],
           migrations: [],
         },
       },
@@ -178,10 +175,8 @@ describe('enrichWebSocketManifest', () => {
     );
 
     expect(result.changed).toBe(true);
-    // No version bump — ChatRoom already exists in CF from ws-v1
     expect(result.nextVersion).toBe(1);
     expect(result.manifest.websocket?.classes).toEqual(['ChatRoom']);
-    // No new migration step — ChatRoom is not "new"
     expect(result.manifest.websocket?.migrations).toEqual([
       { tag: 'ws-v1', newClasses: ['ChatRoom'] },
     ]);
@@ -204,7 +199,7 @@ describe('enrichWebSocketManifest', () => {
         bindings: {},
         websocket: {
           routes: [],
-          classes: ['ChatRoom', 'PresenceRoom'], // ChatRoom returns, PresenceRoom is new
+          classes: ['ChatRoom', 'PresenceRoom'],
           migrations: [],
         },
       },
@@ -222,14 +217,13 @@ describe('enrichWebSocketManifest', () => {
   });
 
   it('falls back to previousClasses when migration history is absent (legacy projects)', () => {
-    // Legacy project: classes exist in CF but no migration history was recorded
     const previousManifest: DeployManifest = {
       version: 3,
       bindings: {},
       websocket: {
         routes: [],
         classes: ['ChatRoom'],
-        migrations: [], // no history — predates the migration system
+        migrations: [],
       },
     };
 
@@ -249,15 +243,12 @@ describe('enrichWebSocketManifest', () => {
 
     expect(result.changed).toBe(true);
     expect(result.nextVersion).toBe(1);
-    // Only PresenceRoom is new — ChatRoom already exists (from previousClasses fallback)
     expect(result.manifest.websocket?.migrations).toEqual([
       { tag: 'ws-v1', newSqliteClasses: ['PresenceRoom'] },
     ]);
   });
 
   it('re-creates a class that was previously deleted via legacy deletedClasses', () => {
-    // Legacy project had a class created then deleted (old behavior).
-    // The namespace was actually destroyed — must re-create it.
     const previousManifest: DeployManifest = {
       version: 3,
       bindings: {},
@@ -266,7 +257,7 @@ describe('enrichWebSocketManifest', () => {
         classes: [],
         migrations: [
           { tag: 'ws-v1', newClasses: ['ChatRoom'] },
-          { tag: 'ws-v2', deletedClasses: ['ChatRoom'] }, // namespace was destroyed
+          { tag: 'ws-v2', deletedClasses: ['ChatRoom'] },
         ],
       },
     };
@@ -277,7 +268,7 @@ describe('enrichWebSocketManifest', () => {
         bindings: {},
         websocket: {
           routes: [],
-          classes: ['ChatRoom'], // re-adding after deletion
+          classes: ['ChatRoom'],
           migrations: [],
         },
       },
@@ -287,7 +278,6 @@ describe('enrichWebSocketManifest', () => {
 
     expect(result.changed).toBe(true);
     expect(result.nextVersion).toBe(3);
-    // ChatRoom must appear in newClasses because its namespace was deleted
     expect(result.manifest.websocket?.migrations).toEqual([
       { tag: 'ws-v1', newClasses: ['ChatRoom'] },
       { tag: 'ws-v2', deletedClasses: ['ChatRoom'] },

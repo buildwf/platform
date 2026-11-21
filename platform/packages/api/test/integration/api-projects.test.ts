@@ -711,7 +711,6 @@ describe('project CI credential ownership', () => {
         ),
         env,
       );
-      // A procedure never tells a caller whether a project exists.
       expect(missingResponse.status).toBe(403);
       expect(await missingResponse.json()).toEqual(forbidden);
     }
@@ -820,9 +819,8 @@ describe('PUT /projects/:id/database-url', () => {
       });
       const cf = mockCfApi();
 
-      // Return the route's first access snapshot, then commit the downgrade.
-      // The handler must re-resolve the collaborator under the project lock
-      // before either creating or updating a live Hyperdrive.
+      // Decision: Return the route's first access snapshot, then commit the downgrade. The handler has to re-resolve
+      // the collaborator under the project lock before creating or updating a live Hyperdrive.
       const requireCapability = projectAccess.requireProjectCapability;
       let downgraded = false;
       vi.spyOn(projectAccess, 'requireProjectCapability').mockImplementation(async (...args) => {
@@ -1137,8 +1135,8 @@ describe('GET /projects/:id/database-url', () => {
   it('returns 409 from POST /:id/database once teardown has begun', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'pg-app-deleting');
-    // Teardown flips status to 'deleting' under a row lock before tearing down
-    // CF resources; provisioning a Hyperdrive after that would orphan it.
+    // Decision: Teardown flips status to 'deleting' under a row lock before tearing down CF resources;
+    // provisioning a Hyperdrive after that would orphan it.
     await env.db.update(projects).set({ status: 'deleting' }).where(eq(projects.id, project.id));
 
     const cf = mockCfApi();
@@ -1155,7 +1153,6 @@ describe('GET /projects/:id/database-url', () => {
     expect(await res.json()).toEqual({
       error: { code: 'PROJECT_DELETING', message: 'Project is being deleted' },
     });
-    // Bailed before touching Cloudflare — no Hyperdrive create attempted.
     expect(cf).not.toHaveBeenCalled();
   });
 
@@ -1163,9 +1160,9 @@ describe('GET /projects/:id/database-url', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'pg-rollback-post');
     const cf = mockCfApi();
-    // Force the resources-row INSERT to fail AFTER CF created the Hyperdrive
-    // (models a concurrent teardown deleting the project → FK violation). The
-    // route must delete the just-created CF Hyperdrive so it doesn't orphan.
+    // Decision: Force the resources-row INSERT to fail after CF created the Hyperdrive (a concurrent teardown
+    // deleting the project, so an FK violation). The route deletes the just-created CF Hyperdrive so it
+    // doesn't orphan.
     vi.spyOn(db, 'createResource').mockRejectedValueOnce(new Error('insert failed'));
 
     const res = await app.fetch(
@@ -1177,7 +1174,6 @@ describe('GET /projects/:id/database-url', () => {
     );
     expect(res.status).toBe(500);
 
-    // The Hyperdrive CF object we created was rolled back (DELETE to its config).
     const hdDeletes = cf.mock.calls.filter(
       ([url, init]) =>
         (init as RequestInit | undefined)?.method === 'DELETE' &&
@@ -1272,10 +1268,8 @@ describe('database URL persistence ordering — CF failure must not overwrite st
       env,
     );
 
-    // CF rejected — the request should fail
     expect(res.status).toBe(502);
 
-    // No credential row should have been written
     const getRes = await app.fetch(
       rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
@@ -1289,7 +1283,6 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     const project = await createTestProject(env.db, user.id, 'pg-post-cf-fail-keep');
     const originalUrl = 'postgresql://void_user:original@db.example.com/appdb';
 
-    // Seed a successful first set via the happy path
     mockCfApi();
     const firstRes = await app.fetch(
       rpcRequest('database.provision', user.jwt, {
@@ -1300,13 +1293,10 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     );
     expect(firstRes.status).toBe(200);
 
-    // A re-run updates through PUT; a CF rejection there must leave the
-    // original credential intact.
     mockCfApi({
       updateHyperdrive: () => cfError('origin database is unreachable', 400),
     });
 
-    // The first POST created the hyperdrive resource, so PUT takes the update path.
     const rows = await env.db.select().from(resources).where(eq(resources.project_id, project.id));
     expect(rows.find((r) => r.type === 'hyperdrive')).toBeDefined();
 
@@ -1319,7 +1309,6 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     );
     expect(putRes.status).toBe(502);
 
-    // The stored URL must still be the original
     const getRes = await app.fetch(
       rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
@@ -1344,10 +1333,8 @@ describe('database URL persistence ordering — CF failure must not overwrite st
       env,
     );
 
-    // CF rejected — the request should fail
     expect(res.status).toBe(502);
 
-    // No credential row should have been written
     const rows = await env.db
       .select()
       .from(projectDatabaseCredentials)
@@ -1360,7 +1347,6 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     const project = await createTestProject(env.db, user.id, 'pg-put-cf-fail-update');
     const originalUrl = 'postgresql://void_user:original@db.example.com/appdb';
 
-    // Seed an existing hyperdrive resource and a stored credential via the happy path
     mockCfApi();
     const firstRes = await app.fetch(
       rpcRequest('database.setUrl', user.jwt, {
@@ -1371,7 +1357,6 @@ describe('database URL persistence ordering — CF failure must not overwrite st
     );
     expect(firstRes.status).toBe(200);
 
-    // Now attempt an update with CF rejecting the new URL
     mockCfApi({
       updateHyperdrive: () => cfError('origin database is unreachable', 400),
     });
@@ -1384,10 +1369,8 @@ describe('database URL persistence ordering — CF failure must not overwrite st
       env,
     );
 
-    // CF rejected — the request should fail
     expect(res.status).toBe(502);
 
-    // The stored URL must still be the original (not overwritten with the rejected URL)
     const getRes = await app.fetch(
       rpcRequest('database.getUrl', user.jwt, { projectId: project.id }),
       env,
@@ -1488,8 +1471,8 @@ describe('POST /projects', () => {
     });
   });
 
-  // `<slug>@<mail domain>` is the project's mailbox, and a certificate
-  // authority may prove control of that domain by mailing `hostmaster@`.
+  // Decision: `<slug>@<mail domain>` is the project's mailbox, and a certificate authority may prove control of
+  // that domain by mailing `hostmaster@`.
   it('rejects CA domain-validation mailbox slugs', async () => {
     const user = await createTestUser(env.db);
 
@@ -1512,10 +1495,9 @@ describe('POST /projects', () => {
     }
   });
 
-  // The slug is the prefix of the project's email local-part
-  // (`<slug>+noreply@<domain>`), which RFC 5321 caps at 64 octets. The runtime
-  // refuses to build a default sender from a slug over 56, so a longer slug
-  // must never be allocated.
+  // Decision: The slug prefixes the project's email local-part (`<slug>+noreply@<domain>`), which RFC 5321 caps
+  // at 64 octets. The runtime refuses to build a default sender from a slug over 56, so a longer slug
+  // is never allocated.
   it('accepts a 56-character slug', async () => {
     const user = await createTestUser(env.db);
     const slug = `len-${'a'.repeat(52)}`;
@@ -1557,7 +1539,6 @@ describe('POST /projects', () => {
     expect(await res.json()).toMatchObject({
       error: { message: 'slug must be at most 56 characters' },
     });
-    // Refused before allocation: nothing was inserted.
     expect(await env.db.select().from(projects).where(eq(projects.slug, slug))).toEqual([]);
   });
 
@@ -1619,8 +1600,8 @@ describe('POST /projects', () => {
     expect(await res.json()).toMatchObject({ error: { message: 'slug already taken' } });
   });
 
-  // A slug is also a mailbox on the shared mail domain, so it may not take
-  // the name another project uses as its email alias.
+  // Decision: A slug is also a mailbox on the shared mail domain, so it can't take the name another project uses
+  // as its email alias.
   it("rejects a slug equal to another project's email alias", async () => {
     const user = await createTestUser(env.db);
     const other = await createTestProject(env.db, user.id, 'alias-holder');
@@ -1888,7 +1869,6 @@ describe('POST /projects/:id/rollback', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'rollback-app');
 
-    // Create two deployments, both retained and live
     const d1 = await createDeployment(
       env.db,
       project.id,
@@ -1927,7 +1907,6 @@ describe('POST /projects/:id/rollback', () => {
     expect(body.deploymentId).toBe(d1.id);
     expect(body.migrationDiff).toEqual([]);
 
-    // Verify KV routing updated
     const routing = (await env.ROUTING.get(project.slug, 'json')) as { workerName: string };
     expect(routing.workerName).toBe(`user-rollback-app-${d1.id}`);
   });
@@ -2080,9 +2059,8 @@ describe('POST /projects/:id/rollback', () => {
   it('keeps legacy Worker targets as Workers after a static deployment', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'rollback-legacy-worker');
-    // The original v1 Worker manifest had no type, workerMain, or
-    // bundle_stored discriminator. In contrast, v1 static manifests carried
-    // `static`, so an otherwise ambiguous historical manifest is a Worker.
+    // Decision: The original v1 Worker manifest had no type, workerMain or bundle_stored discriminator, while v1
+    // static manifests carried `static`, so an otherwise ambiguous historical manifest is a Worker.
     const target = await createDeployment(
       env.db,
       project.id,
@@ -2127,7 +2105,6 @@ describe('POST /projects/:id/rollback', () => {
 
     const d1 = await createDeployment(env.db, project.id, null);
     await updateDeploymentStatus(env.db, d1.id, 'live');
-    // retained defaults to false
 
     const res = await app.fetch(
       new Request(`http://localhost/projects/${project.id}/rollback`, {
@@ -2240,11 +2217,6 @@ describe('POST /projects/:id/rollback', () => {
           Authorization: `Bearer ${user.jwt}`,
           'Content-Type': 'application/json',
         },
-        // Rolling back to d1 drops 002/003 from the target's known
-        // migrations while D1 still has them — destructive rollback. The
-        // caller must echo the exact set of migrations that make up the
-        // server-computed diff (currentActive minus target) as
-        // `allowDestructive`; a mismatch is rejected with 400.
         body: JSON.stringify({
           deploymentId: d1.id,
           allowDestructive: ['002_add_email.sql', '003_add_roles.sql'],
@@ -2261,7 +2233,6 @@ describe('POST /projects/:id/rollback', () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'domain-roll');
 
-    // Insert an active domain
     await env.db.insert(domains).values({
       id: 'dom_rollback',
       project_id: project.id,
@@ -2300,7 +2271,6 @@ describe('POST /projects/:id/rollback', () => {
     );
     expect(res.status).toBe(200);
 
-    // Verify domain KV routing updated
     const domainRouting = (await env.ROUTING.get('domain:rollback.example.com', 'json')) as {
       workerName: string;
     };
@@ -2563,10 +2533,9 @@ describe('POST /projects/:id/rollback', () => {
     await markDeploymentRetained(env.db, d2.id, true);
     await setActiveDeployment(env.db, project.id, d2.id);
 
-    // Simulate a transient CF failure on the SECOND bindings call. Rollback
-    // reads the proxy token once and reuses it for cron and queue sync, so it
-    // succeeds on one healthy call; a second read could fail after cron sync
-    // committed DO state and leave cron partial.
+    // Decision: Simulate a transient CF failure on the second bindings call. Rollback reads the proxy token once
+    // and reuses it for cron and queue sync; a second read could fail after cron sync committed DO
+    // state and leave cron partial.
     let bindingsCalls = 0;
     mockCfApi({
       listWorkerBindings: () => {
@@ -2612,7 +2581,6 @@ describe('POST /projects/:id/rollback', () => {
       env,
     );
     expect(res.status).toBe(200);
-    // Exactly one CF bindings fetch for the rollback.
     expect(bindingsCalls).toBe(1);
 
     const sync = doCalls.find((c) => c.url === '/sync');
@@ -2645,8 +2613,6 @@ describe('POST /projects/:id/rollback', () => {
     await markDeploymentRetained(env.db, d2.id, true);
     await setActiveDeployment(env.db, project.id, d2.id);
 
-    // Return the exact token baked into d1's worker, so we can assert
-    // rollback uses THIS value rather than re-deriving from JWT_SECRET.
     mockCfApi({
       listWorkerBindings: () =>
         cfSuccess([
@@ -2716,11 +2682,9 @@ describe('POST /projects/:id/rollback', () => {
     await markDeploymentRetained(env.db, d2.id, true);
     await setActiveDeployment(env.db, project.id, d2.id);
 
-    // Worker bindings stored at deploy time include the exact
-    // __PLATFORM_PROXY_TOKEN that d1 expects — rollback must read THIS value
-    // from CF rather than re-derive from the current JWT_SECRET, which
-    // would 401 the worker if the secret has rotated since d1 was
-    // deployed.
+    // Decision: Worker bindings stored at deploy time include the exact __PLATFORM_PROXY_TOKEN d1 expects.
+    // Rollback reads that value from CF rather than re-deriving it from the current JWT_SECRET, which
+    // would 401 the worker if the secret has rotated since d1 was deployed.
     mockCfApi({
       listWorkerBindings: () =>
         cfSuccess([
@@ -2751,8 +2715,6 @@ describe('POST /projects/:id/rollback', () => {
       workerName: `user-queue-roll-${d1.id}`,
       projectId: project.id,
       queueName: 'emails',
-      // The EXACT value from d1's worker bindings — not a freshly
-      // hmacSignState(projectId, currentSecret) value.
       proxyToken: 'token-baked-into-d1',
     });
   });
@@ -2830,7 +2792,6 @@ describe('POST /projects/:id/rollback', () => {
       });
       expect(syncBodies).toHaveLength(1);
       const sync = JSON.parse(syncBodies[0]!) as Record<string, unknown>;
-      // Exactly one token: the one the Worker holds.
       expect(Object.keys(sync).filter((key) => key.startsWith('proxyToken'))).toEqual([
         'proxyToken',
       ]);
@@ -2892,8 +2853,8 @@ describe('GET /projects/:id/logs', () => {
       analyticsQuery: (_url, init) => {
         const body = typeof init?.body === 'string' ? init.body : '';
         expect(body).toContain('user-my-app');
-        // The dispatch Worker's tail consumer and the user Worker's own consumer
-        // each deliver a dispatched request, so identical rows are collapsed.
+        // Decision: The dispatch Worker's tail consumer and the user Worker's own consumer each deliver a dispatched
+        // request, so identical rows are collapsed.
         expect(body).toContain(
           'GROUP BY blob1, blob2, blob3, blob4, blob5, blob6, blob7, blob8, double1',
         );
@@ -3001,8 +2962,8 @@ describe('GET /projects/:id/logs', () => {
     expect(res.status).toBe(400);
   });
 
-  // Log rows are keyed by `user-<slug>`, and a deleted project's slug can be
-  // claimed again, so rows older than this project belong to an earlier owner.
+  // Decision: Log rows are keyed by `user-<slug>`, and a deleted project's slug can be claimed again, so rows
+  // older than this project belong to an earlier owner.
   it('does not return rows from before the project was created', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'reused-slug');
@@ -3026,7 +2987,7 @@ describe('GET /projects/:id/logs', () => {
     );
     expect(res.status).toBe(200);
     expect(capturedBody).toContain(`timestamp >= toDateTime('${createdAt.slice(0, 19)}')`);
-    // An earlier owner's invocation can start before creation and be written after it.
+    // Decision: An earlier owner's invocation can start before creation and be written after it.
     expect(capturedBody).toContain(`AND double1 >= ${createdAtMs}`);
   });
 
@@ -3082,8 +3043,6 @@ describe('GET /projects/:id/logs', () => {
       env,
     );
     expect(res.status).toBe(200);
-    // Also catches responses with a 5xx status (blob6) even when the worker
-    // neither threw nor logged at error level.
     expect(capturedBody).toContain(
       `AND (blob1 != 'ok' OR blob3 != '[]' OR blob2 LIKE '%"level":"error"%' OR blob6 LIKE '5%')`,
     );
@@ -3300,8 +3259,8 @@ describe('GET /projects/:id/requests', () => {
     );
 
     expect(res.status).toBe(200);
-    // Keyed on blob1 to match the established requests-dataset convention used
-    // by the billing/top-traffic queries in routes/usage.ts (meta/lessons.md).
+    // Decision: Keyed on blob1 to match the requests-dataset convention the billing and top-traffic queries in
+    // routes/usage.ts use.
     expect(capturedBody).toContain(`WHERE blob1 = '${project.id}'`);
     const json = (await res.json()) as { data: Array<Record<string, unknown>> };
     expect(json.data).toHaveLength(1);
@@ -3462,27 +3421,18 @@ describe('GET /projects/:id/logs limit validation', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Owner auto-add on project create.
-//
-// The project owner's own address is registered with CF Email Routing so mail
-// to themselves works from the first deploy. Entirely best-effort — every
-// failure is logged and swallowed — which is exactly why it needs a test: a
-// regression here is silent.
-// ---------------------------------------------------------------------------
+// Decision: The owner's own address is registered with CF Email Routing so mail to themselves works from the
+// first deploy. It's best effort (failures are logged and swallowed), so a regression here is
+// silent, which is why it has tests.
 describe('POST /projects — owner email destination auto-add', () => {
-  // The gate the route checks. Without a platform mail domain there is no
-  // sender to allow-list a recipient for, so the auto-add stays inert.
   const emailEnv = () => ({
     ...env,
     EMAIL_GATEWAY_ORIGIN: 'https://platform-email-gateway-staging.voidzer0.workers.dev',
     EMAIL_SENDER_DOMAIN: 'mail.staging.buildwf.dev',
   });
 
-  // `respond` may be async so a test can commit a competing write (project
-  // teardown's cascade) while the route is awaiting Cloudflare. The stub is
-  // already called from an async fetch shim, and the shared `mockCfApi`
-  // handlers for these same endpoints are typed the same way.
+  // Decision: `respond` may be async so a test can commit a competing write (project teardown's cascade) while
+  // the route is awaiting Cloudflare.
   function stubEmailRouting(
     respond: (method: string, url: string) => Response | Promise<Response>,
   ): Array<{ method: string; url: string }> {
@@ -3500,8 +3450,7 @@ describe('POST /projects — owner email destination auto-add', () => {
     return calls;
   }
 
-  // `createTestUser` stores `email: null`, which the route treats as
-  // "nothing to register". Give the owner a real address.
+  // Decision: `createTestUser` stores `email: null`, which the route treats as "nothing to register".
   async function withEmail(userId: string, email: string): Promise<string> {
     await env.db.update(users).set({ email }).where(eq(users.id, userId));
     return email;
@@ -3527,8 +3476,6 @@ describe('POST /projects — owner email destination auto-add', () => {
         success: true,
         errors: [],
         messages: [],
-        // CF returns the row immediately; `verified` stays null until the
-        // owner clicks the link it just mailed them.
         result: { tag: 'cf-tag-new', email: ownerEmail, verified: null },
       }),
     );
@@ -3539,9 +3486,8 @@ describe('POST /projects — owner email destination auto-add', () => {
       id: string;
       owner_email_destination?: { address: string; verified?: unknown };
     }>(await res.json());
-    // The response names the address being registered so the CLI can explain
-    // the verification email that may follow. It carries no outcome: the add
-    // runs after the response, so `verified` cannot be known here.
+    // Decision: The add runs after the response, so the response names the address but carries no outcome:
+    // `verified` can't be known here.
     expect(project.owner_email_destination).toEqual({ address: ownerEmail.toLowerCase() });
 
     const [row] = await env.db
@@ -3549,19 +3495,15 @@ describe('POST /projects — owner email destination auto-add', () => {
       .from(emailDestinations)
       .where(eq(emailDestinations.project_id, project.id));
     expect(row).toMatchObject({
-      // Stored lowercased regardless of how the user cased it.
       address: ownerEmail.toLowerCase(),
       cf_destination_id: 'cf-tag-new',
       status: 'pending',
       verification_source: 'cf',
     });
-    // Nothing was inherited, so no consent to attribute.
     expect(row.verified_by_user_id).toBeNull();
   });
 
   it('reuses the tag and verified status when CF already has the address', async () => {
-    // Second-or-later project for the same owner. Without the already-exists
-    // recovery this project would start with an empty allowlist.
     const user = await createTestUser(env.db);
     const ownerEmail = await withEmail(user.id, 'repeat-owner@example.com');
     mockCfApi();
@@ -3591,9 +3533,6 @@ describe('POST /projects — owner email destination auto-add', () => {
       id: string;
       owner_email_destination?: { address: string };
     }>(await res.json());
-    // Same notice as the fresh-address case: the response is built before
-    // the add runs, so it cannot (and must not claim to) know CF adopted a
-    // verified address.
     expect(project.owner_email_destination).toEqual({ address: ownerEmail });
 
     const [row] = await env.db
@@ -3604,7 +3543,6 @@ describe('POST /projects — owner email destination auto-add', () => {
       cf_destination_id: 'cf-tag-existing',
       status: 'verified',
       verification_source: 'cf',
-      // Owner-relaxed reuse: record whose prior consent this inherited.
       verified_by_user_id: user.id,
     });
     expect(row.verified_at).toContain('2026-01-01');
@@ -3632,17 +3570,15 @@ describe('POST /projects — owner email destination auto-add', () => {
   });
 
   it('rolls the CF address back when teardown cascades the project mid-add', async () => {
-    // The auto-add runs off the response path, so project teardown can commit
-    // its cascade between `createProject` and the destination INSERT. The
-    // INSERT then violates the foreign key, and nothing retries it — without a
-    // rollback the account-level CF address stays allocated against the shared
+    // Decision: The auto-add runs off the response path, so project teardown can commit its cascade between
+    // `createProject` and the destination INSERT. The INSERT then violates the foreign key and nothing
+    // retries it; without a rollback the account-level CF address stays allocated against the shared
     // 200-address cap with no row left to reclaim it from.
     const user = await createTestUser(env.db);
     const ownerEmail = await withEmail(user.id, 'cascade-owner@example.com');
     mockCfApi();
     const calls = stubEmailRouting(async (method) => {
       if (method === 'POST') {
-        // Teardown lands while CF is registering the address.
         await env.db.delete(projects).where(eq(projects.slug, 'auto-add-cascaded'));
       }
       return Response.json({
@@ -3653,7 +3589,6 @@ describe('POST /projects — owner email destination auto-add', () => {
       });
     });
 
-    // Best-effort and post-response: the create still succeeds.
     const res = await createProjectAs(user, 'auto-add-cascaded', emailEnv());
     expect(res.status).toBe(200);
     const project = rpcData<{ id: string }>(await res.json());
@@ -3670,10 +3605,9 @@ describe('POST /projects — owner email destination auto-add', () => {
   });
 
   it('leaves the CF address alone when a sibling project still references it', async () => {
-    // Same cascade, but the address came back through the already-exists
-    // recovery and a live sibling project's row still points at the tag. CF
-    // destinations are account-level, so deleting it would silently revoke the
-    // sibling's recipient: the reference count decides, not the failure.
+    // Decision: Same cascade, but the address came from the already-exists recovery and a live sibling project's
+    // row still points at the tag. CF destinations are account-level, so deleting it would silently
+    // revoke the sibling's recipient: the reference count decides, not the failure.
     const user = await createTestUser(env.db);
     const ownerEmail = await withEmail(user.id, 'shared-owner@example.com');
     const sibling = await createTestProject(env.db, user.id, 'auto-add-sibling');
@@ -3699,7 +3633,6 @@ describe('POST /projects — owner email destination auto-add', () => {
           { status: 400 },
         );
       }
-      // Teardown lands while we are recovering the existing tag.
       await env.db.delete(projects).where(eq(projects.slug, 'auto-add-shared'));
       return Response.json({
         success: true,
@@ -3723,27 +3656,21 @@ describe('POST /projects — owner email destination auto-add', () => {
     });
   });
 
-  // A manual `POST /projects/:id/email/destinations` for the owner's own
-  // address can race the post-response auto-add. Its row wins the
-  // `ON CONFLICT DO NOTHING` insert, so the helper reads the winner back
-  // instead — and `{ row: null }` is what it reports when that winner was
-  // deleted between the two statements.
+  // Decision: A manual `POST /projects/:id/email/destinations` for the owner's own address can race the
+  // post-response auto-add. Its row wins the `ON CONFLICT DO NOTHING` insert, so the helper reads the
+  // winner back, and reports `{ row: null }` when that winner was deleted between the two statements.
   //
-  // Interleaves at the driver: `env.db.$client` is the object drizzle issues
-  // every statement through (PGlite here, `pg.Pool` under
-  // BWF_TEST_DATABASE_URL), so a hook on its `query` can run the competing
-  // delete after the helper's INSERT and before its SELECT with the real
-  // helper untouched. The SQL shape is drizzle's: PGlite takes the text
-  // directly, node-postgres wraps it in `{ text }`.
+  // This interleaves at the driver: `env.db.$client` is what drizzle issues statements through (PGlite
+  // here, `pg.Pool` under BWF_TEST_DATABASE_URL), so a hook on its `query` can run the competing delete
+  // after the helper's INSERT and before its SELECT. PGlite takes SQL text directly; node-postgres
+  // wraps it in `{ text }`.
   //
-  // An owner-audited INSERT runs inside a transaction (`tryCreateEmailDestination`
-  // locks the owner's row first), and a transaction's statements never pass
-  // through the top-level `query`: PGlite hands drizzle its own transaction
-  // object, node-postgres a checked-out pool client. Watch those too — but
-  // only to see the INSERT. The delete still fires at the read-back, which
-  // the helper issues at top level after the transaction has committed; on
-  // PGlite it could not run any earlier, since the transaction holds the
-  // single session until then.
+  // An owner-audited INSERT runs inside a transaction (`tryCreateEmailDestination` locks the owner's
+  // row first), and a transaction's statements don't pass through the top-level `query`: PGlite hands
+  // drizzle its own transaction object, node-postgres a checked-out pool client. Watch those too, but
+  // only to see the INSERT. The delete still fires at the read-back, which the helper issues at top
+  // level after the transaction commits; on PGlite it couldn't run earlier, since the transaction holds
+  // the single session.
   function deleteRowBeforeReadBack(rowId: string): void {
     const client = env.db.$client as unknown as {
       query: (...args: Array<unknown>) => Promise<unknown>;
@@ -3771,7 +3698,6 @@ describe('POST /projects — owner email destination auto-add', () => {
       return original(...args);
     });
     if (typeof client.transaction === 'function') {
-      // PGlite: the callback's transaction object is created per call.
       const originalTransaction = client.transaction.bind(client);
       vi.spyOn(client, 'transaction').mockImplementation((cb) =>
         originalTransaction((tx) =>
@@ -3793,10 +3719,9 @@ describe('POST /projects — owner email destination auto-add', () => {
       );
     }
     if (typeof client.connect === 'function') {
-      // node-postgres: drizzle checks a client out of the pool per transaction
-      // with the promise form. The pool's own `query` also goes through
-      // `connect`, callback-style, for every top-level statement — leave
-      // those calls untouched (the `query` spy above already sees them).
+      // Decision: node-postgres: drizzle checks a client out of the pool per transaction with the promise form. The
+      // pool's own `query` also goes through `connect`, callback-style, for each top-level statement;
+      // leave those calls alone (the `query` spy above already sees them).
       const originalConnect = client.connect.bind(client);
       vi.spyOn(client, 'connect').mockImplementation((...args: Array<unknown>) => {
         if (args.length > 0) {
@@ -3815,19 +3740,16 @@ describe('POST /projects — owner email destination auto-add', () => {
   }
 
   it('rolls the CF address back when the winning manual row vanishes before read-back', async () => {
-    // The manual add adopted the tag the auto-add had just allocated (CF said
-    // "already exists", recovery listed it), so its row references the same
-    // tag. Then that row is deleted without the tag being released — the
-    // teardown cascade window, or a DELETE whose upstream call failed. The
-    // helper reports `{ row: null }`; ignoring it exits "successfully" with a
-    // live tag nothing references.
+    // Decision: The manual add adopted the tag the auto-add had just allocated (CF said "already exists",
+    // recovery listed it), so its row references the same tag. Then that row is deleted without the tag
+    // being released (the teardown cascade window, or a DELETE whose upstream call failed). The helper
+    // reports `{ row: null }`; ignoring it exits "successfully" with a live tag nothing references.
     const user = await createTestUser(env.db);
     const ownerEmail = await withEmail(user.id, 'raced-owner@example.com');
     mockCfApi();
     const helper = vi.spyOn(db, 'tryCreateEmailDestination');
     const calls = stubEmailRouting(async (method) => {
       if (method === 'POST') {
-        // The manual add lands while CF is registering the address.
         const [project] = await env.db
           .select()
           .from(projects)
@@ -3854,7 +3776,6 @@ describe('POST /projects — owner email destination auto-add', () => {
     expect(res.status).toBe(200);
     const project = rpcData<{ id: string }>(await res.json());
 
-    // The interleaving was the documented one, not a foreign-key failure.
     expect(helper).toHaveBeenCalledTimes(1);
     await expect(helper.mock.results[0]!.value).resolves.toEqual({ row: null, inserted: false });
 
@@ -3870,9 +3791,8 @@ describe('POST /projects — owner email destination auto-add', () => {
   });
 
   it('leaves a vanished-row tag alone when a sibling project still references it', async () => {
-    // The vanished-row failure must go through the same `refs === 0` guard as
-    // every other rollback: the tag is account-level, and a sibling project's
-    // live row is a reason to keep it regardless of what happened to ours.
+    // Decision: The vanished-row failure goes through the same `refs === 0` guard as the other rollbacks: the tag
+    // is account-level, and a sibling project's live row is a reason to keep it.
     const user = await createTestUser(env.db);
     const ownerEmail = await withEmail(user.id, 'raced-shared-owner@example.com');
     const sibling = await createTestProject(env.db, user.id, 'auto-add-raced-sibling');
@@ -3899,7 +3819,6 @@ describe('POST /projects — owner email destination auto-add', () => {
           { status: 400 },
         );
       }
-      // The manual add lands while we are recovering the existing tag.
       const [project] = await env.db
         .select()
         .from(projects)
@@ -3949,9 +3868,6 @@ describe('POST /projects — owner email destination auto-add', () => {
   });
 
   it('keeps the manual row and the tag when a manual add for the address won', async () => {
-    // Same race, but the winning row is still there when the helper reads it
-    // back: that is a success, not a failure. The manual row must survive
-    // untouched and the tag it references must not be revoked.
     const user = await createTestUser(env.db);
     const ownerEmail = await withEmail(user.id, 'won-owner@example.com');
     mockCfApi();
@@ -4003,11 +3919,9 @@ describe('POST /projects — owner email destination auto-add', () => {
     mockCfApi();
     const calls = stubEmailRouting(() => Response.json({ success: true, errors: [], result: {} }));
 
-    // `env` as-is — EMAIL_SENDER_DOMAIN unset.
     const res = await createProjectAs(user, 'auto-add-no-domain', env);
     expect(res.status).toBe(200);
     expect(calls).toEqual([]);
-    // No add scheduled, so the response must not announce one.
     expect(await res.json()).not.toHaveProperty('owner_email_destination');
   });
 

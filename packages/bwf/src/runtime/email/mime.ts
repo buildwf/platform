@@ -196,12 +196,12 @@ function validateContentId(field: string, value: string): void {
   }
   /** Advance over a `dot-atom-text`; false when there is none, or a dot is misplaced. */
   const dotAtomText = (): boolean => {
-    let run = 0; // atext since the last dot
+    let run = 0;
     for (; i < end; i++) {
       const c = value.charCodeAt(i);
       if (isAtext(c)) {
         run++;
-      } else if (c === 0x2e /* . */ && run > 0) {
+      } else if (c === 0x2e && run > 0) {
         run = 0;
       } else {
         break;
@@ -295,7 +295,7 @@ export function validateAddressParts(field: string, email: string, name?: string
   }
   if (name !== undefined) {
     rejectCRLF(`${field} display name`, name);
-    // A quoted ASCII name never folds: refuse one too long for its line
+    // Decision: A quoted ASCII name never folds: refuse one too long for its line
     // before `formatAddress` escapes it.
     if (
       ASCII_PRINTABLE.test(name) &&
@@ -308,7 +308,7 @@ export function validateAddressParts(field: string, email: string, name?: string
           `so its line would exceed the ${MAX_LINE_OCTETS}-octet limit in RFC 5322 §2.1.1. Shorten it.`,
       );
     }
-    // An `@` in a name usually means a mis-parsed `a@x.dev<b@evil.dev>`.
+    // Decision: An `@` in a name usually means a mis-parsed `a@x.dev<b@evil.dev>`.
     if (name.includes('@')) {
       throw new MimeError(
         fieldErrorCode(field),
@@ -335,7 +335,7 @@ function unquotePairs(text: string): string {
       i++;
     }
   }
-  // UTF-16 code units: a surrogate pair round-trips exactly.
+  // Decision: UTF-16 code units: a surrogate pair round-trips exactly.
   const out = new Uint16Array(text.length - pairs);
   let n = 0;
   for (let i = 0; i < text.length; i++) {
@@ -357,14 +357,14 @@ function unquotePairs(text: string): string {
 export function parseAddress(value: Address, field: string): { email: string; name?: string } {
   if (typeof value === 'string') {
     rejectCRLF(`${field} address`, value);
-    // `Display Name <email@domain>`, quotes paired or absent. The unquoted
+    // Decision: `Display Name <email@domain>`, quotes paired or absent. The unquoted
     // name starts and ends on non-whitespace so adjacent quantifiers cannot
     // compete for one whitespace run, which backtracks cubically.
     const quoted = value.match(/^\s*"((?:[^"\\]|\\.)*)"\s*<\s*([^>\s]+)\s*>\s*$/);
     const angle =
       quoted ?? value.match(/^\s*(?:([^"<\s](?:[^"<]*[^"<\s])?)\s*)?<\s*([^>\s]+)\s*>\s*$/);
     if (angle) {
-      // Undo quoted-pairs first: the name guard must see what renders.
+      // Decision: Undo quoted-pairs first: the name guard must see what renders.
       const name = (quoted ? unquotePairs(angle[1] ?? '') : angle[1])?.trim();
       const email = angle[2];
       validateAddressParts(field, email, name);
@@ -447,7 +447,7 @@ async function normalizeAttachment(att: Attachment): Promise<NormalizedAttachmen
     throw new MimeError('MIME_ERROR', 'attachment: missing filename.');
   }
   rejectCRLF('attachment filename', att.filename);
-  // A quoted parameter never folds: refuse a filename too long for its line
+  // Decision: A quoted parameter never folds: refuse a filename too long for its line
   // before `quoteParam` escapes it. Bound first, then scan.
   if (att.filename.length + QUOTED_FILENAME_LINE_OVERHEAD > MAX_LINE_OCTETS) {
     throw new MimeError(
@@ -471,7 +471,7 @@ async function normalizeAttachment(att: Attachment): Promise<NormalizedAttachmen
   }
   if (att.contentId !== undefined) {
     rejectCRLF('attachment contentId', att.contentId);
-    // `Content-ID: <id>` never folds; the builder adds `<>` around a bare id.
+    // Decision: `Content-ID: <id>` never folds; the builder adds `<>` around a bare id.
     const brackets = att.contentId.startsWith('<') ? 0 : 2;
     if (att.contentId.length + brackets + CONTENT_ID_LINE_OVERHEAD > MAX_LINE_OCTETS) {
       throw new MimeError(
@@ -483,7 +483,7 @@ async function normalizeAttachment(att: Attachment): Promise<NormalizedAttachmen
     rejectControls('attachment contentId', att.contentId);
     validateContentId('attachment contentId', att.contentId);
   }
-  // A JS caller can pass any string, and it is interpolated into
+  // Decision: A JS caller can pass any string, and it is interpolated into
   // `Content-Disposition`.
   if (
     att.disposition !== undefined &&
@@ -536,7 +536,7 @@ export async function normalizeEmail(opts: {
           `headers: '${name}' is not a valid RFC 5322 header name.`,
         );
       }
-      // A field name never folds: refuse one too long for any line before it
+      // Decision: A field name never folds: refuse one too long for any line before it
       // is copied into the rendered message.
       if (name.length + HEADER_NAME_LINE_OVERHEAD > MAX_LINE_OCTETS) {
         throw new MimeError(
@@ -545,7 +545,7 @@ export async function normalizeEmail(opts: {
             `so its line would exceed the ${MAX_LINE_OCTETS}-octet limit in RFC 5322 §2.1.1. Shorten the name.`,
         );
       }
-      // The character check refuses a huge value before UTF-8 encoding copies it.
+      // Decision: The character check refuses a huge value before UTF-8 encoding copies it.
       if (headerInputBytes + name.length + value.length + 4 > MAX_CUSTOM_HEADER_BYTES) {
         throw new MimeError('MIME_ERROR', 'email: custom headers exceed the 16 KiB limit.');
       }
@@ -557,7 +557,7 @@ export async function normalizeEmail(opts: {
       if (RESERVED_HEADERS.has(name.toLowerCase())) {
         continue;
       }
-      // Reject an obviously oversized value before encoding it. This is a
+      // Decision: Reject an obviously oversized value before encoding it. This is a
       // lower bound because encoded words and folding only add bytes.
       if (
         headerBytes + name.length + CUSTOM_HEADER_FRAMING_OCTETS + minHeaderValueOctets(value) >
@@ -565,7 +565,7 @@ export async function normalizeEmail(opts: {
       ) {
         throw new MimeError('MIME_ERROR', 'email: custom headers exceed the 16 KiB limit.');
       }
-      // The proxy's wire-level accounting; `encodeWord` returns ASCII, so
+      // Decision: The proxy's wire-level accounting; `encodeWord` returns ASCII, so
       // length is bytes.
       headerBytes += foldHeader(name, encodeWord(value)).length + CRLF.length;
       if (headerBytes > MAX_CUSTOM_HEADER_BYTES) {
@@ -573,7 +573,7 @@ export async function normalizeEmail(opts: {
       }
     }
   }
-  // Before any address is parsed: the count is what bounds the work below.
+  // Decision: Before any address is parsed: the count is what bounds the work below.
   const recipientCount =
     countRecipients(opts.to) + countRecipients(opts.cc) + countRecipients(opts.bcc);
   if (recipientCount > MAX_RECIPIENTS) {
@@ -590,7 +590,7 @@ export async function normalizeEmail(opts: {
   const cc = opts.cc ? parseAddresses(opts.cc, 'cc') : [];
   const bcc = opts.bcc ? parseAddresses(opts.bcc, 'bcc') : [];
   const replyTo = opts.replyTo ? parseAddress(opts.replyTo, 'replyTo') : undefined;
-  // The count bounds the loop below (zero-byte entries never advance the
+  // Decision: The count bounds the loop below (zero-byte entries never advance the
   // byte total), but only if the loop walks the array it was read from.
   const attachmentList = opts.attachments ?? [];
   if (!Array.isArray(attachmentList)) {
@@ -602,7 +602,7 @@ export async function normalizeEmail(opts: {
       `email: too many attachments (max ${MAX_ATTACHMENTS}, got ${attachmentList.length}).`,
     );
   }
-  // Sequential so the running total is charged before each copy.
+  // Decision: Sequential so the running total is charged before each copy.
   const attachments: Array<NormalizedAttachment> = [];
   let attachmentBytes = 0;
   for (const att of attachmentList) {
@@ -611,7 +611,7 @@ export async function normalizeEmail(opts: {
       throw attachmentsTooLargeError(attachmentBytes + declared);
     }
     const normalized = await normalizeAttachment(att);
-    // Charge the exact length too: a non-ASCII string undercounts itself
+    // Decision: Charge the exact length too: a non-ASCII string undercounts itself
     // above, and `declaredSize` reports 0 for a type `toBytes` will reject.
     attachmentBytes += normalized.bytes.byteLength;
     if (attachmentBytes > MAX_ATTACHMENT_BYTES_TOTAL) {
@@ -680,7 +680,7 @@ function encodeWord(text: string): string {
     return text;
   }
   const encoder = new TextEncoder();
-  // A code point is at most 4 UTF-8 bytes, so the buffer never needs
+  // Decision: A code point is at most 4 UTF-8 bytes, so the buffer never needs
   // more than the budget plus one character of overshoot.
   const pending = new Uint8Array(ENCODED_WORD_PAYLOAD_BYTES + 4);
   let length = 0;
@@ -691,7 +691,7 @@ function encodeWord(text: string): string {
       length = 0;
     }
   };
-  // Code points, so no character is split across words (RFC 2047 §5).
+  // Decision: Code points, so no character is split across words (RFC 2047 §5).
   for (const char of text) {
     const bytes = encoder.encode(char);
     if (length > 0 && length + bytes.length > ENCODED_WORD_PAYLOAD_BYTES) {
@@ -714,15 +714,12 @@ function formatAddress(addr: { email: string; name?: string }): string {
   if (!addr.name) {
     return addr.email;
   }
-  // Non-ASCII → RFC 2047 encoded-word.
   if (!ASCII_PRINTABLE.test(addr.name)) {
     return `${encodeWord(addr.name)} <${addr.email}>`;
   }
-  // ASCII with any specials → quoted-string.
   if (RFC5322_SPECIALS.test(addr.name)) {
     return `"${quoteParam(addr.name)}" <${addr.email}>`;
   }
-  // Plain atom / atom-with-spaces.
   return `${addr.name} <${addr.email}>`;
 }
 
@@ -743,7 +740,7 @@ function foldHeader(name: string, value: string): string {
   }
   const MAX_LINE = 76;
   const lines: Array<string> = [];
-  // Pieces of the line being built, joined by the single space each fold
+  // Decision: Pieces of the line being built, joined by the single space each fold
   // point becomes. The first line starts on `Name:`; a continuation starts
   // on the empty string so the join yields its leading space.
   let current: Array<string> = [`${name}:`];
@@ -761,7 +758,7 @@ function foldHeader(name: string, value: string): string {
       lineLen += 1 + piece.length;
     }
   };
-  // A token is emitted only once the scanner knows whether it is the last
+  // Decision: A token is emitted only once the scanner knows whether it is the last
   // of its part, because that one carries the part's comma. An empty part
   // (`a, , b`) still owes its separator, so it emits an empty chunk rather
   // than losing a comma.
@@ -815,7 +812,7 @@ function foldHeader(name: string, value: string): string {
     if (!inQuotes && ch === ',' && value[i + 1] === ' ') {
       endToken(i);
       endPart(false);
-      i++; // skip the space
+      i++;
       continue;
     }
     if (!inQuotes && (ch === ' ' || ch === '\t')) {
@@ -828,7 +825,7 @@ function foldHeader(name: string, value: string): string {
   }
   endToken(value.length);
   endPart(true);
-  // One unbreakable token — a single long Message-ID, say. There is
+  // Decision: One unbreakable token — a single long Message-ID, say. There is
   // nowhere to fold, and `Name:\r\n <token>` would shorten nothing.
   if (chunks <= 1) {
     return line;
@@ -877,10 +874,10 @@ function findOverlongLine(text: string): { index: number; octets: number } | und
     } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < text.length) {
       const d = text.charCodeAt(i + 1);
       if (d >= 0xdc00 && d <= 0xdfff) {
-        octets += 4; // the pair is one code point
+        octets += 4;
         i++;
       } else {
-        octets += 3; // lone surrogate encodes as U+FFFD
+        octets += 3; /* Decision: lone surrogate encodes as U+FFFD */
       }
     } else {
       octets += 3;
@@ -915,9 +912,8 @@ function base64Wrapped(bytes: Uint8Array): string {
 }
 
 function quotedPrintable(text: string): string {
-  // Encode as UTF-8 bytes then quote per RFC 2045.
   const bytes = new TextEncoder().encode(text);
-  // A byte buffer, not `out +=`, whose cons-string nodes cost ~56 bytes per
+  // Decision: A byte buffer, not `out +=`, whose cons-string nodes cost ~56 bytes per
   // byte. At most 3 bytes per input byte plus a soft break per 73, so it
   // never grows.
   const out = new Uint8Array(Math.ceil(bytes.length * 3 * (76 / 73)) + 8);
@@ -954,7 +950,7 @@ function quotedPrintable(text: string): string {
       continue;
     }
     if (b === 0x0d) {
-      // CR alone or part of CRLF — emit CRLF on the LF side, skip standalone CR.
+      // Decision: CR alone or part of CRLF — emit CRLF on the LF side, skip standalone CR.
       if (bytes[i + 1] === 0x0a) {
         continue;
       }
@@ -964,7 +960,7 @@ function quotedPrintable(text: string): string {
       continue;
     }
     if (b === 0x20 || b === 0x09) {
-      // Defer encoding decision: a space at end-of-line must be quoted.
+      // Decision: Defer encoding decision: a space at end-of-line must be quoted.
       const isLast = i === bytes.length - 1 || bytes[i + 1] === 0x0a || bytes[i + 1] === 0x0d;
       if (isLast) {
         quote(b);
@@ -1060,17 +1056,17 @@ function minBodyOctets(text: string): number {
     if (c < 0x80) {
       octets += 1;
     } else if (c < 0x800) {
-      octets += 6; // 2 UTF-8 bytes, each `=XX`
+      octets += 6; /* Decision: 2 UTF-8 bytes, each `=XX` */
     } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < text.length) {
       const d = text.charCodeAt(i + 1);
       if (d >= 0xdc00 && d <= 0xdfff) {
-        octets += 12; // 4 UTF-8 bytes for the pair
+        octets += 12; /* Decision: 4 UTF-8 bytes for the pair */
         i++;
         continue;
       }
-      octets += 9; // lone surrogate encodes as U+FFFD, 3 bytes
+      octets += 9; /* Decision: lone surrogate encodes as U+FFFD, 3 bytes */
     } else {
-      octets += 9; // 3 UTF-8 bytes
+      octets += 9; /* Decision: 3 UTF-8 bytes */
     }
   }
   return octets;
@@ -1116,7 +1112,6 @@ function buildAttachmentPart(att: NormalizedAttachment): MimePart {
 }
 
 function makeBoundary(prefix: string): string {
-  // 16 random bytes → 24-char base64. Workers + browsers expose crypto.
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   return `=_parts_${prefix}_${bytesToBase64(bytes).replace(/[+/=]/g, '')}`;
@@ -1145,7 +1140,7 @@ const RESERVED_HEADERS = new Set([
   'reply-to',
   'date',
   'message-id',
-  // Threading has one channel, `threading`, which checks each id. replyEmail
+  // Decision: Threading has one channel, `threading`, which checks each id. replyEmail
   // builds it from the original message; sendEmail takes it from the caller.
   'in-reply-to',
   'references',
@@ -1183,11 +1178,11 @@ function minHeaderValueOctets(value: string): number {
       } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < value.length) {
         const d = value.charCodeAt(i + 1);
         if (d >= 0xdc00 && d <= 0xdfff) {
-          utf8 += 4; // the pair is one code point
+          utf8 += 4;
           i++;
           continue;
         }
-        utf8 += 3; // lone surrogate encodes as U+FFFD
+        utf8 += 3; /* Decision: lone surrogate encodes as U+FFFD */
       } else {
         utf8 += 3;
       }
@@ -1225,12 +1220,12 @@ function minVerbatimOctets(value: string): number {
  * suffix has no provable minimum, so it is not counted.
  */
 const ATTACHMENT_PART_MIN_OCTETS: number =
-  CRLF.length + // the join between this part and the one before it
+  CRLF.length /* Decision: the join between this part and the one before it */ +
   ('--=_parts_mixed_'.length + CRLF.length) +
   ('Content-Type: '.length + '; name=""'.length + CRLF.length) +
   ('Content-Transfer-Encoding: base64'.length + CRLF.length) +
   ('Content-Disposition: '.length + '; filename=""'.length + CRLF.length) +
-  CRLF.length; // the blank line before the body
+  CRLF.length; /* Decision: the blank line before the body */
 
 /**
  * Cap on the attachment count, checked before any entry is normalized:
@@ -1255,7 +1250,7 @@ function minHeaderOctets(email: NormalizedEmail): number {
   let octets = minHeaderValueOctets(email.subject);
   for (const [name, value] of Object.entries(email.headers)) {
     if (!RESERVED_HEADERS.has(name.toLowerCase())) {
-      // `HEADER_NAME` admits only ASCII, so `length` is the name's octets.
+      // Decision: `HEADER_NAME` admits only ASCII, so `length` is the name's octets.
       octets += name.length + CUSTOM_HEADER_FRAMING_OCTETS + minHeaderValueOctets(value);
     }
   }
@@ -1276,7 +1271,7 @@ function minHeaderOctets(email: NormalizedEmail): number {
     octets += minVerbatimOctets(email.threading.references);
   }
   for (const att of email.attachments) {
-    // The filename is quoted twice and never folds, so whitespace counts too.
+    // Decision: The filename is quoted twice and never folds, so whitespace counts too.
     octets += ATTACHMENT_PART_MIN_OCTETS + 2 * att.filename.length;
     octets += minVerbatimOctets(att.contentType);
     if (att.contentId) {
@@ -1299,7 +1294,7 @@ function generateMessageId(fromEmail: string): string {
  * generated Message-ID header so callers can surface it in the result.
  */
 export function buildMime(email: NormalizedEmail): { raw: Uint8Array; messageId: string } {
-  // Project the size before rendering, which holds several copies of the
+  // Decision: Project the size before rendering, which holds several copies of the
   // message: an oversize body or header must fail with `MIME_ERROR`, not
   // exhaust the isolate. Each term is a lower bound; the final check rules.
   const projected =
@@ -1325,7 +1320,7 @@ export function buildMime(email: NormalizedEmail): { raw: Uint8Array; messageId:
   if (email.cc.length > 0) {
     topHeaders.push(['Cc', formatAddressList(email.cc)]);
   }
-  // Bcc is intentionally omitted from the rendered headers. The CF `send_email`
+  // Decision: Bcc is intentionally omitted from the rendered headers. The CF `send_email`
   // binding fans out one envelope per recipient, but every envelope carries
   // the same raw MIME body — so a `Bcc:` header here would expose the BCC list
   // to every To/Cc recipient. The envelope itself handles BCC delivery.
@@ -1334,7 +1329,7 @@ export function buildMime(email: NormalizedEmail): { raw: Uint8Array; messageId:
   }
   topHeaders.push(['Subject', encodeWord(email.subject)]);
   topHeaders.push(['Message-ID', messageId]);
-  // Reserved against user-supplied `headers` (RESERVED_HEADERS), so these
+  // Decision: Reserved against user-supplied `headers` (RESERVED_HEADERS), so these
   // land in the wire MIME only through the checked `email.threading`.
   if (email.threading?.inReplyTo) {
     topHeaders.push(['In-Reply-To', email.threading.inReplyTo]);
@@ -1366,13 +1361,11 @@ export function buildMime(email: NormalizedEmail): { raw: Uint8Array; messageId:
     const fileAttachments = email.attachments.filter((a) => a.disposition !== 'inline');
 
     if (inlineAttachments.length > 0 && htmlPart) {
-      // Wrap (alternative or html) with inline attachments via multipart/related.
       bodyPart = wrapMultipart('related', [
         bodyPart,
         ...inlineAttachments.map(buildAttachmentPart),
       ]);
     } else {
-      // No inline images — treat all as regular file attachments.
       fileAttachments.push(...inlineAttachments);
     }
     if (fileAttachments.length > 0) {
@@ -1380,7 +1373,6 @@ export function buildMime(email: NormalizedEmail): { raw: Uint8Array; messageId:
     }
   }
 
-  // Promote the body part's headers into the top-level headers.
   for (const [k, v] of bodyPart.headers) {
     topHeaders.push([k, v]);
   }
@@ -1389,7 +1381,7 @@ export function buildMime(email: NormalizedEmail): { raw: Uint8Array; messageId:
   const rawText = headerBlock + CRLF + CRLF + bodyPart.body;
   const raw = new TextEncoder().encode(rawText);
 
-  // RFC 5322 §2.1.1: at most 998 octets per line, and a token without
+  // Decision: RFC 5322 §2.1.1: at most 998 octets per line, and a token without
   // whitespace cannot fold. Checked after rendering, the only place that sees
   // every header path; encoding or truncating would corrupt ids and names.
   const overlong = findOverlongLine(rawText);

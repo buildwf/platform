@@ -1,10 +1,5 @@
 /** @jsxImportSource react */
 
-// Minimal client router for the admin SPA. The server sends an HTML shell with the page object
-// embedded; navigations fetch the next page object as JSON from the same URL (`X-PlatformPages: true`).
-// TODO(eeao): replace the page-object JSON endpoints with eeao procedures, then delete this
-// header protocol and fetch data per view.
-
 import {
   createContext,
   forwardRef,
@@ -132,7 +127,7 @@ function loadComponent(components: Record<string, Loader>, id: string) {
       throw new Error(`Unknown admin page component "${id}".`);
     }
     promise = loader();
-    // Record the result on the promise so `use()` reads a loaded module without suspending.
+    // Decision: Record the result on the promise so `use()` reads a loaded module without suspending.
     const tracked = promise as typeof promise & { status?: string; value?: unknown };
     void promise.then((value) => {
       tracked.status = 'fulfilled';
@@ -146,7 +141,7 @@ function loadComponent(components: Record<string, Loader>, id: string) {
 function PageBody({ components, page }: { components: Record<string, Loader>; page: PageObject }) {
   const Page = use(loadComponent(components, page.component)).default;
   useEffect(() => {
-    // Set once the page itself has rendered (after any data it suspends on); browser tests wait
+    // Decision: Set once the page itself has rendered (after any data it suspends on); browser tests wait
     // for it before interacting.
     document.getElementById('platform-admin-root')?.setAttribute('data-hydrated', 'true');
   }, []);
@@ -248,8 +243,8 @@ export function startAdminSpa(options: {
     );
   }
 
-  // Load the first page's code before rendering so a full page load never flashes the
-  // loading view (the server-rendered admin never did).
+  // Decision: Load the first page's code before rendering so a full page load doesn't flash the loading
+  // view.
   const firstCode = [initial.component, ...(options.layoutTree[initial.component] ?? [])].map(
     (id) => loadComponent(options.components, id),
   );

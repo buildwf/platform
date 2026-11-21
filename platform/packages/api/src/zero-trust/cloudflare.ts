@@ -318,8 +318,8 @@ export class ZeroTrustCloudflareClient {
   }
 
   private async applications(): Promise<Map<string, ObjectValue>> {
-    // Name checkpoints can come from another request after any earlier inventory.
-    // Always refresh before using a name to recover ownership or establish absence.
+    // Decision: Name checkpoints can come from another request after an earlier inventory. Refresh before using a
+    // name to recover ownership or prove absence.
     const entries: Array<ObjectValue> = [];
     for (let page = 1; page <= 6; page++) {
       const result = await this.request<ReadonlyArray<unknown>>(`apps?page=${page}&per_page=100`);
@@ -415,7 +415,7 @@ export class ZeroTrustCloudflareClient {
     if (current?.id || current?.name) {
       ({ application, inventory } = await this.locateOwnedApplication(current.id, spec.name));
     } else {
-      // No recorded creation intent: the name must still be free.
+      // Decision: No recorded creation intent: the name has to still be free.
       inventory = await this.applications();
       if ([...inventory.values()].some((entry) => entry.name === spec.name)) {
         throw new Error(
@@ -504,8 +504,8 @@ export class ZeroTrustCloudflareClient {
         `The existing Access health application must cover only ${destination} and retain its recorded identity.`,
       );
     }
-    // Read policies directly: application inventory may contain only policy references.
-    // Two entries are enough to reject anything other than a single exact bypass.
+    // Decision: Read policies directly: the application inventory may hold only policy references. Two entries
+    // are enough to reject anything other than a single exact bypass.
     const policies = await this.request<ReadonlyArray<ObjectValue>>(
       `apps/${encodeURIComponent(id)}/policies?page=1&per_page=2`,
     );

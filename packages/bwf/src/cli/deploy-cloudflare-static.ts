@@ -247,7 +247,7 @@ export async function runCloudflareStaticDeploy(
   const entryPath = join(root, '.bwf', 'deploy', 'cloudflare', 'static-edge.mjs');
   mkdirSync(dirname(entryPath), { recursive: true });
 
-  // Write the static config separately so the root config, with its Worker-only bindings and
+  // Decision: Write the static config separately so the root config, with its Worker-only bindings and
   // comments, stays untouched for a later switch back to a Worker app.
   const staticConfigPath = join(dirname(entryPath), 'wrangler-static.json');
   writeFileSync(staticConfigPath, `${JSON.stringify(rootConfig, null, 2)}\n`, { mode: 0o600 });

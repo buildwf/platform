@@ -190,7 +190,7 @@ export async function provisionInstallationServices(input: {
     },
   );
 
-  // First pass: the new proxy reads only ROUTING KV and may go live before the new API.
+  // Decision: First pass: the new proxy reads only ROUTING KV and may go live before the new API.
   await publishInstallationAiLogging({
     client: dependencies.client,
     accountId: plan.account.id,

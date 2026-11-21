@@ -8,8 +8,8 @@ import {
   LOG_TAIL_LIMIT,
 } from '../../src/cli/log-summary.ts';
 
-// picocolors enables color whenever `CI` is set or stdout is a TTY, so the
-// assertions below compare against the plain text.
+// Decision: picocolors enables color when `CI` is set or stdout is a TTY, so the assertions below
+// compare against the plain text.
 const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 
 function plain(text: string | null): string {
@@ -126,7 +126,6 @@ describe('formatDeployLogSummary', () => {
     const errorBlock = out.slice(out.indexOf('Errors'), out.indexOf('Log ('));
     expect(errorBlock).toContain('deploy_server_error');
     expect(errorBlock).not.toContain('deploy_end');
-    // Still visible in the tail, where it is a single truncated line.
     expect(out).toContain('deploy_end');
   });
 
@@ -149,8 +148,8 @@ describe('formatDeployLogSummary', () => {
     expect(out).toContain('detail=first second third');
   });
 
-  // bwf masks the credentials it emits itself. Fields it names are its own,
-  // so a credential-shaped key is masked whatever the value looks like.
+  // Decision: bwf masks the credentials it emits itself. The fields it names are its own, so a
+  // credential-shaped key is masked whatever the value looks like.
   it('masks a field whose key names a credential', () => {
     const out = plain(
       formatDeployLogSummary([
@@ -171,13 +170,12 @@ describe('formatDeployLogSummary', () => {
     expect(out).toContain('privateKey=[redacted]');
     expect(out).not.toContain('sk_live_abcdef');
     expect(out).not.toContain('MIIEpAIBAAKCAQ');
-    // A non-credential key keeps its value, or the tail stops being useful.
     expect(out).toContain('slug=my-app');
   });
 
-  // Scrubbing user-supplied values is left to the CI platform, which owns the
-  // secrets and masks them before the log is written. bwf neither guesses at
-  // credential-shaped names nor parses credentials out of values it was handed.
+  // Decision: Scrubbing user-supplied values is left to the CI platform, which owns the secrets and masks
+  // them before the log is written. bwf doesn't guess at credential-shaped names or parse
+  // credentials out of values it was handed.
   it('passes user-supplied values through unchanged', () => {
     const out = plain(
       formatDeployLogSummary([
@@ -234,8 +232,8 @@ describe('formatDeployLogSummary', () => {
     expect(out).toContain('[redacted]');
   });
 
-  // The file is data, not a typed value. A summary that throws would replace
-  // the deploy failure it is supposed to explain.
+  // Decision: The file is data, not a typed value. A summary that throws would replace the deploy failure
+  // it's meant to explain.
   it('does not throw on an ill-typed err node', () => {
     const cases: Array<unknown> = [
       { message: 123 },
@@ -285,8 +283,8 @@ describe('buildDeployLogSummary', () => {
     expect(buildDeployLogSummary('/definitely/not/a/real/deploy-log.jsonl')).toBeNull();
   });
 
-  // `runDeploy` closes the logger and then reads the file straight back, so a
-  // record written moments earlier has to be on disk by the time close resolves.
+  // Decision: `runDeploy` closes the logger and then reads the file straight back, so a record written
+  // moments earlier has to be on disk by the time close resolves.
   it('reads back records a real logger wrote once close() resolves', async () => {
     const cliLog = openDeployLog();
     expect(cliLog.path).not.toBeNull();

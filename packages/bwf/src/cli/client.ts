@@ -20,7 +20,7 @@ import type {
   DeployWorkerUploadResponse,
 } from './types.ts';
 
-// Null omits `X-Platform-CLI-Version`: the platform answers an unparseable version with 426.
+// Decision: Null omits `X-Platform-CLI-Version`: the platform answers an unparseable version with 426.
 function readCliVersion(): string | null {
   try {
     const pkgPath = join(getPackageDir(), 'package.json');
@@ -82,21 +82,20 @@ const UPGRADE_PLATFORM_ACTION =
 
 function assertSupportedPlatform(apiUrl: string, probe: PlatformVersionProbe): void {
   if (probe.kind === 'unknown') {
-    // Let the real request run and report its own error.
+    // Decision: Let the real request run and report its own error.
     return;
   }
   if (probe.kind === 'missing') {
-    // Every bwf platform release serves discovery, so a 404 there means a
-    // platform that predates it, and therefore predates the minimum.
+    // Decision: Each bwf platform release serves discovery, so a 404 there means a platform that predates it, and
+    // so predates the minimum.
     throw new Error(
       `The bwf platform at ${apiUrl} does not report its version, but this CLI requires ${MIN_PLATFORM_VERSION} or later. ${UPGRADE_PLATFORM_ACTION}`,
     );
   }
   const { version } = probe;
-  // Installed and hosted platforms report their release version. "hosted"
-  // comes from a hosted deployment that does not set PLATFORM_VERSION yet.
-  // Any other value that is not a release version comes from a custom or
-  // development build and cannot be ordered. Both pass.
+  // Decision: Installed and hosted platforms report their release version. "hosted" comes from a hosted
+  // deployment that doesn't set PLATFORM_VERSION yet. Any other value that isn't a release version
+  // comes from a custom or development build and can't be ordered. Both pass.
   if (version === 'hosted' || isOlderPlatformVersion(version, MIN_PLATFORM_VERSION) !== true) {
     return;
   }
@@ -572,9 +571,9 @@ export type GithubConnection = {
 
 export type ManifestOnlyDeployPayload = DeployUploadPayload;
 
-// Only fetch rejections (TypeError, including a headers timeout) are retried; any
-// HTTP response is final. Every attempt sends the same idempotency key, so the
-// platform answers a replay with the earlier deployment's receipt or a 409.
+// Decision: Only fetch rejections (TypeError, including a headers timeout) are retried; any HTTP response is
+// final. All attempts send the same idempotency key, so the platform answers a replay with the
+// earlier deployment's receipt or a 409.
 const DEPLOY_POST_MAX_RETRIES = 3;
 const DEPLOY_POST_BACKOFF_MS = [1000, 5000, 10000];
 /**
@@ -586,9 +585,9 @@ const DEPLOY_OBSERVATION_TIMEOUT_MS = 30_000;
 const DEPLOY_OBSERVATION_DEADLINE_MS = 30 * 60_000;
 const DEPLOY_OBSERVATION_BACKOFF_MS = [1000, 2000, 5000, 10_000, 30_000];
 
-// Heartbeats carry no `seq`. Pipeline streams can omit `status`; observation
-// pages omit `heartbeat` when paging through a completed operation's events.
-// `recoveryAt` is sent only while an execution lease exists.
+// Decision: Heartbeats carry no `seq`. Pipeline streams can omit `status`; observation pages omit `heartbeat`
+// when paging through a completed operation's events. `recoveryAt` is sent only while an execution
+// lease exists.
 type SequencedDeployEvent = DeployEvent & { seq?: number };
 class DeploymentProtocolError extends Error {}
 class DeploymentObservationTimeoutError extends Error {
@@ -637,9 +636,6 @@ function parseDeployEvent(value: unknown): SequencedDeployEvent {
   return event;
 }
 
-/**
- * HTTP client for the bwf platform API.
- */
 export class PlatformClient {
   private readonly baseUrl: string;
   private readonly authHeaders: Record<string, string>;
@@ -708,8 +704,8 @@ export class PlatformClient {
   async supportsDirectWorkerUpload(): Promise<boolean> {
     let probe = await this.platformProbe();
     if (probe.kind === 'unknown') {
-      // One failed probe must not send a large Worker inline. Ask again,
-      // without replacing the outcome the version check keeps.
+      // Decision: One failed probe mustn't send a large Worker inline. Ask again, without replacing the outcome the
+      // version check keeps.
       probe = await this.probePlatformVersion();
     }
     return probe.kind === 'version' && probe.directWorkerUpload;
@@ -764,8 +760,8 @@ export class PlatformClient {
         signal: AbortSignal.timeout(15_000),
       });
     } catch {
-      // A network error or timeout says nothing about the version. The real
-      // request reports its own error if the platform is unreachable.
+      // Decision: A network error or timeout says nothing about the version. The real request reports its own
+      // error if the platform is unreachable.
       return { kind: 'unknown' };
     }
     if (response.status === 404) {
@@ -785,10 +781,9 @@ export class PlatformClient {
   }
 
   private async send(url: string | URL, options: RequestInit): Promise<Response> {
-    // A service-token pair is long-lived and was captured before managed deploy
-    // scrubs the parent environment. User tokens can be renewed in the browser,
-    // so keep checking for a newer environment value when no service pair was
-    // captured and let current credentials override the fallback below.
+    // Decision: A service-token pair is long-lived and was captured before managed deploy scrubs the parent
+    // environment. User tokens can be renewed in the browser, so keep checking for a newer environment
+    // value when no service pair was captured, and let current credentials override the fallback below.
     if (!this.accessHeaders['CF-Access-Client-Id']) {
       ensurePlatformAccessToken(this.baseUrl);
     }
@@ -818,16 +813,16 @@ export class PlatformClient {
       return response;
     }
 
-    // Service-token rejection is an operator/CI configuration error. Never
-    // replace a scoped machine credential with an interactive human session.
+    // Decision: A service-token rejection is an operator or CI configuration error. Don't replace a scoped machine
+    // credential with an interactive human session.
     if (first.accessHeaders['CF-Access-Client-Id']) {
       return response;
     }
 
     await response.body?.cancel();
     ensurePlatformAccessToken(this.baseUrl, true, false, first.accessHeaders['cf-access-token']);
-    // One retry only, at the exact original endpoint. `redirect: 'manual'`
-    // above means credentials are never forwarded to the challenge Location.
+    // Decision: One retry only, at the exact original endpoint. `redirect: 'manual'` above means credentials
+    // aren't forwarded to the challenge Location.
     return send().response;
   }
 
@@ -883,7 +878,7 @@ export class PlatformClient {
         body = JSON.stringify({ error: error.code.toLowerCase(), message: error.message });
       }
     } catch {
-      // Not an RPC error body (an Access login page, for example): report it as received.
+      // Decision: Not an RPC error body (an Access login page, for example): report it as received.
     }
     throw new PlatformApiError(
       action,
@@ -939,7 +934,7 @@ export class PlatformClient {
     try {
       return await this.rpc('projects.get', 'Failed to get project', { projectId });
     } catch (error) {
-      // A project the caller cannot read is, to them, a project that does not exist.
+      // Decision: A project the caller can't read is, to them, a project that doesn't exist.
       if (error instanceof PlatformApiError && error.status === 403) {
         return null;
       }
@@ -1183,7 +1178,7 @@ export class PlatformClient {
       if (isPreflightRejection(error)) {
         throw error;
       }
-      // Network error — fall back to uploading everything
+      // Decision: On a network error, fall back to uploading everything.
       return { needed: Object.keys(assetManifest), total, skipped: 0 };
     }
   }
@@ -1223,7 +1218,7 @@ export class PlatformClient {
       { permission: 'deploy' },
     );
 
-    // Module i uploads to urls[i], so a short or malformed list must not start.
+    // Decision: Module i uploads to urls[i], so a short or malformed list mustn't start.
     if (
       typeof json?.id !== 'string' ||
       !json.id ||
@@ -1244,7 +1239,7 @@ export class PlatformClient {
     payload: ManifestOnlyDeployPayload,
   ): AsyncGenerator<DeployEvent> {
     const cliLog = this.cliLog;
-    // One key for every attempt: a retry after a lost response returns the same deployment.
+    // Decision: One key for all attempts: a retry after a lost response returns the same deployment.
     const idempotencyKey = crypto.randomUUID();
     cliLog?.info('deploy_post', { projectId });
 
@@ -1268,7 +1263,7 @@ export class PlatformClient {
           const parsed = err.status === 409 ? parsePlatformErrorBody(err.body) : null;
           const inFlight = /deployment ([A-Za-z0-9_-]{1,128})$/.exec(parsed?.message ?? '')?.[1];
           if (parsed?.error === 'deploy_in_progress' && inFlight) {
-            // A deployment is in flight: possibly an earlier attempt of this deploy.
+            // Decision: A deployment is in flight: possibly an earlier attempt of this deploy.
             cliLog?.warn('deploy_conflict', { projectId, deploymentId: inFlight });
             yield {
               event: 'error',
@@ -1297,7 +1292,7 @@ export class PlatformClient {
     }
 
     if (deploymentId === undefined) {
-      // An inline deploy refused before it had an ID: its events end in the reason.
+      // Decision: An inline deploy refused before it had an ID: its events end in the reason.
       const failure = (inline ?? []).map(parseDeployEvent).find((event) => event.event === 'error');
       if (failure) {
         yield failure;
@@ -1308,10 +1303,10 @@ export class PlatformClient {
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(deploymentId)) {
       throw new Error('Invalid deployment receipt from platform.');
     }
-    // The platform owns execution independently of this observer.
+    // Decision: The platform owns execution independently of this observer.
     yield { event: 'start', deploymentId };
     let cursor = 0;
-    // Without the Queue the platform ran the deploy inside the request and sent its events back.
+    // Decision: Without the Queue the platform ran the deploy inside the request and sent its events back.
     for (const raw of inline ?? []) {
       const event = parseDeployEvent(raw);
       if (event.seq !== undefined) {
@@ -1415,8 +1410,8 @@ export class PlatformClient {
           return;
         }
       }
-      // Never skip a missing event merely because the server advertises a
-      // later high-water mark. Only consumed events advance the cursor.
+      // Decision: Don't skip a missing event just because the server advertises a later high-water mark. Only
+      // consumed events advance the cursor.
       if (page.terminal) {
         throw new Error('Platform finished deployment without a terminal result.');
       }
@@ -1807,8 +1802,8 @@ export class PlatformClient {
       'Failed to add email destination',
       { method: 'POST', body: { address }, permission: 'settings' },
     );
-    // 201 registered the address now; 200 found it already listed. Whether a
-    // link went out is the body's `verificationSent`, not the status.
+    // Decision: 201 means the address was registered now; 200 means it was already listed. Whether a link went
+    // out is the body's `verificationSent`, not the status.
     const body = (await res.json()) as EmailDestinationResponse;
     return { ...body, created: res.status === 201 };
   }
@@ -1874,7 +1869,6 @@ export class PlatformClient {
     );
   }
 
-  /** Rotates the shared zone connection secret. */
   async rotateEmailDomainSecret(
     projectId: string,
     domain: string,

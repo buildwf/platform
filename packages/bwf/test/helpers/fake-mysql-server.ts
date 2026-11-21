@@ -2,7 +2,6 @@ import { once } from 'node:events';
 import { createServer, type AddressInfo, type Socket } from 'node:net';
 import mysql from 'mysql2';
 
-/** The parts of mysql2's server-side connection that the fake server uses. */
 type ServerConnection = {
   sequenceId: number;
   serverHandshake(options: Record<string, unknown>): void;
@@ -20,16 +19,14 @@ const { Connection, ConnectionConfig } = mysql as unknown as {
 };
 
 const CHARSET = mysql.Charsets.UTF8_GENERAL_CI;
-// Every basic capability except CLIENT_SSL (0x0800), so clients never ask for TLS.
+// Decision: Every basic capability except CLIENT_SSL (0x0800), so clients never ask for TLS.
 const CAPABILITY_FLAGS = 0xffff & ~0x0800;
 
 export type FakeMySqlRow = Record<string, number | string | null>;
 
 export type FakeMySqlServer = {
   port: number;
-  /** The client connections the server holds open. */
   openConnections(): number;
-  /** Every client connection the server has accepted. */
   acceptedConnections(): number;
   close(): Promise<void>;
 };
@@ -50,12 +47,10 @@ function columnsOf(rows: Array<FakeMySqlRow>) {
   }));
 }
 
-/**
- * A MySQL wire-protocol server built on mysql2's own server API. It accepts any user, answers
- * every SELECT with `rows`, or with what `rows` returns for the query (columns in key order of
- * the first row), and every other statement with OK for one row. It speaks the text protocol
- * only, which is what drizzle's mysql2 driver uses.
- */
+// Decision: A MySQL wire-protocol server built on mysql2's own server API. It accepts any user, answers
+// every SELECT with `rows`, or with what `rows` returns for the query (columns in key order of
+// the first row), and every other statement with OK for one row. It speaks the text protocol
+// only, which is what drizzle's mysql2 driver uses.
 export async function startFakeMySqlServer(
   rows: Array<FakeMySqlRow> | ((sql: string) => Array<FakeMySqlRow>),
 ): Promise<FakeMySqlServer> {
@@ -78,7 +73,7 @@ export async function startFakeMySqlServer(
       capabilityFlags: CAPABILITY_FLAGS,
       authCallback(_params: unknown, done: (error: null) => void) {
         done(null);
-        // Each command starts a new packet sequence; the server API leaves the reset to us.
+        // Decision: Each command starts a new packet sequence; the server API leaves the reset to us.
         connection.sequenceId = 0;
       },
     });
@@ -96,7 +91,7 @@ export async function startFakeMySqlServer(
       }
       connection.sequenceId = 0;
     });
-    // A client that drops its socket emits an error here; unhandled, it would end the test run.
+    // Decision: A client that drops its socket emits an error here; unhandled, it would end the test run.
     connection.on('error', () => {});
   });
   server.listen(0, '127.0.0.1');

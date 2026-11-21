@@ -157,7 +157,6 @@ describe('local D1 identity', () => {
     expect(existsSync(cliTarget.databasePath)).toBe(true);
     expect(await getApplicationTables(cliTarget.databasePath)).toContain('users');
 
-    // Read the migrated database through the local runtime's D1 binding.
     const proxy = new Miniflare(
       convertV4MiniflareOptions({
         modules: true,
@@ -230,7 +229,6 @@ describe('local D1 identity', () => {
     expect(() => getLocalD1Target(root)).toThrow('persistence configuration changed');
     expect(() => getLocalD1Target(root)).toThrow('Start the dev server to refresh it');
 
-    // A fresh plugin evaluation replaces stale state with the current setting.
     writeLocalD1PersistState(root, customPersistRoot);
     expect(getLocalD1Target(root).persistRoot).toBe(customPersistRoot);
   });

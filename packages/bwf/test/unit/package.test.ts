@@ -171,9 +171,8 @@ describe('resolveSpaFallbackChain', () => {
   });
 
   it('appends synthetic catch-all after user fallbacks (SPA)', () => {
-    // Under first-match-wins, user rules must come BEFORE the synthetic
-    // catch-all so a more-specific user rule fires first; the synthetic
-    // `/*` only catches paths no user rule matched.
+    // Decision: Under first-match-wins, user rules have to come before the synthetic catch-all so a more
+    // specific user rule fires first; the synthetic `/*` only catches paths no user rule matched.
     const userRules = [{ source: '/docs/*', destination: '/docs.html', status: 200, force: false }];
     const result = resolveSpaFallbackChain('spa', userRules);
     expect(result.assetConfig).toEqual({ not_found_handling: 'none' });
@@ -201,15 +200,13 @@ describe('resolveSpaFallbackChain', () => {
     ];
     const result = resolveSpaFallbackChain('spa', userRules);
 
-    // Platform SPA switch disabled — we're handling the catch-all via rules.
     expect(result.assetConfig).toEqual({ not_found_handling: 'none' });
-    // No synthetic rule prepended: the returned list is exactly what the user supplied.
     expect(result.fallbackRules).toEqual(userRules);
   });
 
   it('still appends synthetic catch-all when user catch-all is host-scoped (SPA)', () => {
-    // A host-scoped `/*` -> `/index.html` only covers one hostname, so other
-    // bound hosts still need the synthetic global SPA fallback.
+    // Decision: A host-scoped `/*` -> `/index.html` covers one hostname only, so other bound hosts still need
+    // the synthetic global SPA fallback.
     const userRules = [
       {
         host: 'www.example.com',
@@ -247,11 +244,10 @@ describe('resolveSpaFallbackChain', () => {
     expect(result.fallbackRules).toBeUndefined();
   });
 
-  // `routing.notFound` (bwf.json) is appType-independent — the worker path
-  // already honors it via `resolveAssetRoutingPolicy`. `detectPreset`
-  // classifies any Vite project with no backend files as `spa`, so a plain
-  // Vite MPA lands on `appType: 'spa'` and this override is its only way to
-  // get a real 404 instead of the SPA shell with HTTP 200.
+  // Decision: `routing.notFound` (bwf.json) doesn't depend on appType: the worker path already honors it
+  // through `resolveAssetRoutingPolicy`. `detectPreset` classifies any Vite project with no
+  // backend files as `spa`, so a plain Vite MPA lands on `appType: 'spa'` and this override is
+  // its only way to get a real 404 instead of the SPA shell with HTTP 200.
   it('honors an explicit notFound over the appType-inferred handling (SPA)', () => {
     expect(resolveSpaFallbackChain('spa', undefined, '404-page').assetConfig).toEqual({
       not_found_handling: '404-page',
@@ -262,10 +258,9 @@ describe('resolveSpaFallbackChain', () => {
   });
 
   it('does not synthesise the SPA catch-all when notFound overrides away from SPA', () => {
-    // Applying the override AFTER the SPA branch would leave the synthetic
-    // `/* -> /index.html` rule in place, so the SPA shell would still be
-    // served (via a rule instead of the platform switch) and the override
-    // would be a no-op.
+    // Decision: Applying the override after the SPA branch would leave the synthetic `/* -> /index.html`
+    // rule in place, so the SPA shell would still be served (through a rule instead of the
+    // platform switch) and the override would do nothing.
     const userRules = [{ source: '/docs/*', destination: '/docs.html', status: 200, force: false }];
     const result = resolveSpaFallbackChain('spa', userRules, '404-page');
     expect(result.assetConfig).toEqual({ not_found_handling: '404-page' });
@@ -488,7 +483,6 @@ describe('_worker.js safety guard (collectAndHashAssets)', () => {
     writeFileSync(join(TMP, '.assetsignore'), '');
 
     const { assetManifest } = await collectAndHashAssets(TMP);
-    // _worker.js is included because .assetsignore doesn't exclude it
     expect(Object.keys(assetManifest).sort()).toEqual(['/_worker.js', '/index.html']);
   });
 

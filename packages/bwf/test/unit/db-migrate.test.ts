@@ -152,7 +152,6 @@ const mockReadCloudflareD1Migrations = vi.fn();
 const mockApplyCloudflareD1Migrations = vi.fn();
 const mockRestoreCloudflareD1Database = vi.fn();
 
-// The D1 context still comes from the real config reader; only the Cloudflare calls are fake.
 vi.mock('../../src/cli/cloudflare-operations.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/cli/cloudflare-operations.ts')>()),
   readCloudflareD1Migrations: (...args: Array<unknown>) => mockReadCloudflareD1Migrations(...args),
@@ -269,7 +268,7 @@ describe('bwf db migrate', () => {
         ],
       }),
     );
-    // Cloudflare's default folder holds SQL that bwf never checked.
+    // Decision: Cloudflare's default migrations folder holds SQL that bwf never checked.
     mkdirSync(join(root, 'migrations'));
     writeFileSync(join(root, 'migrations', '0001_legacy.sql'), 'DROP TABLE users;');
     selectCloudflare(root);
@@ -358,7 +357,6 @@ describe('bwf db migrate', () => {
   });
 
   it('counts pending files, not tracked names, in the status summary', async () => {
-    // Another branch applied 002 and 003, which are not on disk here.
     const root = createProjectRoot({
       '001_a.sql': 'CREATE TABLE a (id integer);',
       '004_d.sql': 'CREATE TABLE d (id integer);',
@@ -579,7 +577,7 @@ describe('bwf db restore', () => {
       expect.objectContaining({ migrateToken: 'app-db' }),
       { bookmark },
     );
-    // The saved platform is bwf, so the bare follow-up commands would not reach Cloudflare.
+    // Decision: The saved platform is bwf, so the bare follow-up commands wouldn't reach Cloudflare.
     expect(mockLog.info).toHaveBeenCalledWith(
       `To undo this restore, run \`bwf db restore --platform cloudflare --bookmark=${previous}\`.`,
     );

@@ -89,8 +89,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // clearTables does not touch the builds table; delete any rows this suite
-  // seeded first so the FK to projects/users doesn't block clearTables.
+  // Decision: clearTables doesn't clear builds. Delete the rows this suite seeded first, so the FK to
+  // projects and users doesn't block clearTables.
   await env.db.delete(builds);
   await clearTables(env.db);
   zeroTrust.progressed = false;
@@ -174,7 +174,6 @@ describe('scheduled()', () => {
   it('backfills userId into routing entries', async () => {
     const { id } = await createTestUser(env.db, 'backfill', 'github', undefined, 'free');
     const proj = await createTestProject(env.db, id);
-    // Old routing entry without userId
     await env.ROUTING.put(proj.slug, JSON.stringify({ worker: 'test', projectId: proj.id }));
 
     await scheduled(mockController, makeBindings(env), mockCtx);
@@ -186,7 +185,6 @@ describe('scheduled()', () => {
   it('does not overwrite existing userId in routing entries', async () => {
     const { id } = await createTestUser(env.db, 'existing', 'github', undefined, 'free');
     const proj = await createTestProject(env.db, id);
-    // Routing entry already has userId
     await env.ROUTING.put(
       proj.slug,
       JSON.stringify({ worker: 'test', projectId: proj.id, userId: 'existing-user-id' }),
@@ -208,11 +206,10 @@ describe('scheduled()', () => {
     await expect(scheduled(mockController, makeBindings(env), mockCtx)).resolves.toBeUndefined();
   });
 
-  // The hourly scheduled fallback best-effort re-pokes BUILD_SCHEDULER whenever
-  // queued container builds remain, in case the webhook's inline poke was lost.
-  // It must key that decision off hasQueuedContainerBuilds (ANY queued container
-  // build) — NOT getQueuedBuilds, which excludes builds whose project already has
-  // an active build and therefore returns [] for a fully-blocked queue.
+  // Decision: The hourly fallback re-pokes BUILD_SCHEDULER while queued container builds remain, in case the
+  // webhook's inline poke was lost. It keys off hasQueuedContainerBuilds (any queued container
+  // build), not getQueuedBuilds, which leaves out builds whose project already has an active build
+  // and so returns [] for a fully blocked queue.
   describe('build scheduler re-poke', () => {
     function pokeSpyBindings(e: TestEnv): {
       bindings: ReturnType<typeof makeBindings>;
@@ -222,9 +219,8 @@ describe('scheduled()', () => {
       const spyScheduler = {
         idFromName: (name: string) => ({ toString: () => name }),
         get: (_id: unknown) => ({
-          // index.ts calls `scheduler.fetch(urlString, { method: 'POST' })`,
-          // so normalize the (input, init) overload into a Request before
-          // inspecting it — a DO stub.fetch accepts the same shape as fetch().
+          // Decision: index.ts calls `scheduler.fetch(urlString, { method: 'POST' })`, so normalize the (input, init)
+          // overload into a Request before reading it. A DO stub.fetch takes the same shape as fetch().
           fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
             const req = input instanceof Request ? input : new Request(input, init);
             const url = new URL(req.url);
@@ -259,9 +255,6 @@ describe('scheduled()', () => {
     });
 
     it('re-pokes when the queue is fully blocked (no startable rows but queued work remains)', async () => {
-      // The project already has an ACTIVE build, so getQueuedBuilds excludes the
-      // project entirely and returns [] — but a queued container build still
-      // exists, so hasQueuedContainerBuilds is true and the fallback must poke.
       const { id } = await createTestUser(env.db, 'queued-blocked', 'github', undefined, 'free');
       const proj = await createTestProject(env.db, id);
       await env.db.insert(builds).values([
@@ -340,23 +333,21 @@ describe('scheduled()', () => {
     expect(rows.get('actions-abandoned')).toBe('failed');
   });
 
-  // The container reaper's DB terminalize frees the slot + revokes the token,
-  // but the `started_at > maxAge` predicate does not prove the container is gone
-  // (the DO may have been evicted / its alarm lost). The scheduled handler must
-  // therefore best-effort issue a BuildManager cancelBuild for each reaped id so
-  // a still-alive orphan is actually stopped.
+  // Decision: The reaper's DB terminalize frees the slot and revokes the token, but `started_at > maxAge`
+  // doesn't prove the container is gone (the DO may have been evicted or lost its alarm). So the
+  // scheduled handler also sends a BuildManager cancelBuild for each reaped id, to stop a live orphan.
   describe('stale container reaper', () => {
     function cancelSpyBindings(e: TestEnv): {
       bindings: ReturnType<typeof makeBindings>;
-      // Separate recorders per size so a routing assertion can prove the reaper
-      // forwarded each build's instance_type and addressed the right class.
+      // Decision: Separate recorders per size, so a routing assertion can prove the reaper forwarded each build's
+      // instance_type and addressed the right class.
       baseCancels: Array<{ id: string; reason: string }>;
       largeCancels: Array<{ id: string; reason: string }>;
     } {
       const baseCancels: Array<{ id: string; reason: string }> = [];
       const largeCancels: Array<{ id: string; reason: string }> = [];
-      // cancelContainerBuildDos resolves the DO by `idFromName(build.id)`, so
-      // round-trip the build id through the stub name to assert it later.
+      // Decision: cancelContainerBuildDos resolves the DO by `idFromName(build.id)`, so carry the build id through
+      // the stub name to check it later.
       const makeSpy = (sink: Array<{ id: string; reason: string }>) =>
         ({
           idFromName: (name: string) => ({ toString: () => name }),
@@ -381,8 +372,6 @@ describe('scheduled()', () => {
       const { id } = await createTestUser(env.db, 'stale-container', 'github', undefined, 'free');
       const proj = await createTestProject(env.db, id);
 
-      // Over-age active PAID (standard-4) container build (> 75 min cutoff). Its
-      // cancel must land on BUILD_MANAGER_LARGE, NOT the base namespace.
       await env.db.insert(builds).values({
         id: 'bld_stale_paid',
         project_id: proj.id,
@@ -392,8 +381,6 @@ describe('scheduled()', () => {
         instance_type: 'standard-4',
         started_at: sql`now() - interval '90 minute'`,
       });
-      // Over-age active FREE (null instance_type legacy) container build — its
-      // cancel must land on the base BUILD_MANAGER.
       await env.db.insert(builds).values({
         id: 'bld_stale_free',
         project_id: proj.id,
@@ -403,7 +390,6 @@ describe('scheduled()', () => {
         instance_type: null,
         started_at: sql`now() - interval '90 minute'`,
       });
-      // Fresh active container build — must NOT be cancelled.
       await env.db.insert(builds).values({
         id: 'bld_fresh',
         project_id: proj.id,
@@ -417,12 +403,8 @@ describe('scheduled()', () => {
       try {
         await scheduled(mockController, bindings, mockCtx);
 
-        // Both stale rows were terminalized (slot freed + token revoked)...
         const paid = await env.db.select().from(builds).where(eq(builds.id, 'bld_stale_paid'));
         expect(paid[0]?.status).toBe('failed');
-        // ...AND each got a stop attempt on its OWN size namespace: the paid
-        // build on LARGE, the free/null build on the base manager. The reaper
-        // forwarded instance_type so the cancel can't miss a live container.
         expect(largeCancels).toEqual([{ id: 'bld_stale_paid', reason: 'stale build reaper' }]);
         expect(baseCancels).toEqual([{ id: 'bld_stale_free', reason: 'stale build reaper' }]);
       } finally {
@@ -462,14 +444,12 @@ describe('scheduled()', () => {
     const proj2 = await createTestProject(env.db, id2);
     await env.ROUTING.put(proj2.slug, JSON.stringify({ worker: 'test', projectId: proj2.id }));
 
-    // Use a USAGE_COUNTER that fails for the first user but works for the second
     let callCount = 0;
     const failingMock = {
       idFromName: (name: string) => ({ toString: () => name }),
       get: (_id: unknown) => ({
         fetch: async (req: Request) => {
           callCount++;
-          // Fail on first rollover call (first user), succeed on rest
           if (callCount === 1) {
             throw new Error('DO failure');
           }
@@ -487,18 +467,14 @@ describe('scheduled()', () => {
 
     const bindings = { ...makeBindings(env), USAGE_COUNTER: failingMock };
 
-    // Should not throw despite first user failing
     await expect(scheduled(mockController, bindings, mockCtx)).resolves.toBeUndefined();
 
-    // Second user should still have userId backfilled
     const routing2 = JSON.parse((await env.ROUTING.get(proj2.slug))!);
     expect(routing2.userId).toBe(id2);
   });
 
-  // A DO mock that always reports `requestsSuspended: <latch>` on /rollover,
-  // optionally also reporting a one-time rollover. Mirrors the real DO, which
-  // returns the request latch on every response so the scheduler can
-  // reconcile KV against it each pass.
+  // Decision: Mirrors the real DO, which returns the request latch on each /rollover response so the scheduler
+  // can reconcile KV against it each pass.
   function makeRequestLatchMock(opts: {
     requestsSuspended: boolean;
     rolled?: boolean;
@@ -533,7 +509,6 @@ describe('scheduled()', () => {
       status: 'active',
     });
 
-    // Routes left `suspended` by the previous period's request cap.
     const suspendedJson = JSON.stringify({
       projectId: proj.id,
       userId: id,
@@ -542,7 +517,6 @@ describe('scheduled()', () => {
     await env.ROUTING.put(proj.slug, suspendedJson);
     await env.ROUTING.put('domain:roll-custom.example.com', suspendedJson);
 
-    // DO reports the billing period rolled and the request latch is now clear.
     await scheduled(
       mockController,
       {
@@ -559,10 +533,8 @@ describe('scheduled()', () => {
   });
 
   it('self-heals a stale requests_exceeded marker even on a pass that did NOT roll over', async () => {
-    // Models a prior rollover whose KV clear partially failed: the DO latch is
-    // already false (period rolled last run) but a route still carries the
-    // stale marker. A later, non-rolling pass must reconcile it — proving the
-    // cleanup is retryable, not one-shot.
+    // Decision: Models an earlier rollover whose KV clear partly failed: the DO latch is already false but a
+    // route still carries the stale marker. A later pass that doesn't roll over has to reconcile it.
     const { id } = await createTestUser(env.db, 'staleuser', 'github', undefined, 'free');
     const proj = await createTestProject(env.db, id);
     await env.ROUTING.put(
@@ -585,7 +557,6 @@ describe('scheduled()', () => {
   it('preserves an admin suspension when the request latch is clear (reason-scoped reconcile)', async () => {
     const { id } = await createTestUser(env.db, 'adminuser', 'github', undefined, 'free');
     const proj = await createTestProject(env.db, id);
-    // Admin-suspended route — the request-cap reconcile must never lift this.
     await env.ROUTING.put(
       proj.slug,
       JSON.stringify({ projectId: proj.id, userId: id, suspended: 'admin_suspended' }),
@@ -743,8 +714,6 @@ describe('scheduled() proxy token rotations', () => {
   ])('advances a due rotation on the %s cron', async (_tier, controller) => {
     const projectId = await dueRotation();
     await scheduled(controller, makeBindings(env), mockCtx);
-    // A project without Workers runs START through REVOKE, then waits for the
-    // raised floor to reach every reader.
     expect(await rotationState(projectId)).toEqual({ gen: 1, phase: 'settle' });
   });
 
@@ -768,7 +737,6 @@ describe('scheduled() proxy token rotations', () => {
 describe('scheduled() AI logging sweep', () => {
   const fastController = { cron: FAST_CRON, scheduledTime: Date.now() } as ScheduledController;
 
-  /** A core self-hosted install: no optional module may gate the sweep. */
   function coreBindings() {
     return {
       ...makeBindings(env),

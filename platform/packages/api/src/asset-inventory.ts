@@ -11,9 +11,9 @@ export async function findR2Assets(
     return found;
   }
   const prefix = `assets/${projectId}/`;
-  // A small delta should not scan the project's entire retained history. Keep
-  // direct probes within one bounded wave; large manifests still use LIST so
-  // thousands of files cannot exhaust the per-request subrequest budget.
+  // Decision: A small delta shouldn't scan the project's whole retained history. Keep direct probes within
+  // one bounded wave; large manifests still use LIST so thousands of files can't exhaust the
+  // per-request subrequest budget.
   if (requiredHashes.size <= R2_CONCURRENCY) {
     await uploadPool([...requiredHashes], R2_CONCURRENCY, async (hash) => {
       const object = await r2.head(`${prefix}${hash}`);

@@ -987,9 +987,9 @@ describe('operator installation-aware system and worker operations', () => {
       events: Array<{ worker_name: string; status: string }>;
     };
     expect(result).toMatchObject({ ok: false, partial: true, environment: 'staging' });
-    // Rollback runs in reverse deploy order, so the email gateway, which the
-    // API's confirmation page posts back through, rolls back after the API.
-    // Its dispatch service entrypoint also stays intact if API rollback fails.
+    // Decision: Rollback runs in reverse deploy order, so the email gateway (which the API's confirmation page
+    // posts back through) rolls back after the API. Its dispatch service entrypoint also stays intact
+    // if the API rollback fails.
     expect(result.events.map((event) => [event.worker_name, event.status])).toEqual([
       ['dashboard', 'success'],
       ['api', 'failed'],
@@ -1094,9 +1094,8 @@ describe('operator installation-aware system and worker operations', () => {
     expect((await getDeployment(env.db, deployment.id))?.status).toBe('canceling');
     expect(cf.state.containerApps.has(application.id)).toBe(true);
 
-    // Simulate an abandoned request after the operator requested cancellation.
-    // The operator flow itself must own the terminal transition; the test does
-    // not update the deployment to `canceled` directly.
+    // Decision: Simulate a request abandoned after the operator asked for cancellation. The operator flow has to
+    // own the terminal transition, so the test doesn't set the deployment to `canceled` itself.
     await env.db
       .update(deployments)
       .set({ updated_at: '2020-01-01T00:00:00.000Z' })
@@ -1127,8 +1126,8 @@ describe('operator installation-aware system and worker operations', () => {
       state: 'complete',
     });
     expect(await env.ROUTING.get(PLATFORM_SANDBOX_DRAIN_KEY)).toBeNull();
-    // Each audit row is inserted, then updated with its outcome, so its physical
-    // position does not follow request order.
+    // Decision: Each audit row is inserted, then updated with its outcome, so its physical position doesn't
+    // follow request order.
     const events = await env.db
       .select()
       .from(operatorEvents)
@@ -1504,7 +1503,6 @@ describe('proxy token rotation', () => {
   const rotationTarget = (projectId: string) => `proxy-token-rotation:${projectId}`;
   const tok = (projectId: string, gen: number) => deriveProxyToken(JWT_SECRET, projectId, gen);
 
-  /** Cloudflare mock whose script bindings come from seeded scripts; a missing script is a 404. */
   function cloudflare() {
     const cf: MockCfApiHandle = mockCfApi({
       listWorkerBindings: (url) => {
@@ -1521,7 +1519,6 @@ describe('proxy token rotation', () => {
     cf.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH')
       .length;
 
-  /** A project, optionally with an active Worker (plus a retained one) holding tok(gen). */
   async function rotationProject(
     cf: MockCfApiHandle,
     slug: string,
@@ -1577,7 +1574,6 @@ describe('proxy token rotation', () => {
     cf.state.hostScripts.get(script)?.bindings.find((b) => b.name === '__PLATFORM_PROXY_TOKEN')
       ?.text;
 
-  /** Moves every rotation wait an hour back and makes the jobs due. */
   async function endWaits() {
     const shifted = (field: string) => sql`CASE WHEN payload->>${field} IS NOT NULL
       THEN jsonb_build_object(${field}::text, to_char(((payload->>${field})::timestamptz
@@ -1589,13 +1585,11 @@ describe('proxy token rotation', () => {
       WHERE kind = 'proxy-token-rotation'`);
   }
 
-  /** One scheduled rotation run past the current waits. */
   async function runRotations() {
     await endWaits();
     await reconcileProxyTokenRotations(env.db, env as unknown as ProxyTokenRotationEnv);
   }
 
-  /** Scheduled rotation runs until no job is left. */
   async function finishRotations() {
     for (let run = 0; run < 6; run++) {
       await runRotations();
@@ -1721,7 +1715,6 @@ describe('proxy token rotation', () => {
       action: 'system.rotate-proxy-tokens',
       target: { projects: project.id },
     });
-    // Every Worker is patched; the floor waits for their old versions to drain.
     expect(Date.parse(body.job.waitUntil)).toBeGreaterThan(Date.now());
     expect(patchCount(cf)).toBe(2);
     expect(await env.ROUTING.get(`proxy-token:${project.id}`)).toBeNull();
@@ -1739,7 +1732,6 @@ describe('proxy token rotation', () => {
       const cf = cloudflare();
       const project = await rotationProject(cf, `rotate-again-${phase}`, { workers: true });
       if (phase === 'patch') {
-        // Stop right after START, before the first Worker is patched.
         await requestProxyTokenRotation(env.db, project.id, 'operator', 'operator');
         await advanceProxyTokenRotation(
           env.db,

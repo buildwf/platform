@@ -44,8 +44,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // builds reference projects via FK, so they must be cleared before
-  // clearTables() deletes projects (clearTables does not touch builds).
+  // Decision: builds references projects through an FK, and clearTables doesn't clear builds,
+  // so delete them first.
   await env.db.delete(builds);
   await clearTables(env.db);
 });
@@ -54,14 +54,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// A scoped (aud:'deploy') token authenticates as the project owner but is
-// minted only to run `bwf deploy` against ONE project. The authMiddleware
-// allowlist must let the deploy flow's own endpoints through while denying
-// every other owner-scoped /projects/* route (delete, secrets PUT, github
-// connect, ...) and any cross-project use.
+// Decision: A deploy token (aud:'deploy') authenticates as the project owner but only to run `bwf deploy`
+// against one project. The authMiddleware allowlist lets the deploy flow's endpoints through and
+// denies other owner-scoped /projects/* routes and any cross-project use.
 describe('deploy token scope enforcement', () => {
-  // Without an explicit build, bind the token to a fresh active build of the
-  // scoped project, as remote builds do.
   async function deployToken(
     projectId: string,
     userId: string,
@@ -87,8 +83,8 @@ describe('deploy token scope enforcement', () => {
     const token = await deployToken(project.id, user.id);
     mockCfApi();
 
-    // Empty body — the handler will 400 (or some other non-403), but the point
-    // is that the auth middleware did NOT reject it with 403 forbidden.
+    // Decision: An empty body: the handler gives 400 or similar. The test only checks that the auth middleware
+    // didn't reject it with 403.
     const res = await app.fetch(
       new Request(`http://localhost/projects/${project.id}/deploy`, {
         method: 'POST',
@@ -170,17 +166,13 @@ describe('deploy token scope enforcement', () => {
         }),
         env,
       );
-      // GET /projects/:id/{resources,deployments,secrets} must reach the
-      // handler (owner check passes), not be 403'd by the deploy-token gate.
       expect(res.status).not.toBe(403);
     }
   });
 
-  // The deployments endpoint is on the deploy-token allowlist, but the deploy
-  // manifest's `vars` field carries plaintext env values (uploaded as plain_text
-  // Worker bindings). A leaked/untrusted build token must not be able to read
-  // historical env values through it. The CLI only needs `manifest.live` for
-  // live-binding restoration, so that field is preserved.
+  // Decision: The deployments endpoint is on the deploy-token allowlist, but manifest `vars` holds plaintext
+  // env values. A leaked build token mustn't read them, so they're stripped. The CLI only needs
+  // `manifest.live` to restore live bindings, so that stays.
   it('strips manifest.vars (plaintext env) for deploy-token callers but keeps manifest.live', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'deploy-vars-stripped');
@@ -213,17 +205,14 @@ describe('deploy token scope enforcement', () => {
     };
     expect(body.deployments).toHaveLength(1);
     const returned = JSON.parse(body.deployments[0].manifest!) as Record<string, unknown>;
-    // The plaintext env values must be gone...
     expect(returned.vars).toBeUndefined();
     expect('vars' in returned).toBe(false);
-    // ...but the live-binding restoration metadata must survive for the CLI.
     expect(returned.live).toEqual({
       bindingName: 'LIVE',
       className: 'LiveObject',
       storage: 'sqlite',
       classes: ['LiveObject'],
     });
-    // Non-secret structural fields are untouched.
     expect(returned.version).toBe(3);
   });
 
@@ -244,7 +233,6 @@ describe('deploy token scope enforcement', () => {
     await createDeployment(env.db, project.id, manifest);
     mockCfApi();
 
-    // A normal aud:'api' token (deployScope unset) keeps the full manifest.
     const res = await app.fetch(
       new Request(`http://localhost/rpc/deployments.list`, {
         method: 'POST',
@@ -265,8 +253,8 @@ describe('deploy token scope enforcement', () => {
   it('returns manifest:null for deploy-token callers when the manifest is unparseable', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'deploy-vars-garbage');
-    // A null manifest and a non-JSON garbage manifest must both fail safe to
-    // null (never returning an unparseable string that might carry secrets).
+    // Decision: A null manifest and a manifest that isn't JSON both fail safe to null, so the response doesn't
+    // carry an unparseable string that might hold secrets.
     await createDeployment(env.db, project.id, null);
     await createDeployment(env.db, project.id, 'not-json-at-all{');
     const token = await deployToken(project.id, user.id);
@@ -311,7 +299,6 @@ describe('deploy token scope enforcement', () => {
     const user = await createTestUser(env.db);
     const projectP = await createTestProject(env.db, user.id, 'scoped-listed');
     const projectQ = await createTestProject(env.db, user.id, 'sibling-hidden');
-    // Token scoped to P only; Q belongs to the same owner.
     const token = await deployToken(projectP.id, user.id);
     mockCfApi();
 
@@ -326,9 +313,7 @@ describe('deploy token scope enforcement', () => {
     expect(res.status).toBe(200);
     const body = rpcData(await res.json()) as ReadonlyArray<{ id: string; slug: string }>;
     const ids = body.map((p) => p.id);
-    // The scoped project must be present so the CLI can resolve slug→id...
     expect(ids).toContain(projectP.id);
-    // ...but the sibling must NOT leak through.
     expect(ids).not.toContain(projectQ.id);
     expect(ids).toHaveLength(1);
   });
@@ -350,7 +335,6 @@ describe('deploy token scope enforcement', () => {
     expect(res.status).toBe(200);
     const body = rpcData(await res.json()) as ReadonlyArray<{ id: string; slug: string }>;
     const ids = body.map((p) => p.id);
-    // A full `api` token (deployScope unset) keeps the complete listing.
     expect(ids).toContain(projectP.id);
     expect(ids).toContain(projectQ.id);
   });
@@ -408,7 +392,6 @@ describe('deploy token scope enforcement', () => {
     const user = await createTestUser(env.db);
     const projectP = await createTestProject(env.db, user.id, 'scoped-project');
     const projectOther = await createTestProject(env.db, user.id, 'other-project');
-    // Token scoped to projectP, used against projectOther's deploy endpoint.
     const token = await deployToken(projectP.id, user.id);
     mockCfApi();
 
@@ -424,10 +407,9 @@ describe('deploy token scope enforcement', () => {
     expect(await res.json()).toMatchObject({ error: 'forbidden' });
   });
 
-  // A deploy token may be bound to the build it was minted for. Once that build
-  // is no longer active (superseded/cancelled by a newer push or run), a stale
-  // runner that still holds the token must be rejected at deploy time — the DB
-  // supersede is only advisory until the deploy endpoint enforces it.
+  // Decision: A deploy token can be bound to the build it was minted for. Once that build isn't active
+  // (superseded or cancelled by a newer push or run), a stale runner that still holds the token is
+  // rejected at deploy time. The DB supersede is only advisory until the deploy endpoint enforces it.
   it('rejects a deploy token whose bound build is cancelled (superseded runner)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'build-cancelled');
@@ -463,8 +445,8 @@ describe('deploy token scope enforcement', () => {
     const token = await deployToken(project.id, user.id, 'octocat', build.id);
     mockCfApi();
 
-    // Empty body — the handler 400s on manifest validation, but the point is
-    // that the build-state guard did NOT reject it with 403.
+    // Decision: An empty body: the handler 400s on manifest validation. The test only checks that the
+    // build-state guard didn't reject it with 403.
     const res = await app.fetch(
       new Request(`http://localhost/projects/${project.id}/deploy`, {
         method: 'POST',
@@ -476,8 +458,8 @@ describe('deploy token scope enforcement', () => {
     expect(res.status).not.toBe(403);
   });
 
-  // A deploy token must be bound to a build or a CI credential. One with
-  // neither would skip both the build-state and the revocation checks.
+  // Decision: A deploy token is bound to a build or a CI credential. One with neither would skip both the
+  // build-state and the revocation checks.
   it('rejects a deploy token with neither a build nor a credential claim', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'build-unbound');
@@ -515,11 +497,9 @@ describe('deploy token scope enforcement', () => {
     expect(deployment).toBeUndefined();
   });
 
-  // The build-state guard lives in authMiddleware, so it gates EVERY allowlisted
-  // route a deploy token may hit — not just POST /deploy. These mutating
-  // endpoints (database provisioning, asset preflight, presigned upload URLs)
-  // must reject a token whose bound build is no longer active, otherwise a
-  // superseded/cancelled runner could still mutate real project state.
+  // Decision: The build-state guard is in authMiddleware, so it gates each allowlisted route a deploy token
+  // can reach, not only POST /deploy. A superseded or cancelled runner mustn't mutate project state
+  // through these routes either.
   const ALLOWLISTED_MUTATING_ROUTES: ReadonlyArray<{ name: string; path: string; rpc?: string }> = [
     { name: 'POST /projects/:id/database', path: 'database', rpc: 'database.provision' },
     {
@@ -588,8 +568,8 @@ describe('deploy token scope enforcement', () => {
       const token = await deployToken(project.id, user.id, 'octocat', build.id);
       mockCfApi();
 
-      // Empty body — the handler will return some non-403 (400/etc.), but the
-      // point is that the central build-state guard did NOT reject it with 403.
+      // Decision: An empty body: the handler returns a non-403 (400 or similar). The test only checks that the
+      // central build-state guard didn't reject it with 403.
       const res = await app.fetch(
         new Request(
           route.rpc
@@ -607,14 +587,12 @@ describe('deploy token scope enforcement', () => {
     });
   }
 
-  // The build claim must belong to the token's scoped project. A token whose
-  // bound build references a DIFFERENT project is rejected even when that build
-  // is active — defends against a build-id/project-scope mismatch.
+  // Decision: The build claim has to belong to the token's scoped project. A bound build of another project
+  // is rejected even when it's active, to block a build-id and project-scope mismatch.
   it('rejects a deploy token whose bound build belongs to a different project', async () => {
     const user = await createTestUser(env.db);
     const projectP = await createTestProject(env.db, user.id, 'build-scope-self');
     const projectOther = await createTestProject(env.db, user.id, 'build-scope-other');
-    // Active build, but it belongs to projectOther, while the token is scoped to projectP.
     const build = await createTestBuild(env.db, {
       projectId: projectOther.id,
       userId: user.id,
@@ -635,9 +613,8 @@ describe('deploy token scope enforcement', () => {
     expect(res.status).toBe(403);
   });
 
-  // A complete JSON-mode (direct-to-R2) deploy request that exercises the WfP
-  // pipeline all the way to the final publish transaction. No assets and a
-  // trivial default worker module, so `mockCfApi()` covers every CF call.
+  // Decision: No assets and a trivial default worker module, so `mockCfApi()` covers each CF call on the way
+  // to the final publish transaction.
   function fullDeployRequest(projectId: string, token: string): Request {
     return new Request(`http://localhost/projects/${projectId}/deploy`, {
       method: 'POST',
@@ -646,25 +623,16 @@ describe('deploy token scope enforcement', () => {
         manifest: { version: 3, assetManifestVersion: 2, bindings: {} },
         assetManifest: {},
         workerFiles: {
-          // base64 of a trivial worker module.
           'index.js': btoa("export default { fetch() { return new Response('ok'); } }"),
         },
       }),
     });
   }
 
-  // The up-front build guard in `handleManifestOnlyDeploy` checks the bound
-  // build ONCE at request entry. The request then spends
-  // minutes parsing, prechecking, provisioning, and uploading. During that
-  // window a newer GitHub Actions run can supersede (cancel) the OLD bound
-  // build. Without a re-check inside the final publish transaction a superseded
-  // runner would still flip the deployment to `live` with stale code.
-  //
-  // This test proves the FINAL-tx re-check fires (not just the up-front guard):
-  // the build is `building` at request entry (so the up-front guard PASSES),
-  // and the mid-flight cancel is injected during the Cloudflare Worker upload.
-  // The final-tx row-locked re-check then observes the terminal build and
-  // aborts the publish.
+  // Decision: The up-front build guard checks the bound build once at request entry, and the request can then
+  // take minutes. A newer run can cancel the build in that window, so the final publish transaction
+  // re-checks it. Here the build is `building` at entry, so the up-front guard passes, and the
+  // cancel is injected during the Worker upload, so only the final-tx re-check can catch it.
   it('rejects a deploy whose bound build is cancelled mid-flight (final-tx re-check)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'build-superseded-midflight');
@@ -672,13 +640,12 @@ describe('deploy token scope enforcement', () => {
       projectId: project.id,
       userId: user.id,
       executor: 'github_actions',
-      status: 'building', // ACTIVE at the up-front guard
+      status: 'building',
     });
     const token = await deployToken(project.id, user.id, 'octocat', build.id);
     let cancelInjected = false;
     mockCfApi({
       uploadWorker: async () => {
-        // Supersede the build after its request-entry guard, before final publish.
         await env.db
           .update(builds)
           .set({ status: 'cancelled', error: 'superseded by newer run' })
@@ -689,11 +656,10 @@ describe('deploy token scope enforcement', () => {
     });
 
     const res = await app.fetch(fullDeployRequest(project.id, token), env);
-    expect(res.status).toBe(200); // streaming NDJSON response
+    expect(res.status).toBe(200);
 
     const events = await readAllEvents(res);
-    expect(cancelInjected).toBe(true); // confirm the seam fired before publish
-    // The publish was aborted — an error event, never a `done`.
+    expect(cancelInjected).toBe(true);
     expect(events.some((e) => (e as { event: string }).event === 'done')).toBe(false);
     const errEvent = events.find((e) => (e as { event: string }).event === 'error') as
       | { event: string; message?: string }
@@ -701,21 +667,16 @@ describe('deploy token scope enforcement', () => {
     expect(errEvent).toBeDefined();
     expect(errEvent!.message).toBe('bound build was superseded');
 
-    // The deployment row must NOT be live. Routing is rolled back and the row
-    // is marked terminal by the post-routing rollback branch.
     const liveRows = await env.db
       .select({ id: deployments.id })
       .from(deployments)
       .where(eq(deployments.status, 'live'));
     expect(liveRows).toHaveLength(0);
 
-    // The project must not point at any deployment (publish tx rolled back).
     const updatedProject = await db.getProject(env.db, project.id);
     expect(updatedProject?.active_deployment_id ?? null).toBeNull();
   });
 
-  // Control: a bound build that stays ACTIVE through the entire pipeline
-  // (up-front guard AND final-tx re-check) deploys normally and goes live.
   it('lets a deploy go live when the bound build stays active through the final tx', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'build-active-through');

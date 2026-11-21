@@ -49,7 +49,6 @@ interface EmailHandlerDefinition {
   address: string;
   /** Path relative to the email directory, e.g. "support.ts". */
   filePath: string;
-  /** Compiled match pattern. */
   pattern: CompiledEmailPattern;
 }
 
@@ -75,7 +74,7 @@ function compileSegment(part: string): Segment | null {
 }
 
 function escapeLiteral(value: string): string {
-  // Of the allowed literal chars `[a-z0-9._-]`, only `.` is regex-meaningful.
+  // Decision: Of the allowed literal chars `[a-z0-9._-]`, only `.` is regex-meaningful.
   return value.replace(/\./g, '\\.');
 }
 
@@ -98,7 +97,6 @@ function patternKind(prefix: Segment, tag?: Segment): EmailPatternKind {
  */
 export function compileEmailPattern(basename: string): CompiledEmailPattern | null {
   const lower = basename.toLowerCase();
-  // We allow at most one `+` separator (subaddress tag). Anything else is invalid.
   const parts = lower.split('+');
   if (parts.length > 2) {
     return null;
@@ -199,13 +197,10 @@ function parseEmailFiles(files: Array<string>): {
       continue;
     }
     const basename = filePath.replace(/\.[^.]+$/, '');
-    // `_default` is a reserved filename and is matched exactly: `_Default.ts`
-    // or `_default.test.ts` fall through to the `_`-prefix skip below like
-    // any other private helper. Two `_default.<ext>` files (e.g. `.ts` next
-    // to `.js` mid-migration) would otherwise resolve to whichever the glob
-    // returned last — readdir order, not stable across filesystems — with
-    // the other silently unbundled. Reject, mirroring the regex-collision
-    // check on per-address handlers below.
+    // Decision: `_default` is reserved and matched exactly: `_Default.ts` or `_default.test.ts` fall through to
+    // the `_`-prefix skip like any other private helper. Two `_default.<ext>` files would resolve to
+    // whichever the glob returned last (readdir order isn't stable), leaving the other unbundled,
+    // so reject the second one, as the regex-collision check does for per-address handlers.
     if (basename === '_default') {
       if (defaultHandler !== undefined) {
         throw new Error(
@@ -231,7 +226,7 @@ function parseEmailFiles(files: Array<string>): {
 
   addresses.sort(compareEmailRoutes);
 
-  // Two handlers can compile to the same regex source — the obvious case
+  // Decision: Two handlers can compile to the same regex source — the obvious case
   // is `[user].ts` and `[other].ts` both producing `^([^+@]+)$`. After
   // alphabetical sort, the first one wins for every delivery and the
   // others are dead code. Reject at scan time with a clear error rather

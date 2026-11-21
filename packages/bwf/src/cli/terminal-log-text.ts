@@ -1,4 +1,4 @@
-// A whole CSI sequence (ESC [, parameter bytes, intermediate bytes, final byte),
+// Decision: A whole CSI sequence (ESC [, parameter bytes, intermediate bytes, final byte),
 // a whole OSC sequence of printable text ended by BEL or ESC \, or one C0/C1
 // control character other than tab and newline.
 const TERMINAL_CONTROL =

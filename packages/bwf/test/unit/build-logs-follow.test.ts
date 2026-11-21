@@ -83,7 +83,6 @@ it.each(['complete', 'failed', 'cancelled'])(
 
 describe('isFatalFollowError', () => {
   it('treats every 4xx except 429 as fatal (including 426 cli_outdated)', () => {
-    // 426 cli_outdated: a too-old CLI must exit, not retry forever.
     for (const status of [400, 401, 403, 404, 409, 410, 422, 426]) {
       expect(isFatalFollowError(apiError(status))).toBe(true);
     }
@@ -135,7 +134,7 @@ describe('followBuildLogs', () => {
       pollMs: 0,
     });
 
-    expect(sinceCalls).toEqual([1, 2]); // advances cursor to each page's lastSeq
+    expect(sinceCalls).toEqual([1, 2]);
     expect(written).toEqual(['b', 'c']);
     expect(result).toEqual({ status: 'complete', terminal: true });
   });
@@ -151,7 +150,6 @@ describe('followBuildLogs', () => {
         sinceCalls.push(since);
         call += 1;
         if (call === 1) {
-          // Transient blip on the first poll (e.g. a 502/timeout).
           return Promise.reject(new Error('boom'));
         }
         return Promise.resolve(
@@ -173,11 +171,9 @@ describe('followBuildLogs', () => {
       onRetry: (err) => retries.push(err),
     });
 
-    // The failed attempt did NOT advance the cursor: the retry re-requests since=2.
     expect(sinceCalls).toEqual([2, 2]);
-    expect(retries).toHaveLength(1); // onRetry called exactly once
+    expect(retries).toHaveLength(1);
     expect((retries[0] as Error).message).toBe('boom');
-    // Nothing written on the failed attempt; terminal page's lines written after.
     expect(written).toEqual(['c']);
     expect(result).toEqual({ status: 'complete', terminal: true });
   });
@@ -272,7 +268,7 @@ describe('followBuildLogs', () => {
 
   it('follows an initially terminal build whose producer has not drained', async () => {
     vi.useFakeTimers();
-    // Bind this fixture token explicitly so a saved platform cannot select the destination.
+    // Decision: Bind this fixture token explicitly so a saved platform cannot select the destination.
     vi.stubEnv('BWF_TOKEN', 'test-build-logs-token');
     vi.stubEnv('BWF_API_URL', 'https://api.example.test');
     const registry = mkdtempSync(join(tmpdir(), 'platform-build-connections-'));

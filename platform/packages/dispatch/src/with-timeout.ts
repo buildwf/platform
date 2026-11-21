@@ -114,8 +114,8 @@ export async function withDelayedHedge<T>(
     clearTimeout(timeoutTimer);
   };
   const discardAttempt = (attempt: Attempt): void => {
-    // The storage binding itself is not abortable. Keep a handled continuation
-    // so a late body is canceled and a late rejection is always observed.
+    // Decision: The storage binding isn't abortable. A handled continuation stays attached, so a late body is
+    // canceled and a late rejection is observed.
     void attempt.promise
       .then(async (outcome) => {
         if (outcome.ok && outcome.value !== null) {
@@ -165,8 +165,8 @@ export async function withDelayedHedge<T>(
       throw initial.outcome.error;
     }
 
-    // Binding errors are often transient. Retry one fast rejection without
-    // waiting for the hedge delay; the same absolute deadline still applies.
+    // Decision: Binding errors are often transient, so one fast rejection is retried without waiting for the
+    // hedge delay. The same absolute deadline applies.
     options.onHedge?.();
     const retry = startAttempt();
     const retried = await Promise.race([
@@ -183,8 +183,6 @@ export async function withDelayedHedge<T>(
     throw retried.outcome.error;
   }
 
-  // The timer fired, so attempt one is still pending. Launch exactly one
-  // independent read and prefer the first usable (non-null) result.
   options.onHedge?.();
   const second = startAttempt();
   const winner = await Promise.race([

@@ -87,9 +87,9 @@ export function recordCloudflareCandidateUpload(
       'The saved Cloudflare candidate belongs to a different Worker or live version. Inspect the deployment before retrying.',
     );
   }
-  // The activation runner supplies its verified live parent. If the last saved
-  // candidate already became that parent, begin a new chain instead of retaining
-  // the interrupted deployment's old parent and inactive-version authorization.
+  // Decision: The activation runner supplies its verified live parent. If the last saved candidate already
+  // became that parent, begin a new chain instead of keeping the interrupted deployment's old parent
+  // and inactive-version authorization.
   const versionIds = [
     ...(expected?.parentVersionId === parentVersionId ? expected.versionIds : []),
     versionId,

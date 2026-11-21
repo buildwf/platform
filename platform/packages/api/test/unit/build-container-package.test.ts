@@ -35,7 +35,6 @@ it.each(['0.20.0', '0.20.1', '0.21.0-rc.2'])(
       const entrypoint = JSON.parse(/^CMD (.+)$/m.exec(dockerfile)![1]!) as Array<string>;
       expect(entrypoint[0]).toBe('node');
       const agentUrl = pathToFileURL(join(directory, entrypoint[1]!)).href;
-      // The fallback must not depend on cwd or the application's package version.
       const untrusted = join(directory, 'app');
       mkdirSync(untrusted);
       writeFileSync(
@@ -74,7 +73,6 @@ it('uses the root build context in every configured container and in CI', () => 
     wrangler.matchAll(/"image": "\.\/container\/Dockerfile",\s*"image_build_context": "([^"]+)"/g),
     (match) => match[1]!,
   );
-  // Both container sizes in the base, staging and production configurations.
   expect(contexts).toHaveLength(6);
   expect(contexts.every((context) => resolve(apiRoot, context) === repositoryRoot)).toBe(true);
   const workflow = readFileSync(join(repositoryRoot, '.github/workflows/platform-ci.yml'), 'utf8');
@@ -82,8 +80,8 @@ it('uses the root build context in every configured container and in CI', () => 
 });
 
 it('allows only the public manifest and container sources into the root build context', () => {
-  // The uploader pipes its Dockerfile on stdin, so a Dockerfile-specific ignore
-  // file would not protect local credentials or node_modules in the checkout.
+  // Decision: The uploader pipes its Dockerfile on stdin, so a Dockerfile-specific ignore file wouldn't protect
+  // local credentials or node_modules in the checkout.
   const patterns = readFileSync(join(repositoryRoot, '.dockerignore'), 'utf8')
     .split('\n')
     .filter((line) => line && !line.startsWith('#'));

@@ -43,7 +43,7 @@ describe('playground/kitchen-sink', () => {
   let child: ReturnType<typeof spawn>;
 
   beforeAll(async () => {
-    // Build first so every dependency is resolved before the server starts;
+    // Decision: Build first so every dependency is resolved before the server starts;
     // dev-mode dependency optimization makes browser checks unreliable.
     const pg = join(ROOT, 'playground/kitchen-sink');
     rmSync(join(pg, 'dist'), { recursive: true, force: true });
@@ -53,7 +53,6 @@ describe('playground/kitchen-sink', () => {
     });
     const previewDatabaseId = preparePreviewWranglerConfig(pg);
 
-    // Start preview server — pre-built assets, no lazy optimization.
     const server = await startServer(
       (port) => {
         child = spawn(
@@ -85,7 +84,7 @@ describe('playground/kitchen-sink', () => {
     );
     BASE = server.base;
 
-    // Preview mode doesn't auto-run migrations (dev mode's migrationPlugin
+    // Decision: Preview mode doesn't auto-run migrations (dev mode's migrationPlugin
     // handles this via configureServer). Apply them directly to the local
     // D1 database so pages that query DB/Auth tables work.
     const { runMigrations, getMiniflareDatabasePath } =
@@ -131,7 +130,6 @@ describe('playground/kitchen-sink', () => {
       await page.waitForFunction(() => document.querySelector('h1')?.textContent?.includes('DB'));
       expect(page.url()).toBe(`${BASE}/db`);
 
-      // Marker survives = SPA navigation (no reload)
       const marker = await page.evaluate(() => window.__SPA_MARKER);
       expect(marker).toBe(true);
 
@@ -276,8 +274,6 @@ describe('playground/kitchen-sink', () => {
       await page.fill('input[placeholder="my-value"]', 'queued');
       await page.click('button:has-text("Send to Queue")');
 
-      // Poll for the result — the consumer writes to KV and the page
-      // shows it under "Processed Results". Reload to pick up the result.
       const start = Date.now();
       let found = false;
       while (Date.now() - start < 15_000) {
@@ -441,7 +437,7 @@ const PREVIEW_SECRETS = {
   API_URL: 'https://api.example.com',
 };
 
-// Preview runs without Cloudflare credentials: containers need a local Docker build and Workers AI
+// Decision: Preview runs without Cloudflare credentials: containers need a local Docker build and Workers AI
 // is remote-only, so turn both off. kitchen-sink-build.test.ts covers them.
 function preparePreviewWranglerConfig(pg: string): string {
   const wranglerPath = join(pg, 'dist', 'ssr', 'wrangler.json');
@@ -461,12 +457,12 @@ function preparePreviewWranglerConfig(pg: string): string {
     ...(wranglerConfig.dev ?? {}),
     enable_containers: false,
   };
-  // Preview runs the production build, which has no .env: give it the auth secret and the
+  // Decision: Preview runs the production build, which has no .env: give it the auth secret and the
   // server keys that env.ts requires, or the Worker fails env validation at boot.
   wranglerConfig.vars = { ...(wranglerConfig.vars ?? {}), ...PREVIEW_SECRETS };
   delete wranglerConfig.ai;
   writeFileSync(wranglerPath, `${JSON.stringify(wranglerConfig, null, 2)}\n`);
-  // v2 preview reads the native artifact, while the CLI still uses the validated dist build.
+  // Decision: v2 preview reads the native artifact, while the CLI still uses the validated dist build.
   const nativePath = getWorkerConfigPath(pg);
   const native = JSON.parse(readFileSync(nativePath, 'utf8'));
   for (const [name, value] of Object.entries(PREVIEW_SECRETS)) {

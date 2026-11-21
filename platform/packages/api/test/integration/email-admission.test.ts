@@ -345,7 +345,7 @@ describe('authoritative email admission', () => {
               payloadDigest: 'f'.repeat(64),
               route: receiptRoute(),
             });
-      // It can fail before the assertion below listens; that is not an unhandled rejection.
+      // Decision: It can fail before the assertion below listens. That isn't an unhandled rejection.
       receive.catch(() => {});
       try {
         await waitForPostgresLockWaiter();
@@ -1292,7 +1292,7 @@ describe('authoritative email admission', () => {
               payloadDigest: 'd'.repeat(64),
               route: receiptRoute(),
             });
-      // It can fail before the assertion below listens; that is not an unhandled rejection.
+      // Decision: It can fail before the assertion below listens. That isn't an unhandled rejection.
       start.catch(() => {});
       try {
         await waitForPostgresLockWaiter();

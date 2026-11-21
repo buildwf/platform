@@ -258,10 +258,9 @@ export function parsePlatformRuntimeManifest(value: unknown): PlatformRuntimeMan
       root.sourceRevision === undefined || root.sourceRevision === null
         ? null
         : sourceRevision(root.sourceRevision),
-    // Runtime manifests released before authenticated usage envelopes did not
-    // declare a protocol. Keep them usable for explicit rollback while making
-    // the installer treat every move to or from that legacy contract as a
-    // traffic-fenced transition.
+    // Decision: Runtime manifests released before authenticated usage envelopes didn't declare a protocol.
+    // Keep them usable for explicit rollback while making the installer treat each move to or from
+    // that legacy contract as a traffic-fenced transition.
     usageProtocolVersion: usageProtocolVersion(root.usageProtocolVersion),
   };
 }

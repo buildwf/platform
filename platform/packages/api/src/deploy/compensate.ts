@@ -117,7 +117,6 @@ export async function recoverFailedDeployment(input: {
     workerUploaded: workerUploaded,
   });
 
-  // Evict the WfP mirror manifest on pre-routing failure.
   if (!routingSwitched && input.wfpMirroredManifestDeploymentId) {
     const id = input.wfpMirroredManifestDeploymentId;
     input.wfpMirroredManifestDeploymentId = null;
@@ -163,15 +162,12 @@ export async function recoverFailedDeployment(input: {
     });
   };
 
-  // A connection can fail after PostgreSQL has committed the go-live
-  // transaction but before the client receives COMMIT's acknowledgement.
-  // Before undoing any external state, reconcile that ambiguous outcome
-  // from the durable deployment row. A readable non-live row after three
-  // checks proves the callback did not commit. A live row proves it did,
-  // even when a newer deploy/rollback has since changed project.active.
-  // If PostgreSQL remains unreadable, preserve external state: leaking a
-  // version temporarily is recoverable, deleting a possibly-live Worker
-  // and restoring stale tenant routing is not.
+  // Decision: A connection can fail after PostgreSQL committed the go-live transaction but before the client
+  // gets COMMIT's acknowledgement. Before undoing external state, settle that outcome from the durable
+  // deployment row. A readable non-live row after three checks proves the callback didn't commit; a
+  // live row proves it did, even when a newer deploy or rollback has changed project.active. If
+  // PostgreSQL stays unreadable, keep external state: leaking a version for a while is recoverable,
+  // deleting a possibly-live Worker and restoring stale tenant routing isn't.
   const supersededBuild = raw === SUPERSEDED_BUILD_ERROR_MESSAGE;
   const teardownRaceLost = routingSwitched && raw === PROJECT_DELETING_ERROR_MESSAGE;
   const deploymentCanceled = raw === 'deployment canceled';
@@ -229,8 +225,8 @@ export async function recoverFailedDeployment(input: {
       );
       readyMarkerConfirmed = ready?.projectId === projectId && ready.ownerId === cutoverOwnerId;
     } catch {
-      // An unreadable marker leaves the protected intent fenced. A
-      // later deploy can retry this proof under the project lock.
+      // Decision: An unreadable marker leaves the protected intent fenced. A later deploy can retry this proof under
+      // the project lock.
     }
   }
   const preserveAmbiguousCutover =
@@ -238,12 +234,10 @@ export async function recoverFailedDeployment(input: {
     (ambiguousCutoverOutcome === 'pending_reconcile' && readyMarkerConfirmed !== false) ||
     ambiguousCutoverOutcome === 'unknown';
 
-  // SUPERSEDED is thrown only inside the go-live tx (by
-  // `assertBoundBuildStillActive`), so the message alone identifies it.
-  // A teardown race is PROJECT_DELETING thrown AFTER routing was switched
-  // (the in-tx delete re-check). Both abort the go-live: roll back the
-  // routing keys this attempt wrote and tear down the worker/bundle/
-  // container state, then mark the deployment failed (never live).
+  // Decision: SUPERSEDED is thrown only inside the go-live tx (by `assertBoundBuildStillActive`), so the message
+  // alone identifies it. A teardown race is PROJECT_DELETING thrown after routing was switched. Both
+  // abort the go-live: roll back the routing keys this attempt wrote, tear down the
+  // worker/bundle/container state, then mark the deployment failed.
   const cutoverFailed = cutoverProtected && !cutoverCommitted && !preserveAmbiguousCutover;
   if (teardownRaceLost || supersededBuild || cutoverFailed) {
     const failureEvent = supersededBuild
@@ -256,11 +250,9 @@ export async function recoverFailedDeployment(input: {
       writtenRoutingKeyCount: writtenRoutingKeys.length,
     });
 
-    // Once a protected cutover intent exists, claim an explicit
-    // compensation state under the project lock before undoing or
-    // deleting anything. A concurrent recovery that already published
-    // this deployment makes the conditional claim fail, in which case
-    // this stale request must not touch its external state or artifacts.
+    // Decision: Once a protected cutover intent exists, claim a compensation state under the project lock before
+    // undoing or deleting anything. If a concurrent recovery already published this deployment, the
+    // conditional claim fails, and this stale request must not touch its external state or artifacts.
     const needsProtectedClaim = !teardownRaceLost && input.currentStatus === 'cutover';
     if (needsProtectedClaim) {
       const claimed = await context.get('db').transaction(async (tx) => {
@@ -299,10 +291,9 @@ export async function recoverFailedDeployment(input: {
       logger.error('catch', 'cron_rollback_failed', e);
     });
 
-    // Snapshot compensation is best-effort per surface. Retry once when
-    // one of those exact undos failed, then normalize the whole project
-    // back to PostgreSQL's committed active deployment if exact restore
-    // is still incomplete.
+    // Decision: Snapshot compensation is per surface and can partly fail. Retry once when an exact undo failed,
+    // then normalize the whole project back to PostgreSQL's committed active deployment if the exact
+    // restore is still incomplete.
     if (needsProtectedClaim && compensationErrors.length > 0) {
       compensationErrors.length = 0;
       await restoreTrackedQueueConsumers().catch((error) => compensationErrors.push(error));
@@ -350,11 +341,9 @@ export async function recoverFailedDeployment(input: {
           if (!routingSwitched) {
             return;
           }
-          // Exact undo succeeded, but a domain activation may have
-          // committed after the earlier snapshot and copied this failed
-          // deployment's slug route. Reconcile only domain keys to the
-          // restored route; touching cron/queues here would regress
-          // pre-routing failures that never changed those surfaces.
+          // Decision: The exact undo worked, but a domain activation may have committed after the snapshot and copied
+          // this failed deployment's slug route. Reconcile only domain keys to the restored route; touching
+          // cron or queues here would regress pre-routing failures that never changed them.
           const currentDomains = await getDomainsByProjectId(tx, projectId);
           const rawRouting = await context.env.ROUTING.get(projectRouteKey(lockedProject));
           const restoredRouting =
@@ -417,7 +406,7 @@ export async function recoverFailedDeployment(input: {
         context.env.ROUTING.delete(cutoverReadyKey(failedDeployment.id)),
         context.env.ROUTING.delete(cutoverCompensatedKey(failedDeployment.id)),
       ]).catch(() => {
-        // Terminal PostgreSQL state makes stale markers harmless.
+        // Decision: A terminal PostgreSQL state makes stale markers harmless.
       });
     }
     emit({ event: 'error', message: msg, step: currentStep });
@@ -432,7 +421,7 @@ export async function recoverFailedDeployment(input: {
         context.env.ROUTING.delete(cutoverIntentKey(failedDeployment.id)),
         context.env.ROUTING.delete(cutoverReadyKey(failedDeployment.id)),
       ]).catch(() => {
-        // Stale markers are harmless once PostgreSQL is live.
+        // Decision: Stale markers are harmless once PostgreSQL is live.
       });
       emitSlugDone();
     } else {

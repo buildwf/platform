@@ -202,7 +202,7 @@ export function runCloudflareAuthCommand(
   const [command, ...prefix] = resolveCloudflareOperationArgv();
   const args = encodeCloudflareOperation(operation);
   if (cloudflareAuthNeedsTerminal(operation)) {
-    // cf can prompt or print a device code while the browser login is active.
+    // Decision: cf can prompt or print a device code while the browser login is active.
     return new Promise((resolve) => {
       const child = spawn(command!, [...prefix, ...args], {
         cwd: root,
@@ -277,8 +277,8 @@ export function cloudflareAuthEnvironment(
       delete env[key];
     }
   }
-  // Deploy uses the encrypted cf store. Login and status must read that same
-  // store: cf migrates plaintext credentials into it and removes the old file.
+  // Decision: Deploy uses the encrypted cf store. Login and status have to read that same store: cf migrates
+  // plaintext credentials into it and removes the old file.
   env.CLOUDFLARE_AUTH_USE_KEYRING = 'true';
   return env;
 }

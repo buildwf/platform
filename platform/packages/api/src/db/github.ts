@@ -49,29 +49,22 @@ export async function invalidateGitHubConnectionAuthorizedBy(
   return cancelledBuilds;
 }
 
-// ---------------------------------------------------------------------------
-// github_connections
-// ---------------------------------------------------------------------------
-
 export async function createGitHubConnection(
   db: Db,
   args: {
     projectId: string;
     installationId: string;
     repoFullName: string;
-    // The repo's immutable numeric GitHub id (as text), resolved at connect time.
-    // Webhook/OIDC resolution keys on it (full_name is mutable).
+    // Decision: The repo's immutable numeric GitHub id (as text), resolved at connect time. Webhook and OIDC
+    // resolution key on it, because full_name can change.
     repositoryId: string;
-    // The project owner or administrator who proved repository access while
-    // connecting. Runtime authority requires this user to remain the owner or
-    // an administrator.
+    // Decision: The project owner or administrator who proved repository access while connecting. Runtime
+    // authority requires this user to stay the owner or an administrator.
     authorizedByUserId: string;
     branch?: string;
     buildExecutor?: GitHubConnection['build_executor'];
-    // The `.github/workflows/*.yml` file the OIDC exchange binds the deploy
-    // token to. Optional: when omitted the column default applies (the
-    // scaffolded `bwf-deploy.yml`). Validated by the connect route before it
-    // reaches here.
+    // Decision: The `.github/workflows/*.yml` file the OIDC exchange binds the deploy token to. When omitted, the
+    // column default applies (the scaffolded `bwf-deploy.yml`). The connect route validates it first.
     workflowPath?: string;
   },
 ): Promise<GitHubConnection> {
@@ -266,11 +259,9 @@ export async function getGitHubActionsConnectionsByRepo(
     .where(
       and(
         eq(githubConnections.repository_id, repositoryId),
-        // Bind the connection's installation account to the OIDC repo owner. The
-        // `repository_id` is immutable across a repo TRANSFER, so this top-level
-        // condition (applies to BOTH the 'all' and 'selected' branches below)
-        // rejects a transferred repo (same id, NEW owner) that would otherwise
-        // match the old owner's stale connection.
+        // Decision: Bind the installation account to the OIDC repo owner. `repository_id` stays the same across a
+        // repo transfer, so this top-level condition (for both the 'all' and 'selected' branches) rejects a
+        // transferred repo that would otherwise match the old owner's stale connection.
         eq(githubInstallations.account_id, repositoryOwnerId),
         eq(githubConnections.build_executor, 'github_actions'),
         eq(githubInstallations.status, 'active'),
@@ -311,10 +302,6 @@ export async function deleteGitHubConnection(db: Db, projectId: string): Promise
   await db.delete(githubConnections).where(eq(githubConnections.project_id, projectId));
 }
 
-// ---------------------------------------------------------------------------
-// github_installations
-// ---------------------------------------------------------------------------
-
 export async function upsertGitHubInstallation(
   db: Db,
   args: {
@@ -324,17 +311,13 @@ export async function upsertGitHubInstallation(
     accountId: string;
     accountType: GitHubInstallation['account_type'];
     repositories: ReadonlyArray<GitHubInstallationRepository>;
-    // GitHub's `repository_selection` (`all` | `selected`). Optional so callers
-    // that don't carry it (e.g. the OAuth callback re-upsert) preserve the
-    // existing value on conflict; defaults to `selected` on insert, the safe
-    // direction (requires explicit membership unless proven all-repos).
+    // Decision: GitHub's `repository_selection`. Optional so callers that don't carry it (such as the OAuth
+    // callback re-upsert) keep the stored value on conflict; inserts default to `selected`, the safe
+    // direction.
     repositorySelection?: GitHubInstallation['repository_selection'];
-    // When true, the conflict path ALSO rolls repo membership forward to the
-    // fresh `repositories` / `repositorySelection` carried in args. Only the
-    // OAuth callback caller sets this — it just refetched the LIVE membership via
-    // `listInstallationRepositories`, so its data is authoritative on reconnect /
-    // `setup_action=update`. The webhook `installation.created` caller leaves it
-    // off (default), keeping the stale-`created` membership guard below intact.
+    // Decision: When true, the conflict path also rolls repo membership forward from args. Only the OAuth callback
+    // sets it: it just fetched the live membership, so its data is authoritative. The webhook
+    // `installation.created` caller leaves it off, which keeps the stale-`created` guard below.
     refreshMembership?: boolean;
   },
 ): Promise<GitHubInstallation> {
@@ -354,16 +337,12 @@ export async function upsertGitHubInstallation(
     .onConflictDoUpdate({
       target: githubInstallations.installation_id,
       set: {
-        // Only personal (account_type='User') installs carry an owner. A
-        // personal account converted into an organization arrives here with the
-        // organization type, so it drops its owner. Otherwise preserve an
-        // already-linked user_id when a webhook upsert arrives with no user
-        // (install-before-signin can be backfilled later). When a user is
-        // provided, adopt it ONLY if the row is unowned or already owned by the
-        // same user — never re-own a row linked to a DIFFERENT user, even if two
-        // callbacks race. (Done in the column expression, not setWhere: setWhere
-        // would freeze repositories/status refreshes on the webhook re-upsert,
-        // and `user_id = NULL` is never true.)
+        // Decision: Only personal (account_type='User') installs have an owner; a personal account converted to an
+        // organization arrives as an organization and drops its owner. Otherwise keep an already-linked
+        // user_id when a webhook upsert has no user (install-before-signin is backfilled later). Adopt a
+        // provided user only if the row is unowned or owned by the same user, so racing callbacks can't
+        // re-own a row. This lives in the column expression, not setWhere: setWhere would freeze the
+        // repositories/status refreshes, and `user_id = NULL` is never true.
         user_id:
           args.accountType === 'Organization'
             ? null
@@ -373,46 +352,28 @@ export async function upsertGitHubInstallation(
         account_login: args.accountLogin,
         account_id: args.accountId,
         account_type: args.accountType,
-        // By default, do NOT overwrite repo-membership (`repositories` /
-        // `repository_selection`) on the conflict path. GitHub never reuses
-        // installation_ids, so a `created` that conflicts with an existing row is
-        // ALWAYS a stale/redelivered event and its payload membership is never
-        // newer than what we already hold. The INSERT above seeds both on the
-        // genuine first install, and the `installation_repositories` webhook
-        // handler is the authoritative writer for every membership/selection
-        // change thereafter (under a FOR UPDATE lock). Overwriting here would let
-        // a redelivered original `created` (e.g. repos [A]) roll back a cache the
-        // handler correctly advanced (e.g. [A, B]), or downgrade an `all`
-        // selection back to `selected` — silently rejecting pushes/OIDC for the
-        // dropped repos until the next selection refresh.
-        //
-        // EXCEPTION: the OAuth callback caller (routes/github.ts) sets
-        // `refreshMembership: true`. It just refetched the LIVE membership via
-        // `listInstallationRepositories`, so on reconnect / `setup_action=update`
-        // its data IS authoritative and must roll the cache forward (otherwise
-        // newly-added repos / a widen-to-`all` stay rejected until the next
-        // webhook). The membership keys are spread in only for that caller, so the
-        // generated SQL is byte-identical to the webhook path when the flag is off.
+        // Decision: By default, don't overwrite `repositories` or `repository_selection` on conflict. GitHub doesn't
+        // reuse installation_ids, so a conflicting `created` is a stale or redelivered event whose
+        // membership is never newer than ours. The INSERT seeds both on first install, and the
+        // `installation_repositories` handler owns later changes (under FOR UPDATE). Overwriting here would
+        // let a redelivered `created` roll the cache back or downgrade `all` to `selected`, rejecting
+        // pushes and OIDC for the dropped repos.
+        // The OAuth callback (routes/github.ts) is the exception: it sets `refreshMembership: true` because
+        // it just fetched the live membership. The keys are spread in only for that caller, so the SQL for
+        // the webhook path is unchanged.
         ...(args.refreshMembership
           ? {
               repositories: args.repositories,
-              // NULL-safe: never blank an existing selection if the caller omitted it.
+              // Decision: NULL-safe: don't blank a stored selection when the caller left it out.
               repository_selection:
                 args.repositorySelection ?? sql`${githubInstallations.repository_selection}`,
             }
           : {}),
-        // Do NOT let a conflict-update revive a terminal/suspended row. A genuine
-        // reinstall ALWAYS gets a NEW installation_id from GitHub (ids are never
-        // reused), so it hits the INSERT branch above (status defaults to active),
-        // never this conflict path. Therefore a `created` that conflicts with an
-        // existing row is always a stale/redelivered event — and if that row is
-        // currently `deleted` (uninstalled) or `suspended`, a LATER lifecycle event
-        // set it so. Flipping it back to `active` here would re-enable push/OIDC
-        // resolution (the resolvers gate only on status='active') for an App the
-        // user already removed. Keep `deleted`/`suspended` terminal; only the real
-        // `installation.unsuspend` webhook (markGitHubInstallationStatus) clears a
-        // suspension. `active` rows stay active (the common create-before-callback
-        // backfill case is a no-op).
+        // Decision: Don't let a conflict update revive a deleted or suspended row. A real reinstall gets a new
+        // installation_id (GitHub doesn't reuse them) and takes the INSERT branch, so a conflicting
+        // `created` is stale, and a `deleted` or `suspended` status came from a later event. Setting it
+        // back to `active` would re-enable push and OIDC resolution (which gate only on status='active')
+        // for an App the user removed. Only the real `installation.unsuspend` webhook clears a suspension.
         status: sql`CASE WHEN ${githubInstallations.status} IN ('deleted', 'suspended') THEN ${githubInstallations.status} ELSE 'active' END`,
         updated_at: sql`now()`,
       },
@@ -437,14 +398,11 @@ export async function getGitHubInstallationsByUser(
   db: Db,
   userId: string,
 ): Promise<ReadonlyArray<GitHubInstallation>> {
-  // Personal-account owner OR active member. Organization installs have no
-  // owner (`user_id` is null), so they are visible only through a live
-  // membership. The EXISTS correlates on the NUMERIC
-  // `installation_id` (githubInstallations.installation_id) — the key the
-  // membership cache is stored under — NOT the surrogate `.id`. The membership
-  // arm honors the TTL (`expires_at > now()`, DB clock). owner-OR-EXISTS yields
-  // each installation at most once (the row is from githubInstallations, deduped
-  // by its own PK), so a caller who is both owner and member still sees one row.
+  // Decision: Personal-account owner or active member. Organization installs have no owner (`user_id` is null),
+  // so they show only through a live membership. The EXISTS correlates on the numeric
+  // `installation_id` (the membership cache key), not the surrogate `.id`, and honors the TTL
+  // (`expires_at > now()`, DB clock). Owner-or-EXISTS yields each installation once, so an owner who
+  // is also a member sees one row.
   return db
     .select()
     .from(githubInstallations)
@@ -464,10 +422,9 @@ export async function setGitHubInstallationRepositories(
   db: Db,
   installationId: string,
   repositories: ReadonlyArray<GitHubInstallationRepository>,
-  // Optional `repository_selection` (`all` | `selected`) delivered alongside the
-  // installation_repositories delta. When provided it is updated atomically with
-  // the cached set so an install that flips to `all` (or back to `selected`)
-  // stays in sync; when omitted the stored selection is preserved.
+  // Decision: Optional `repository_selection` sent with the installation_repositories delta. When given, it's
+  // updated with the cached set so an install that flips to `all` (or back) stays in sync; when
+  // omitted the stored selection is kept.
   repositorySelection?: GitHubInstallation['repository_selection'],
 ): Promise<void> {
   await db
@@ -583,14 +540,10 @@ export async function getGitHubInstallationsByAccount(
     );
 }
 
-// ---------------------------------------------------------------------------
-// github_installation_members — cached org co-membership (TTL, no stored token)
-//
-// Canonical helper surface for the org-shared GitHub App flow. A row records
-// that a Platform user was verified as a member of the GitHub account behind a
-// numeric installation. It is a TTL cache: access is re-verified per-repo, and
-// these helpers only short-circuit the org-membership check while fresh.
-// ---------------------------------------------------------------------------
+// Decision: github_installation_members is a TTL cache of org co-membership (no stored token): a row records
+// that a Platform user was verified as a member of the GitHub account behind an installation.
+// Access is re-verified per repo; these helpers only short-circuit the org-membership check while
+// the row is fresh.
 
 /**
  * Insert (or refresh) a cached membership for `(installationId, userId)`.
@@ -708,16 +661,11 @@ export async function deleteGitHubInstallationMembersByGithubAccount(
     );
 }
 
-// ---------------------------------------------------------------------------
-// github_installation_revocations — durable monotonic revocation tombstone
-//
-// A row records the high-water mark `revoked_at` for `(installation_id,
-// user_id)`. `member_removed` upserts `revoked_at = greatest(existing, now())`
-// (never regresses); join/complete + the connect gate compare an artifact's
-// `iat` (mint time, DB-clock ms via `getDbNowMs`) against this to reject any
-// artifact minted AT OR BEFORE the last revocation. A legit re-join AFTER re-add
-// mints a fresh artifact (iat > revoked_at) → kept.
-// ---------------------------------------------------------------------------
+// Decision: github_installation_revocations is a durable, monotonic revocation tombstone. A row holds the
+// high-water `revoked_at` for an installation and GitHub account. `member_removed` upserts
+// `revoked_at = greatest(existing, now())`, so it can't move back. join/complete and the connect gate
+// reject any artifact whose `iat` (DB-clock ms from `getDbNowMs`) is at or before it. A re-join after
+// re-add mints a fresh artifact with a later iat, so it's kept.
 
 /**
  * Current DB time as EPOCH MILLISECONDS. Used to stamp an artifact's `iat` from

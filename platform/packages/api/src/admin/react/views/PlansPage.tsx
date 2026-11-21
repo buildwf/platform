@@ -327,7 +327,7 @@ export function PlanEditPage({ path, platformName, username }: AdminPageProps) {
                     submitValue="true"
                     initialValue={plan.allowShortSlugs}
                   />
-                  {/* The page value can come from a cached read; only a changed selector is sent. */}
+                  {/* Decision: The page value can come from a cached read; only a changed selector is sent. */}
                   <input
                     type="hidden"
                     name="aiLoggingInitial"

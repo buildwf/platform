@@ -3,9 +3,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import type { ApiEnv } from '../../src/env.ts';
 import { getBranchHeadComparisonStatus } from '../../src/github/installation-token.ts';
 
-// Real RS256 PKCS#8 key so the REAL getInstallationToken -> createAppJwt ->
-// importPKCS8/sign path runs (the integration suite vi.mock's this whole module,
-// so only a real-module unit test can exercise the new logging).
+// Decision: A real RS256 PKCS#8 key, so the real getInstallationToken -> createAppJwt -> sign path runs.
+// The integration suite mocks this module, so only this unit test covers the real logging.
 let PRIVATE_KEY_PEM: string;
 
 beforeAll(async () => {
@@ -36,7 +35,6 @@ function isCompare(url: string): boolean {
   return url.includes('/compare/');
 }
 
-// A valid access-token POST response so the compare GET path is reached.
 function accessTokenOk(): Response {
   return Response.json({
     token: 'minted-installation-token',
@@ -44,8 +42,6 @@ function accessTokenOk(): Response {
   });
 }
 
-// Parse the structured `console.warn` JSON lines this module emits (non-JSON
-// fallback lines, if any, are ignored).
 function warnObjects(spy: ReturnType<typeof vi.spyOn>): Array<Record<string, unknown>> {
   const out: Array<Record<string, unknown>> = [];
   for (const call of spy.mock.calls) {
@@ -55,9 +51,7 @@ function warnObjects(spy: ReturnType<typeof vi.spyOn>): Array<Record<string, unk
     }
     try {
       out.push(JSON.parse(arg) as Record<string, unknown>);
-    } catch {
-      // non-JSON fallback line — skip
-    }
+    } catch {}
   }
   return out;
 }
@@ -68,14 +62,11 @@ function reasonsOf(spy: ReturnType<typeof vi.spyOn>): Array<unknown> {
     .map((o) => (o.msg as string)?.replace('branch-head compare failed: ', ''));
 }
 
-// Assert every github failure log locks the shared schema fields.
 function assertSchema(spy: ReturnType<typeof vi.spyOn>, installationId: string): void {
   for (const o of warnObjects(spy)) {
     if (o.area !== 'github') {
       continue;
     }
-    // 'exhausted' carries `attempts` instead of `attempt`; all the per-attempt
-    // failure logs carry `attempt`. Both always carry the identity fields.
     expect(o.installationId).toBe(installationId);
     expect(o.repoFullName).toBe(REPO);
     expect(o.baseSha).toBe(BASE_SHA);
@@ -88,7 +79,6 @@ function assertSchema(spy: ReturnType<typeof vi.spyOn>, installationId: string):
   }
 }
 
-/** Keep every retry attempt but run its backoff timer at once. */
 function skipRetryDelay(): void {
   const schedule = globalThis.setTimeout;
   vi.spyOn(globalThis, 'setTimeout').mockImplementation((callback, delay, ...args) =>
@@ -98,9 +88,8 @@ function skipRetryDelay(): void {
 
 describe('getBranchHeadComparisonStatus structured logging', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
-  // Unique installation id per test — getInstallationToken caches the
-  // installation-wide token per id for the isolate, so a shared id would let a
-  // minted token from one test satisfy the mint in another (skewing case 1).
+  // Decision: Each test gets its own installation id: getInstallationToken caches the token per id for the
+  // isolate, so a shared id would let one test's token satisfy the mint in another.
   let installId = 0;
   function nextInstallId(): string {
     installId += 1;
@@ -117,8 +106,6 @@ describe('getBranchHeadComparisonStatus structured logging', () => {
     vi.unstubAllGlobals();
   });
 
-  // Case 1: access-token POST -> 401 (token mint fails). Mint fails on every
-  // attempt, so no compare GET is ever issued; returns null.
   it('logs token-mint-failed when the access-token POST returns 401 (no compare GET)', async () => {
     const installationId = nextInstallId();
     let compareCalls = 0;
@@ -149,14 +136,11 @@ describe('getBranchHeadComparisonStatus structured logging', () => {
     expect(compareCalls).toBe(0);
     const reasons = reasonsOf(warnSpy);
     expect(reasons).toContain('token-mint-failed');
-    // Mint fails on all 3 attempts, then exhausted.
     expect(reasons.filter((r) => r === 'token-mint-failed')).toHaveLength(3);
     expect(reasons).toContain('exhausted');
     assertSchema(warnSpy, installationId);
   });
 
-  // Case 2: compare GET -> 404 + body. Definitive 4xx -> immediate null, exactly
-  // one compare GET (no retries).
   it('logs http-4xx with status 404 and body, returns null with no retries', async () => {
     const installationId = nextInstallId();
     let compareCalls = 0;
@@ -195,7 +179,6 @@ describe('getBranchHeadComparisonStatus structured logging', () => {
     assertSchema(warnSpy, installationId);
   });
 
-  // Case 3: compare GET -> 403 + body. Another definitive 4xx.
   it('logs http-4xx with status 403', async () => {
     const installationId = nextInstallId();
     vi.stubGlobal(
@@ -229,8 +212,6 @@ describe('getBranchHeadComparisonStatus structured logging', () => {
     assertSchema(warnSpy, installationId);
   });
 
-  // Case 4: compare GET -> 500 every time. 5xx is transient -> 3 compare GETs
-  // (1 + 2 retries), one http-5xx per attempt, then one exhausted.
   it('logs http-5xx per attempt then exhausted on a persistent 500', async () => {
     const installationId = nextInstallId();
     let compareCalls = 0;
@@ -269,8 +250,6 @@ describe('getBranchHeadComparisonStatus structured logging', () => {
     assertSchema(warnSpy, installationId);
   });
 
-  // Case 5: compare GET throws (network) every time. Transient -> 3 attempts,
-  // one network-error per attempt, then exhausted.
   it('logs network-error per attempt then exhausted when the compare GET throws', async () => {
     const installationId = nextInstallId();
     let compareCalls = 0;
@@ -309,8 +288,6 @@ describe('getBranchHeadComparisonStatus structured logging', () => {
     assertSchema(warnSpy, installationId);
   });
 
-  // Case 6: compare GET -> 200 {status:'identical'}. Success path: returns the
-  // status, emits ZERO warn lines.
   it('returns the status with no warn lines on a 200 success', async () => {
     const installationId = nextInstallId();
     vi.stubGlobal(
@@ -339,8 +316,6 @@ describe('getBranchHeadComparisonStatus structured logging', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  // Case 7: compare GET -> 500 then 200 {status:'ahead'}. One http-5xx, then the
-  // retry succeeds: returns 'ahead', NO exhausted.
   it('logs one http-5xx then returns the status when the retry succeeds', async () => {
     const installationId = nextInstallId();
     let compareCalls = 0;

@@ -56,7 +56,7 @@ const state = vi.hoisted(() => ({
   wait: vi.fn(),
 }));
 
-// Do not wait before a read is done again.
+// Decision: Don't wait before a read is done again.
 vi.mock('node:timers/promises', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:timers/promises')>()),
   setTimeout: state.wait,
@@ -169,7 +169,6 @@ vi.mock('../../src/cli/platform-installer.ts', async (importOriginal) => {
         existing!.ownershipNonce,
       );
       expect(borrowed.prepareDatabase).toBe(state.prepareDatabase);
-      // Every upgrade and repair republishes AI logging settings on the held connection.
       expect(borrowed.publishAiLogging).toBe(state.publishAiLogging);
       expect(borrowed.readAuthenticationState).toBe(state.readAuthenticationState);
       await borrowed.readAuthenticationState!();
@@ -1339,14 +1338,14 @@ describe('installed platform upgrade', () => {
         return { name: 'assets' };
       });
 
-      // The Workers can use a newer token than the one saved on this machine.
+      // Decision: The Workers can use a newer token than the one saved on this machine.
       await expect(upgrade()).rejects.toThrow(
         'platform: The runtime API token saved on this machine cannot use platform email. Cloudflare denied: Zone → Zone Settings → Edit, Zone → Email Routing Rules → Edit, Account → Email Routing Addresses → Edit (HTTP 403). bwf checked this token because PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN is not set. If the platform uses a different runtime token, set PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN to that token, and bwf checks that token instead.',
       );
       expect(installPlatform).not.toHaveBeenCalled();
 
-      // A token from PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN goes to the
-      // Workers, so the message does not talk about the saved token.
+      // Decision: A token from PLATFORM_RUNTIME_CLOUDFLARE_API_TOKEN goes to the Workers, so the message
+      // doesn't talk about the saved token.
       state.createSecrets.mockReturnValue({
         cloudflareApiToken: 'replacement-token',
         workerSecretUpdates: { CF_API_TOKEN: 'replacement-token' },
@@ -1365,7 +1364,6 @@ describe('installed platform upgrade', () => {
 
     it('continues with one warning only when the token saved on this machine is not valid', async () => {
       enableEmail();
-      // Cloudflare's answers to a token that is not valid.
       state.request.mockImplementation(async (path: string) => {
         state.events.push(`request:${path}`);
         if (path === '/zones/mail-zone') {
@@ -1499,7 +1497,6 @@ describe('installed platform upgrade', () => {
           ],
         };
       });
-      // bwf deployed the active version of the API Worker.
       state.request.mockImplementation(async (path: string) => {
         if (path.endsWith(`/${apiWorker()}/deployments`)) {
           return {
@@ -1594,14 +1591,13 @@ describe('installed platform upgrade', () => {
       await upgrade();
 
       expect(installPlatform).toHaveBeenCalledOnce();
-      // The secret is inherited; the plain-text value is saved and sent again as a secret.
+      // Decision: The secret is inherited; the plain-text value is saved and sent again as a secret.
       const checkpoint = state.createSecrets.mock.calls.at(-1)![0].checkpoint;
       expect(checkpoint.billingPending).toBe('true');
       expect(JSON.parse(checkpoint.billingJson)).toEqual({ STRIPE_PRICE_SOLO: 'price_solo' });
       expect(vi.mocked(installPlatform).mock.calls[0]![1]).toBe(
         state.createSecrets.mock.results.at(-1)!.value,
       );
-      // The review and the billing check share one read of the version.
       expect(
         state.request.mock.calls.filter(([path]) =>
           String(path).endsWith(`/versions/${activeVersion}`),
@@ -1625,7 +1621,6 @@ describe('installed platform upgrade', () => {
     describe('when bwf cannot read the Worker', () => {
       const failure = (status: number) =>
         new PlatformCloudflareApiError('Cloudflare error', status);
-      /** Answer the reads of one path with these answers, and the other reads as before. */
       const answer = (suffix: () => string, reply: () => Promise<unknown>) => {
         const original = state.request.getMockImplementation()!;
         state.request.mockImplementation(async (path: string) =>
@@ -1731,9 +1726,8 @@ describe('installed platform upgrade', () => {
         queueConsumers: [],
         workflows: [],
       };
-      // The run agreed to replace a change made outside bwf on the API
-      // Worker. It made bwf's version active and stopped before the cutover
-      // finished. The marker shows the Cloudflare CLI.
+      // Decision: The run agreed to replace a change made outside bwf on the API Worker. It made bwf's version
+      // active and stopped before the cutover finished. The marker shows the Cloudflare CLI.
       const stoppedRun = (sessionsRequired: boolean) => {
         withApiWorker();
         state.manifest = recordWorkerCutoverStage(
@@ -1768,7 +1762,6 @@ describe('installed platform upgrade', () => {
           }
           return { name: 'assets' };
         });
-        // This installation has not changed to configurable sign-in yet.
         state.readAuthenticationState.mockResolvedValue({
           enabledProviders: [],
           protectedByAccess: false,
@@ -1846,8 +1839,6 @@ describe('installed platform upgrade', () => {
           }
           return { name: 'assets' };
         });
-        // Like the installer: it creates a resource, uploads the Workers changed
-        // outside bwf with the configs that the run deploys, then pauses traffic.
         const installer = vi.mocked(installPlatform).getMockImplementation()!;
         vi.mocked(installPlatform).mockImplementation(
           async (plan, _secrets, existing, dependencies) => {
@@ -1951,9 +1942,9 @@ describe('installed platform upgrade', () => {
       });
 
       it('replaces an active version that bwf did not deploy without a review upload', async () => {
-        // An earlier run replaced the change with the Cloudflare CLI and then
-        // stopped. The marker shows the Cloudflare CLI, but the active version
-        // in runInTerminal still has no bwf record of its triggers.
+        // Decision: An earlier run replaced the change with the Cloudflare CLI and then stopped. The marker shows
+        // the Cloudflare CLI, but the active version in runInTerminal still has no bwf record of its
+        // triggers.
         expect(await runInTerminal()).toBeNull();
 
         expect(confirm).toHaveBeenCalledOnce();

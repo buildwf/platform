@@ -20,7 +20,6 @@ export async function runDeleteCommand(
 
   const client = new PlatformClient(token, { root });
 
-  // Resolve project: positional arg, or fall back to linked project
   let projectId: string;
   let projectSlug: string;
 
@@ -82,7 +81,6 @@ export async function runDeleteCommand(
     }
   }
 
-  // Remove local config if it pointed to this project
   const localConfig = readProjectConfig(root);
   if (localConfig?.projectId === projectId) {
     removeProjectConfig(root);

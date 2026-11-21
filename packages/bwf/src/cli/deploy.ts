@@ -48,13 +48,13 @@ export function resolveDeploymentPlatform(
   root: string,
   options?: RunDeployOptions,
 ): DeploymentPlatform {
-  // Projects with no saved choice predate the init prompt and keep the bwf default.
+  // Decision: Projects with no saved choice predate the init prompt and keep the bwf default.
   return options?.platform ?? readDeploymentPlatform(root) ?? 'platform';
 }
 
 /** Run `bwf deploy`; a failure carries a summary of the deploy log in its message. */
 export async function runDeploy(root: string, options?: RunDeployOptions): Promise<void> {
-  // The Cloudflare link check can evaluate bwf.config.ts, so record operator input first.
+  // Decision: The Cloudflare link check can evaluate bwf.config.ts, so record operator input first.
   options = withRecordedReadinessAccessOrigin(options ?? {});
   console.log();
 
@@ -78,9 +78,9 @@ export async function runDeploy(root: string, options?: RunDeployOptions): Promi
     cliLog.info('deploy_end', { ok: true });
   } catch (err) {
     cliLog.error('deploy_end', err, { ok: false });
-    // Flush before reading the file back. The `Detailed log:` path is useless
-    // on a CI runner that is destroyed with the job, so inline the errors and
-    // the trailing timeline into the message the caller prints.
+    // Decision: Flush before reading the file back. The `Detailed log:` path is useless on a CI runner that's
+    // destroyed with the job, so inline the errors and the trailing timeline into the message the caller
+    // prints.
     await cliLog.close().catch(() => {});
     try {
       if (err instanceof Error) {
@@ -90,10 +90,9 @@ export async function runDeploy(root: string, options?: RunDeployOptions): Promi
         }
       }
     } catch {
-      // A postmortem aid must never replace the failure it describes. The
-      // assignment alone can throw: `message` is read-only on a frozen Error
-      // and getter-only on a DOMException, which an aborted fetch produces.
-      // Losing the summary is fine; losing the deploy error is not.
+      // Decision: A postmortem aid mustn't replace the failure it describes. The assignment alone can throw:
+      // `message` is read-only on a frozen Error and getter-only on a DOMException, which an aborted fetch
+      // produces. Losing the summary is fine; losing the deploy error isn't.
     }
     throw err;
   } finally {
@@ -169,15 +168,15 @@ async function runManagedDeploy(
   options: RunDeployOptions,
   cliLog: CliLogger,
 ): Promise<void> {
-  // Resolve the connected recipient before credentials, OIDC, builds, or platform requests.
+  // Decision: Resolve the connected recipient before credentials, OIDC, builds or platform requests.
   const apiUrl = getApiUrl(root);
   const requestedProjectSlug = getRequestedProjectSlug(options);
   let reauthenticated = false;
   let displayedProject: string | undefined;
   while (true) {
     try {
-      // Project IDs and implicit slugs belong to the platform that issued them.
-      // Re-read after reauthentication: this attempt may have established its first link.
+      // Decision: Project IDs and implicit slugs belong to the platform that issued them.
+      // Read again after reauthentication: this attempt may have set up its first link.
       const savedProject = readProjectConfig(root);
       const linkedProject = savedProject?.platformUrl === apiUrl ? savedProject : null;
       if (savedProject && !linkedProject && !requestedProjectSlug) {
@@ -185,13 +184,12 @@ async function runManagedDeploy(
           `deploy: This project is linked to ${savedProject.platformUrl}. Pass --project <slug> to deploy to ${apiUrl} without changing the saved link.`,
         );
       }
-      // Token precedence: BWF_TOKEN, then GitHub Actions OIDC, then the saved
-      // login. OIDC must beat the saved login so a leftover `bwf account login`
-      // on a reused runner cannot preempt it.
+      // Decision: Token precedence: BWF_TOKEN, then GitHub Actions OIDC, then the saved login. OIDC has to beat the
+      // saved login so a leftover `bwf account login` on a reused runner can't preempt it.
       let token = process.env.BWF_TOKEN ? getToken(root) : null;
       if (!token && isGithubActionsOidcAvailable()) {
-        // A workflow with `id-token: write` intends OIDC, so an unknown slug is a
-        // hard error rather than a fallback to the saved login.
+        // Decision: A workflow with `id-token: write` intends OIDC, so an unknown slug is a hard error, not a
+        // fallback to the saved login.
         const slug = requestedProjectSlug ?? linkedProject?.slug;
         if (!slug) {
           throw new Error(
@@ -202,8 +200,8 @@ async function runManagedDeploy(
         const tokenOrigin = getApiUrl(root);
         token = await exchangeGithubOidcForDeployToken(tokenOrigin, slug);
         maskGithubActionsSecret(token);
-        // Treat the exchanged token like an explicit CI token; `buildEnv()`
-        // still removes it from every project-controlled child.
+        // Decision: Treat the exchanged token like an explicit CI token; `buildEnv()` still removes it from each
+        // project-controlled child.
         process.env.BWF_TOKEN = token;
         process.env.BWF_API_URL = tokenOrigin;
         cliLog.info('github_oidc_exchange_success', { slug });
@@ -214,20 +212,19 @@ async function runManagedDeploy(
         process.exit(1);
       }
 
-      // Access credentials stay in `process.env` for the expired-token re-auth
-      // below; `buildEnv()` removes them from each project-controlled child.
+      // Decision: Access credentials stay in `process.env` for the expired-token re-auth below; `buildEnv()`
+      // removes them from each project-controlled child.
       const client = new PlatformClient(token, { root, cliLog });
       if (options.skipMigrations) {
         await client.requireMigrationSkipSupport();
       }
 
-      // Resolve the target project: CLI flag > env var > linked project file.
+      // Decision: Target project precedence: CLI flag, then env var, then the linked project file.
       let config: ProjectConfig | null = null;
 
       if (requestedProjectSlug) {
-        // Most deploys already have a project ID. The existing single-project
-        // endpoint avoids account-wide history/traffic queries even when CI
-        // also sets BWF_PROJECT to the linked slug.
+        // Decision: Most deploys already have a project ID. The single-project endpoint avoids account-wide history
+        // and traffic queries even when CI also sets BWF_PROJECT to the linked slug.
         const linked =
           linkedProject?.slug === requestedProjectSlug
             ? await client.getProject(linkedProject.projectId)
@@ -241,7 +238,7 @@ async function runManagedDeploy(
 
         if (!config) {
           if (!process.stdin.isTTY) {
-            // CI: auto-create when --project is explicitly specified
+            // Decision: In CI, auto-create when --project is given explicitly.
             config = await createProjectFromSlug(root, client, requestedProjectSlug, cliLog);
           } else {
             const shouldCreate = await confirm({
@@ -299,7 +296,7 @@ async function runManagedDeploy(
         );
       }
 
-      // Resolve the app type: bwf.config.ts > CLI flags > auto-detection.
+      // Decision: App type precedence: bwf.config.ts, then CLI flags, then auto-detection.
       const bwfConfig = readConfig(root);
       cliLog.info('config_resolved', { appType: bwfConfig.inference?.appType });
 
@@ -308,8 +305,8 @@ async function runManagedDeploy(
         spa: options?.spa,
       });
 
-      // Detect git commit before build (only when not skipping build). Same scrub as
-      // `getGitCommit`: these git children can reach repo-configured hooks/credential helpers.
+      // Decision: Read the git commit before the build (only when not skipping it). Same scrub as `getGitCommit`:
+      // these git children can reach repo-configured hooks and credential helpers.
       const gitMetadata = collectGitDeployMetadata(
         root,
         options?.skipBuild ? null : getGitCommit(root),
@@ -317,16 +314,13 @@ async function runManagedDeploy(
         buildEnv(),
       );
       if (!preset && !bwfConfig.inference?.appType) {
-        // No configured app type — detect from project structure.
-        // `strictBackend` only here: this is the branch where the user has said
-        // NOTHING about the app type, so an SSG project that also has a backend is
-        // genuinely ambiguous and must be refused rather than silently deployed as
-        // static. The explicit-intent paths (`--dir`, configured
-        // `inference.appType`) resolve through `resolveStaticDeployPreset` above
+        // Decision: No configured app type, so detect from project structure. `strictBackend` is set only here: on
+        // this branch the user has said nothing about the app type, so an SSG project that also has a
+        // backend is ambiguous and has to be refused, not quietly deployed as static. The explicit-intent
+        // paths (`--dir`, configured `inference.appType`) resolve through `resolveStaticDeployPreset` above
         // and keep working without the guard.
         preset = detectPreset(root, { spa: options?.spa, strictBackend: true });
       }
-      // appType === "platform" → full deploy.
 
       if (preset) {
         preset = {

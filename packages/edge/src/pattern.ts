@@ -27,9 +27,9 @@ export type CompiledPattern = Readonly<{
   paramNames: ReadonlyArray<string>;
 }>;
 
-// `text` matches itself. The others match a run of UTF-16 code units:
-//   seg  — 1 or more, none is '/'                          (regex `[^/]+`)
-//   any  — 0 or more, none is \n \r U+2028 U+2029          (regex `.*`)
+// Decision: `text` matches itself. The others match a run of UTF-16 code units:
+// seg - 1 or more, none is '/'                 (regex `[^/]+`)
+// any - 0 or more, none is \n \r U+2028 U+2029  (regex `.*`)
 type Token = { kind: 'text'; text: string } | { kind: 'seg' | 'any'; name?: string };
 
 type Prepared = Readonly<{ steps: ReadonlyArray<Token>; starts: Int32Array; minLength: number }>;
@@ -75,7 +75,7 @@ function isNameChar(code: number): boolean {
 /** Whether a wildcard of this kind may take the code unit. */
 function accepts(kind: Token['kind'], code: number): boolean {
   if (kind === 'seg') {
-    return code !== 47; // '/'
+    return code !== 47;
   }
   return code !== 10 && code !== 13 && code !== 0x2028 && code !== 0x2029;
 }
@@ -106,7 +106,6 @@ function parseCapture(source: string): { tokens: Array<Token>; paramNames: Array
         end++;
       }
       if (end === index + 1) {
-        // No name follows, so the colon is literal.
         pushText(tokens, ':');
         index++;
         continue;
@@ -159,8 +158,8 @@ function prepare(tokens: ReadonlyArray<Token>): Prepared {
       steps.push(token);
     }
   }
-  // starts[i]: the fewest units the steps before i consume, i.e. the earliest
-  // position where step i can begin.
+  // Decision: starts[i]: the fewest units the steps before i consume, so the earliest position where step
+  // i can begin.
   const starts = new Int32Array(steps.length + 1);
   steps.forEach((step, i) => {
     const shortest = step.kind === 'text' ? step.text.length : step.kind === 'any' ? 0 : 1;
@@ -169,23 +168,20 @@ function prepare(tokens: ReadonlyArray<Token>): Prepared {
   return { steps, starts, minLength: starts[steps.length]! };
 }
 
-/*
- * Rows. Step i can only begin at a position p in [starts[i], starts[i] + slack],
- * where slack = path.length - minLength: earlier and the steps before it could
- * not fit, later and the steps after it could not. So every row has
- * slack + 1 entries and row[d] is about position starts[i] + d.
- *
- * row[d] is 1 when steps i..n-1 can match path from that position to the end.
- * A text step of length L moves both the position and starts[] by L, and a
- * one-unit wildcard moves both by 1, so the index d lines up between a row and
- * the next one:
- *
- *   text      row[d] = next[d] && path has the text at p
- *   seg  row[d] = path[p] allowed && (next[d] || row[d + 1])
- *   any       row[d] = next[d] || (path[p] allowed && row[d + 1])
- *
- * (row[slack + 1] counts as 0.) Returns whether any entry is 1.
- */
+// Decision: Rows. Step i can only begin at a position p in [starts[i], starts[i] + slack], where
+// slack = path.length - minLength: earlier and the steps before it couldn't fit, later and the
+// steps after it couldn't. So each row has slack + 1 entries and row[d] is about position
+// starts[i] + d.
+//
+// row[d] is 1 when steps i..n-1 can match path from that position to the end. A text step of
+// length L moves both the position and starts[] by L, and a one-unit wildcard moves both by 1,
+// so the index d lines up between a row and the next one:
+//
+//   text  row[d] = next[d] && path has the text at p
+//   seg   row[d] = path[p] allowed && (next[d] || row[d + 1])
+//   any   row[d] = next[d] || (path[p] allowed && row[d + 1])
+//
+// (row[slack + 1] counts as 0.) Returns whether any entry is 1.
 function stepBack(
   step: Token,
   path: string,
@@ -203,10 +199,10 @@ function stepBack(
     return found === 1;
   }
   const kind = step.kind;
-  let after = 0; // row[d + 1]; 0 past the window
+  let after = 0; /* Decision: row[d + 1]; 0 past the window. */
   for (let d = row.length - 1; d >= 0; d--) {
-    // Path reads stay inside the path: seg need a unit at every p in the
-    // window, and `any` reads only when after === 1, i.e. p is not the last slot.
+    // Decision: Path reads stay inside the path: seg needs a unit at each p in the window, and `any` reads
+    // only when after === 1, so p isn't the last slot.
     const value =
       kind === 'any'
         ? next[d] === 1 || (after === 1 && accepts(kind, path.charCodeAt(start + d)))
@@ -244,7 +240,7 @@ function matches(prepared: Prepared, path: string): boolean {
   const { steps, starts, minLength } = prepared;
   let next: Uint8Array = endRow(path.length - minLength + 1);
   let row: Uint8Array = new Uint8Array(next.length);
-  // quickReject proved a leading text step, and only position 0 matters for it.
+  // Decision: quickReject proved a leading text step, and only position 0 matters for it.
   const first = steps[0]?.kind === 'text' ? 1 : 0;
   for (let i = steps.length - 1; i >= first; i--) {
     if (!stepBack(steps[i]!, path, starts[i]!, next, row)) {
@@ -266,7 +262,8 @@ function greedyEnd(step: Token, path: string, p: number, d: number, next: Uint8A
     return p + step.text.length;
   }
   const shortest = step.kind === 'any' ? 0 : 1;
-  const longest = next.length - 1 - d + shortest; // keeps d + k - shortest inside `next`
+  const longest =
+    next.length - 1 - d + shortest; /* Decision: Keeps d + k - shortest inside `next`. */
   let k = 0;
   while (k < longest && accepts(step.kind, path.charCodeAt(p + k))) {
     k++;
@@ -292,7 +289,7 @@ function greedyEnds(prepared: Prepared, path: string, upTo: number): Int32Array 
   const { steps, starts, minLength } = prepared;
   const n = steps.length;
   const width = path.length - minLength + 1;
-  // Small tables keep every row (size 1), so the forward pass rebuilds nothing.
+  // Decision: Small tables keep each row (size 1), so the forward pass rebuilds nothing.
   const size = n * width <= 1 << 16 ? 1 : Math.ceil(Math.sqrt(n));
   const saved = new Map<number, Uint8Array>([[n, endRow(width)]]);
   let next: Uint8Array = endRow(width);
@@ -319,7 +316,7 @@ function greedyEnds(prepared: Prepared, path: string, upTo: number): Int32Array 
   let p = 0;
   for (let i = 0; i <= upTo; i++) {
     if (i + 1 > top) {
-      // Blocks are entered in order at their first row, so each is rebuilt once.
+      // Decision: Blocks are entered in order at their first row, so each is rebuilt once.
       top = Math.min(n, Math.ceil((i + 1) / size) * size);
       for (let r = top - 1; r > i; r--) {
         stepBack(steps[r]!, path, starts[r]!, rowAt(r + 1), pool[r % size]!);
@@ -360,7 +357,7 @@ function compile(source: string): Compiled {
     if (seen.has(name)) {
       error ??= `Duplicate capture group name "${name}"`;
     } else if (name.charCodeAt(0) >= 48 && name.charCodeAt(0) <= 57) {
-      // A JS group name cannot start with a digit; keep rejecting those.
+      // Decision: A JS group name can't start with a digit; keep rejecting those.
       error ??= `Invalid capture group name "${name}"`;
     }
     seen.add(name);
@@ -416,7 +413,7 @@ export function matchPatternCaptures(
   if (ends === null || (ends === undefined && !matches(compiled, pathname))) {
     return null;
   }
-  // Every name gets a value, in source order; one dropped by `prepare` matched ''.
+  // Decision: Each name gets a value, in source order; one dropped by `prepare` matched ''.
   const params: Record<string, string> = Object.create(null);
   for (const name of compiled.paramNames) {
     params[name] = '';
@@ -470,7 +467,7 @@ export function substituteParams(destination: string, params: Record<string, str
   const result = destination.replace(/:([A-Za-z0-9_]+)\*?/g, (whole, name: string) => {
     return params[name] ?? whole;
   });
-  // A capture can start with '/', so a path destination must stay on this site.
+  // Decision: A capture can start with '/', so a path destination has to stay on this site.
   if (/^[/\\]{2}/.test(result) && !/^[/\\]{2}/.test(destination)) {
     return '/' + result.replace(/^[/\\]+/, '');
   }

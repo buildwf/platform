@@ -208,8 +208,8 @@ export async function projectDestinations(
   const custom = [
     ...new Set(
       (await getDomainsByProjectId(db, project.id))
-        // Public rules must never authorize an unverified hostname. Activation passes
-        // its freshly verified domain while the durable row is still pending.
+        // Decision: Public rules mustn't authorize an unverified hostname. Activation passes its freshly verified
+        // domain while the durable row is still pending.
         .filter(
           (domain) =>
             protectedProject || domain.status === 'active' || domain.id === verifiedDomainId,
@@ -300,8 +300,8 @@ export function initialProjectProtection(
   configuration: ZeroTrustConfiguration,
   project: Pick<Project, 'created_at'> & Partial<Pick<Project, 'preview_client_id'>>,
 ): boolean {
-  // These origins have their own live OAuth grant gate at dispatch. The client
-  // preview permission authorizes this exception, not public application data.
+  // Decision: These origins have their own live OAuth grant gate at dispatch. The client preview permission
+  // authorizes this exception, not public application data.
   if (project.preview_client_id) {
     return false;
   }

@@ -79,14 +79,14 @@ export function createPlatformWorkerConfigs(input: {
       }),
     ),
   });
-  // Sent only in minimal mode, so default Worker configs stay unchanged.
+  // Decision: Sent only in minimal mode, so default Worker configs stay unchanged.
   const runtimeLogs = deployment.runtimeLogs
     ? { PLATFORM_RUNTIME_LOGS: deployment.runtimeLogs }
     : {};
   const common = {
     account_id: accountId,
     compatibility_date: '2026-02-24',
-    // Minimal runtime logs keep Workers Logs off on every platform Worker.
+    // Decision: Minimal runtime logs keep Workers Logs off on each platform Worker.
     observability: { enabled: !deployment.runtimeLogs },
     preview_urls: publicEndpoints && !deployment.authentication.accessProtection,
     workers_dev: publicEndpoints,
@@ -98,8 +98,8 @@ export function createPlatformWorkerConfigs(input: {
   ];
   const dispatchNamespace = [{ binding: 'DISPATCH', namespace: names.dispatchNamespace }];
   const r2 = [{ binding: 'STATIC_ASSETS_R2', bucket_name: names.assetsBucket }];
-  // Installer probes must re-enter the public edge. The optional API-to-proxy
-  // health binding is attached only at final cutover, after the proxy exists.
+  // Decision: Installer probes have to re-enter the public edge. The optional API-to-proxy health binding
+  // is attached only at final cutover, after the proxy exists.
   const fetchWorkersDev =
     Boolean(deployment.application.workersDev) ||
     [apiUrl, proxyUrl, ...(deployment.capabilities.email ? [emailGatewayUrl] : [])].some((url) =>
@@ -287,7 +287,7 @@ export function createPlatformWorkerConfigs(input: {
     },
     tail: {
       ...common,
-      // The tail worker only receives trace events from the dispatch worker.
+      // Decision: The tail worker only receives trace events from the dispatch worker.
       workers_dev: false,
       preview_urls: false,
       name: names.tailWorker,

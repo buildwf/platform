@@ -6,7 +6,7 @@ import {
   type PlatformDiscoveryFeatures,
 } from '../helpers/platform-discovery.ts';
 
-// Never read the keychain or run cloudflared. Without Access credentials, an
+// Decision: Never read the keychain or run cloudflared. Without Access credentials, an
 // Access challenge fails the way it does for a CLI that has none.
 vi.mock('../../src/cli/cf-access.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/cli/cf-access.ts')>()),
@@ -17,7 +17,7 @@ vi.mock('../../src/cli/cf-access.ts', async (importOriginal) => ({
   }),
 }));
 
-// Version checks are cached per process and base URL, so each test uses its own origin.
+// Decision: Version checks are cached per process and base URL, so each test uses its own origin.
 let origin = '';
 let sequence = 0;
 const fetchMock = vi.fn();
@@ -275,7 +275,6 @@ describe('direct Worker upload discovery', () => {
     );
     await client().listProjectChoices();
     await expect(client().supportsDirectWorkerUpload()).resolves.toBe(true);
-    // The version check keeps its first outcome.
     await client().listProjects();
     expect(requestedPaths()).toEqual([
       '/.well-known/platform',

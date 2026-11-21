@@ -18,7 +18,7 @@ const PROJECT_ROLE_CAPABILITIES = {
   owner: ['read', 'deploy', 'configure', 'settings', 'members', 'delete'],
 } as const satisfies Record<ProjectRole, ReadonlyArray<ProjectCapability>>;
 
-// These messages describe requirements, not the caller's role or private project data.
+// Decision: These messages describe requirements, not the caller's role or private project data.
 export const PROJECT_PERMISSION_MESSAGES = {
   read: 'You need project access to view this project. Ask a project admin or owner to invite you.',
   deploy:

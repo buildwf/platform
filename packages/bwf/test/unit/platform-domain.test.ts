@@ -133,7 +133,6 @@ describe('platform domain activation', () => {
     await expect(
       applyPlatformDomain(client, f.current(), f.target, resumedPlan, f.dependencies),
     ).rejects.toThrow('TLS pending');
-    // Project Zero Trust leaves only the platform health hostname outside Access.
     expect(f.dependencies.probe).toHaveBeenLastCalledWith(
       'void-platform-health.example.com',
       expect.anything(),

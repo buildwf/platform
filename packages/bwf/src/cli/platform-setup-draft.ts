@@ -59,7 +59,7 @@ export function savePlatformSetupDraft(
     now,
   );
   writeInstallationManifest(manifest);
-  // Establish secure storage before collecting any secret.
+  // Decision: Establish secure storage before collecting any secret.
   writePendingInstallationSecrets(
     manifest,
     plan.externalHyperdrive

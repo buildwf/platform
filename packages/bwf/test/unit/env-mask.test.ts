@@ -6,8 +6,6 @@ import {
   REDACTED,
 } from '../../src/shared/env-mask.ts';
 
-/** Validator messages redact raw inputs unconditionally unless explicitly unmasked. */
-
 describe('redactMessage', () => {
   it('replaces the raw value in the message', () => {
     const msg = redactMessage('abc', 'Expected a number, got "abc"');
@@ -48,7 +46,6 @@ describe('isUnmaskActive', () => {
   it('returns true and prints a one-shot stderr notice when BWF_ENV_UNMASK=1', () => {
     process.env.BWF_ENV_UNMASK = '1';
     expect(isUnmaskActive()).toBe(true);
-    // Called again: cached, no second notice.
     expect(isUnmaskActive()).toBe(true);
     expect(errSpy).toHaveBeenCalledTimes(1);
     const printed = String(errSpy.mock.calls[0]?.[0] ?? '');

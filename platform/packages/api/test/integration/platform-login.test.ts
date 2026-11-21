@@ -356,7 +356,7 @@ describe('configured platform login routes', () => {
         await browser.close();
       }
     },
-    // Launching Chromium alone can take longer than the default under a full parallel run.
+    // Decision: Launching Chromium alone can take longer than the default timeout under a full parallel run.
     30_000,
   );
   it('links an ordinary account only after recent login, provider proof, and explicit browser confirmation', async () => {

@@ -77,7 +77,7 @@ export function analyzeApplicationSync(
   const websockets = allWebsockets.filter((route) =>
     isRouteEnabledForEnvironment(route, environment),
   );
-  // Typed durable modules currently use the root convention on every target.
+  // Decision: Typed durable modules use the root convention on every target.
   const durableObjects = scanDurableObjectModules(root);
   const email = scanEmailHandlersSync(paths.sourceRoot);
   const overrides = config.inference?.bindings;

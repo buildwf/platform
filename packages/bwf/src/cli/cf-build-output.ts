@@ -42,8 +42,8 @@ export interface CfBuildOutput {
   dispose(): Promise<void>;
 }
 
-// Match the additional modules emitted by the Cloudflare Vite plugin. A complete
-// manifest keeps cf from treating text, binary, and Wasm imports as JavaScript.
+// Decision: Match the additional modules the Cloudflare Vite plugin emits. A complete manifest keeps cf from
+// treating text, binary and Wasm imports as JavaScript.
 const moduleTypes: Record<string, ModuleType> = {
   '.js': 'esm',
   '.mjs': 'esm',
@@ -96,9 +96,9 @@ function copyBundle(source: string, destination: string): Record<string, { type:
       name === 'wrangler.json' ||
       name === '.dev.vars' ||
       name === join('.vite', 'manifest.json') ||
-      // Vite extracts side-effect CSS imports into the Worker output, but they
-      // are static build assets rather than Worker modules. Wrangler's module
-      // rules do not upload CSS, and a complete cf manifest must omit it too.
+      // Decision: Vite extracts side-effect CSS imports into the Worker output, but they're static build assets,
+      // not Worker modules. Wrangler's module rules don't upload CSS, and a complete cf manifest has to
+      // leave it out too.
       name.endsWith('.css') ||
       name.endsWith('.css.map')
     ) {
@@ -129,8 +129,8 @@ function stagePackageContext(directory: string, projectRoot: string): void {
   if (!existsSync(manifest)) {
     return;
   }
-  // cf reads package.json and resolves installed versions from its working directory.
-  // Keep both outside the Worker bundle and assets so they are never uploaded as files.
+  // Decision: cf reads package.json and resolves installed versions from its working directory.
+  // Keep both outside the Worker bundle and assets so they aren't uploaded as files.
   copyFileSync(manifest, join(directory, 'package.json'));
   for (let parent = root; ; parent = dirname(parent)) {
     const modules = join(parent, 'node_modules');
@@ -157,8 +157,8 @@ export async function prepareCfBuildOutput(
 ): Promise<CfBuildOutput | null> {
   const source = resolve(workerDirectory);
   const hasNativeOutput = existsSync(getRootConfigPath(source));
-  // Ask the version-aware reader before falling back to a Wrangler build. Old
-  // native artifacts need a rebuild, even if a dist/ssr copy is still present.
+  // Decision: Ask the version-aware reader before falling back to a Wrangler build. Old native artifacts need a
+  // rebuild, even if a dist/ssr copy is still there.
   if (!hasNativeOutput && existsSync(join(source, '.cloudflare/output'))) {
     await readBuildOutput(source);
   }
@@ -202,16 +202,16 @@ export async function prepareCfBuildOutput(
       }
       let native: CfBuildOutput | null = null;
       try {
-        // Stage native Workers through the same manifest/path validation as
-        // ordinary native output before combining them with deferred Containers.
+        // Decision: Stage native Workers through the same manifest and path checks as ordinary native output before
+        // combining them with deferred Containers.
         native = await prepareNativeBuildOutput(source, accountId, mode, projectRoot);
         if (!native) {
           await prepared.dispose();
           return null;
         }
         const staged = await readBuildOutput(native.directory);
-        // Container preparation replaces only the entry Worker. Auxiliary Workers
-        // remain part of the native build and must travel with the final upload.
+        // Decision: Container preparation replaces only the entry Worker. Auxiliary Workers stay part of the native
+        // build and have to travel with the final upload.
         for (const [name, worker] of Object.entries(staged.workers)) {
           if (name !== 'default') {
             cpSync(
@@ -389,7 +389,7 @@ async function prepareNativeBuildOutput(
         for (const module of Object.keys(worker.config.manifest.modules)) {
           const destination = join(bundle, module);
           if (
-            // A backslash or a colon (a Windows drive) has no place in a bundle path.
+            // Decision: A backslash or a colon (a Windows drive) has no place in a bundle path.
             module.includes('\\') ||
             module.includes(':') ||
             !isInside(bundle, resolve(bundle, module)) ||
@@ -429,7 +429,7 @@ async function prepareNativeBuildOutput(
   }
 }
 
-// The additional module rules of the Cloudflare Vite plugin, which does not export them.
+// Decision: The additional module rules of the Cloudflare Vite plugin, which doesn't export them.
 // Hook filters need a RegExp; `additionalModulePath` applies the same rules.
 const ADDITIONAL_MODULE_FILTER = /\.(?:wasm(?:\?module)?|bin|txt|html|sql)$/;
 const ADDITIONAL_MODULE_EXTENSIONS = new Set(['.wasm', '.bin', '.txt', '.html', '.sql']);
@@ -466,13 +466,13 @@ function additionalModulePath(id: string): string | undefined {
  * `@cloudflare/vite-plugin` does, so `copyBundle` uploads them as Worker modules.
  */
 function additionalModulesPlugin(): Plugin {
-  // The external id carries a key, not the path: Rolldown escapes ids in the output.
+  // Decision: The external id carries a key, not the path: Rolldown escapes ids in the output.
   // The random marker keeps app strings that look like an id from being rewritten.
   const marker = `__PLATFORM_MODULE_${randomBytes(8).toString('hex')}__`;
   const paths: Array<string> = [];
   const keys = new Map<string, number>();
-  // Each file keeps its own name and extension. Assets with the same bytes would
-  // otherwise be merged, and the extension picks the module type.
+  // Decision: Each file keeps its own name and extension. Otherwise assets with the same bytes would be merged,
+  // and the extension picks the module type.
   const fileNames = new Map<string, string>();
   const usedFileNames = new Set<string>();
   return {
@@ -562,14 +562,14 @@ async function prepareBundledBuildOutput(options: {
       configFile: false,
       root: options.projectRoot,
       publicDir: false,
-      // `.env` is local-only. The framework build drops its client values, but modules it left
-      // as imports (an installed `@builtbyfriends/bwf/env`) are compiled here, and Vite
-      // would fill their `import.meta.env` from the project's `.env`. Shell values still apply.
+      // Decision: `.env` is local-only. The framework build drops its client values, but modules it left as
+      // imports (an installed `@builtbyfriends/bwf/env`) are compiled here, and Vite would fill their
+      // `import.meta.env` from the project's `.env`. Shell values still apply.
       envDir: false,
       logLevel: 'error',
       plugins: [additionalModulesPlugin()],
-      // Like @cloudflare/vite-plugin: Worker conditions plus the build mode. A deploy
-      // bundle is always a production build, whatever NODE_ENV says.
+      // Decision: Like @cloudflare/vite-plugin: Worker conditions plus the build mode. A deploy bundle is a
+      // production build, whatever NODE_ENV says.
       resolve: { conditions: [...WORKER_CONDITIONS, 'production'] },
       build: {
         outDir: scratch,

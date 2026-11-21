@@ -84,8 +84,8 @@ export const finalize = procedure('deploy.finalize')
   .noMcp({ reason: 'Deploys come from the CLI, which builds the manifest' })
   .cli({ command: 'deploy finalize', description: 'Start a deployment from an uploaded manifest' })
   .handler(async ({ env, ctx, input, fail, request, waitUntil }) => {
-    // The admission pipeline is the one `executeQueuedDeployment` already re-enters through a
-    // Hono app, so it runs unchanged here: same gates, same idempotency, same queue dispatch.
+    // Decision: Reuse the admission pipeline that `executeQueuedDeployment` already enters through a Hono app, so
+    // it runs unchanged here: same gates, idempotency and queue dispatch.
     const deployApp = new Hono<ApiEnv>()
       .use('*', async (context, next) => {
         context.set('db', ctx.db);
@@ -133,9 +133,7 @@ export const finalize = procedure('deploy.finalize')
       let body: { error?: unknown; message?: unknown; deployment?: unknown } = {};
       try {
         body = JSON.parse(text) as typeof body;
-      } catch {
-        // Not a JSON refusal: report the status below.
-      }
+      } catch {}
       const code = codeFor(response.status, body);
       if (!code) {
         throw new Error(`deploy admission failed with HTTP ${response.status}: ${text}`);
@@ -153,9 +151,9 @@ export const finalize = procedure('deploy.finalize')
           : detail,
       );
     }
-    // With the Queue the receipt header names a deployment the Queue owns, so drop the stream and let
-    // the caller observe it. Without the Queue the deploy runs inside this response: read it to the
-    // end and hand its events back, the first of which names the deployment.
+    // Decision: With the Queue, the receipt header names a deployment the Queue owns, so drop the stream and let
+    // the caller watch it. Without the Queue, the deploy runs inside this response: read it to the end
+    // and return its events, the first of which names the deployment.
     const receipt = response.headers.get('x-platform-deployment-id');
     if (env.DEPLOYMENTS_QUEUE && receipt) {
       await response.body?.cancel().catch(() => {});

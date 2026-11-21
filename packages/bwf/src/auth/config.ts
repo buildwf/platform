@@ -120,7 +120,7 @@ export async function loadBwfAuthConfig(
     return undefined;
   }
   const mod = await importModule(configPath);
-  // The Worker imports only the default export.
+  // Decision: The Worker imports only the default export.
   if (!Object.hasOwn(mod, 'default')) {
     throw new Error(
       `${configPath} has no default export. Export the auth config with \`export default defineAuth(...)\`.`,

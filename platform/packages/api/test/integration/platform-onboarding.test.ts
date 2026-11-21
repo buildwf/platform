@@ -78,7 +78,7 @@ describe('platform onboarding pages', () => {
     expect(html).toContain('&lt;Example Platform&gt;');
     expect(html).toContain('<title>Get Started · &lt;Example Platform&gt;</title>');
     expect(html).not.toContain('<Example Platform>');
-    // `escapeHtml` escapes the quotes too; the browser renders them back.
+    // Decision: `escapeHtml` escapes the quotes too. The browser renders them back.
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).not.toContain('attacker.example');
     expect(html).not.toContain('alias.example.com');
@@ -97,7 +97,7 @@ describe('platform onboarding pages', () => {
     );
     const html = await adminHtml(response);
     expect(html).toContain('Get Started with Platform');
-    // `escapeHtml` escapes the quotes too; the browser renders them back.
+    // Decision: `escapeHtml` escapes the quotes too. The browser renders them back.
     expect(html).toContain('bwf connect &#39;api.example.com&#39;');
     expect(html).not.toContain('attacker.example');
   });
@@ -158,8 +158,8 @@ describe('platform onboarding pages', () => {
       );
       expect(response.status).toBe(200);
       const html = await adminHtml(response);
-      // The hosted and the generic name are both "Platform" now, so check
-      // that the forwarded hosted origin doesn't reach the page instead.
+      // Decision: The hosted and the generic name are both "Platform", so check that the forwarded hosted origin
+      // doesn't reach the page instead.
       expect(html).toContain('Platform');
       expect(html).not.toContain('platform.buildwithfriends.dev');
       if (path === '/') {

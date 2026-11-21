@@ -30,10 +30,9 @@ import {
 
 const app = withLegacyDeploy(rawApp);
 
-// ---------------------------------------------------------------------------
-// Managed Sandbox deploys isolate the trusted controller in an account Worker.
-// Tenant Workers receive only its service binding. Containers remain per deployment
-// so image upgrades, rollback, retention, and deletion have independent lifetimes.
+// Decision: Managed Sandbox deploys isolate the trusted controller in an account Worker. Tenant Workers get
+// only its service binding. Containers stay per deployment so image upgrades, rollback, retention
+// and deletion have independent lifetimes.
 
 let env: TestEnv;
 
@@ -137,9 +136,6 @@ async function listR2Keys(prefix: string): Promise<Array<string>> {
 }
 
 describe('per-deploy sandbox integration', () => {
-  // ----------------------------------------------------------------------
-  // First sandbox deploy
-  // ----------------------------------------------------------------------
   it('fails before controller upload when custom image preparation fails', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'sb-image-error');
@@ -169,10 +165,8 @@ describe('per-deploy sandbox integration', () => {
     expect(done).toBeDefined();
     const deployId = done!.deployment;
 
-    // No host script `do-host-{slug}` should exist.
     expect(cf.state.hostScripts.has(`do-host-${project.slug}`)).toBe(false);
 
-    // The dispatch namespace contains exactly the per-deploy user worker.
     const userWorkerName = `user-${project.slug}-${deployId}`;
     const userWorker = cf.state.hostScripts.get(userWorkerName);
     expect(userWorker).toBeDefined();
@@ -210,8 +204,6 @@ describe('per-deploy sandbox integration', () => {
       { method: 'PUT', url: '/scripts/' + userWorkerName },
     );
 
-    // Per-deploy container app exists: `${projectId}-${deployId}-platform-sandbox`
-    // (lowercased, `_`→`-`), bound to the user worker's namespace_id.
     const containerAppName = `${project.id}-${deployId}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
@@ -225,8 +217,8 @@ describe('per-deploy sandbox integration', () => {
       expect.objectContaining({ images: { default: SANDBOX_IMAGE_V1 } }),
     ]);
 
-    // Per-deploy containers do NOT write a `resources` row (no DB pointer —
-    // teardown finds them via orphan-recovery enumeration).
+    // Decision: Per-deploy containers don't write a `resources` row; teardown finds them via orphan-recovery
+    // enumeration.
     const resRows = await env.db
       .select()
       .from(resources)
@@ -234,15 +226,11 @@ describe('per-deploy sandbox integration', () => {
     expect(resRows).toHaveLength(0);
   });
 
-  // ----------------------------------------------------------------------
-  // Sandbox redeploy creates fresh user worker + container with NEW namespace
-  // ----------------------------------------------------------------------
   it('sandbox redeploy: brand-new user worker name, brand-new namespace_id, brand-new container app (no namespace preservation across deploys)', async () => {
     const user = await createTestUser(env.db, 'sb-rd-user', 'github', undefined, 'solo');
     const project = await createTestProject(env.db, user.id, 'sb-redeploy');
     const cf = mockCfApi();
 
-    // Deploy v1.
     const res1 = await deploy(project.id, user.jwt);
     expect(res1.status).toBe(200);
     const done1 = getDoneEvent(await readAllEvents(res1));
@@ -257,7 +245,6 @@ describe('per-deploy sandbox integration', () => {
       .toLowerCase()
       .replaceAll('_', '-');
 
-    // Deploy v2 with the same manifest.
     const res2 = await deploy(project.id, user.jwt);
     expect(res2.status).toBe(200);
     const done2 = getDoneEvent(await readAllEvents(res2));
@@ -266,20 +253,17 @@ describe('per-deploy sandbox integration', () => {
 
     expect(v2Id).not.toBe(v1Id);
 
-    // Brand-new user worker.
     const v2WorkerName = `user-${project.slug}-${v2Id}`;
     expect(v2WorkerName).not.toBe(v1WorkerName);
     const v2Worker = cf.state.hostScripts.get(v2WorkerName);
     expect(v2Worker).toBeDefined();
 
-    // Brand-new namespace_id (per-deploy, NOT preserved across deploys).
     const v2Namespace = cf.state.hostScripts
       .get(sandboxControllerWorkerName(project.id, v2Id))!
       .classes.get('SandboxController')!;
     expect(v2Namespace).toBeTruthy();
     expect(v2Namespace).not.toBe(v1Namespace);
 
-    // Brand-new container app bound to the new namespace.
     const v2ContainerName = `${project.id}-${v2Id}-platform-sandbox`
       .toLowerCase()
       .replaceAll('_', '-');
@@ -291,16 +275,12 @@ describe('per-deploy sandbox integration', () => {
     expect(v2App!.durable_objects.namespace_id).toBe(v2Namespace);
   });
 
-  // ----------------------------------------------------------------------
-  // Static-only deploy doesn't write bundle
-  // ----------------------------------------------------------------------
   it('static-only deploy does NOT write a worker bundle (bundle_stored stays false, no R2 objects)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'sb-static');
     mockCfApi();
 
-    // Pre-upload the asset to R2 — direct-to-R2 deploys verify R2 has the
-    // declared bytes before flipping routing.
+    // Decision: Direct-to-R2 deploys verify R2 has the declared bytes before flipping routing.
     const indexBytes = new TextEncoder().encode('<html>hello</html>');
     const indexHash = (await import('../../src/assets.ts')).computeAssetHash(
       indexBytes.buffer.slice(
@@ -347,25 +327,18 @@ describe('per-deploy sandbox integration', () => {
     expect(done).toBeDefined();
     const deployId = done!.deployment;
 
-    // No bundle objects under `worker-bundles/{projectId}/{deploymentId}/`.
     const bundleKeys = await listR2Keys(`worker-bundles/${project.id}/${deployId}/`);
     expect(bundleKeys).toHaveLength(0);
 
-    // bundle_stored stays false.
     const [row] = await env.db.select().from(deployments).where(eq(deployments.id, deployId));
     expect(row!.bundle_stored).toBe(false);
   });
 
-  // ----------------------------------------------------------------------
-  // Retention eviction
-  // ----------------------------------------------------------------------
   it('retention eviction: oldest sandbox deploy has its user worker, container app, AND R2 bundle deleted when retention limit is exceeded', async () => {
-    // Free plan: retainedDeployments=1 — second deploy evicts the first.
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'sb-evict');
     const cf = mockCfApi();
 
-    // Deploy v1.
     const res1 = await deploy(project.id, user.jwt);
     expect(res1.status).toBe(200);
     const done1 = getDoneEvent(await readAllEvents(res1));
@@ -376,39 +349,33 @@ describe('per-deploy sandbox integration', () => {
       .toLowerCase()
       .replaceAll('_', '-');
 
-    // Model a retained deployment created before Worker bundle storage stopped.
+    // Decision: Models a retained deployment created before Worker bundle storage stopped.
     await env.STATIC_ASSETS_R2.put(
       `worker-bundles/${project.id}/${v1Id}/index.js`,
       'legacy Worker bundle',
     );
     await env.db.update(deployments).set({ bundle_stored: true }).where(eq(deployments.id, v1Id));
 
-    // Sanity: v1 state is in place.
     expect(cf.state.hostScripts.has(v1WorkerName)).toBe(true);
     expect(
       Array.from(cf.state.containerApps.values()).some((a) => a.name === v1ContainerName),
     ).toBe(true);
     expect((await listR2Keys(`worker-bundles/${project.id}/${v1Id}/`)).length).toBeGreaterThan(0);
 
-    // Deploy v2 — retention sweep should evict v1.
     const res2 = await deploy(project.id, user.jwt);
     expect(res2.status).toBe(200);
     const done2 = getDoneEvent(await readAllEvents(res2));
     expect(done2).toBeDefined();
 
-    // v1's user worker is gone.
     expect(cf.state.hostScripts.has(v1WorkerName)).toBe(false);
     expect(cf.state.hostScripts.has(sandboxControllerWorkerName(project.id, v1Id))).toBe(false);
 
-    // v1's container app is gone.
     expect(
       Array.from(cf.state.containerApps.values()).some((a) => a.name === v1ContainerName),
     ).toBe(false);
 
-    // v1's bundle objects are gone from R2.
     expect(await listR2Keys(`worker-bundles/${project.id}/${v1Id}/`)).toHaveLength(0);
 
-    // v1's retained flag flipped false in DB.
     const [v1Row] = await env.db.select().from(deployments).where(eq(deployments.id, v1Id));
     expect(v1Row!.retained).toBe(false);
   });
@@ -445,17 +412,13 @@ describe('per-deploy sandbox integration', () => {
     expect(JSON.parse(cleaned!.manifest!).sandbox.runtime.cleanupComplete).toBe(true);
   });
 
-  // ----------------------------------------------------------------------
-  // Pre-routing failure: catch deletes user worker AND container
-  // ----------------------------------------------------------------------
   it('pre-routing failure: outer catch deletes the user worker AND the per-deploy container app (no orphans)', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'sb-prefail');
 
-    // Fail BETWEEN the user worker PUT (and container POST) AND the routing
-    // flip to force the `routingSwitched=false` cleanup branch: reject the
-    // slug ROUTING.put, which is exactly the routing flip step
-    // (`routingSwitched` is set true RIGHT AFTER that put).
+    // Decision: Fail between the user worker PUT (and container POST) and the routing flip to force the
+    // `routingSwitched=false` cleanup branch: reject the slug ROUTING.put, which is the routing flip
+    // (`routingSwitched` is set true right after it).
     const originalPut = env.ROUTING.put.bind(env.ROUTING);
     const putSpy = vi.spyOn(env.ROUTING, 'put').mockImplementation((async (
       key: string,
@@ -484,22 +447,16 @@ describe('per-deploy sandbox integration', () => {
 
     putSpy.mockRestore();
 
-    // The user worker PUT is recorded in cf.state.hostScripts (mock state),
-    // and the catch path issues a DELETE — so the script should NOT be present
-    // anymore.
     const userWorkerKey = Array.from(cf.state.hostScripts.keys()).find((k) =>
       k.startsWith(`user-${project.slug}-`),
     );
     expect(userWorkerKey).toBeUndefined();
 
-    // The per-deploy container app should also be gone.
     const sandboxApps = Array.from(cf.state.containerApps.values()).filter((a) =>
       a.name.endsWith('-platform-sandbox'),
     );
     expect(sandboxApps).toHaveLength(0);
 
-    // The deploy was recorded as a DELETE on the worker script and a DELETE
-    // on the container app.
     const workerDeletes = cf.state.recordedCalls.filter(
       (c) =>
         c.method === 'DELETE' &&
@@ -513,9 +470,6 @@ describe('per-deploy sandbox integration', () => {
     expect(containerDeletes.length).toBeGreaterThanOrEqual(1);
   });
 
-  // ----------------------------------------------------------------------
-  // Post-routing teardown race: rollback branch deletes the container app
-  // ----------------------------------------------------------------------
   it('post-routing teardown race: when status flips to deleting after the slug routing PUT, the rollback branch deletes the user worker AND the per-deploy container app', async () => {
     const user = await createTestUser(env.db);
     const project = await createTestProject(env.db, user.id, 'sb-teardown-race');
@@ -524,11 +478,10 @@ describe('per-deploy sandbox integration', () => {
     const previousRouting = JSON.stringify({ type: 'static', deploymentId: 'previous' });
     await env.ROUTING.put(project.slug, previousRouting);
 
-    // Hook: AFTER the slug ROUTING.put commits (routingSwitched=true), model
-    // teardown taking authority: flip projects.status='deleting' and perform
-    // teardown's routing deletion before the deploy reaches its final
-    // FOR UPDATE check. The deploy compensation must not restore the previous
-    // value after teardown's one deletion pass.
+    // Decision: After the slug ROUTING.put commits (routingSwitched=true), model teardown taking authority: flip
+    // projects.status='deleting' and do teardown's routing deletion before the deploy reaches its final
+    // FOR UPDATE check. The deploy compensation mustn't restore the previous value after teardown's one
+    // deletion pass.
     const originalPut = env.ROUTING.put.bind(env.ROUTING);
     const originalDelete = env.ROUTING.delete.bind(env.ROUTING);
     let teardownTriggered = false;
@@ -538,13 +491,11 @@ describe('per-deploy sandbox integration', () => {
       options?: KVNamespacePutOptions,
     ) => {
       const result = await originalPut(key, value as never, options as never);
-      // The `cutover-ready:` key is written after the routing-switch transaction
-      // commits and before the deploy's finalize transaction opens, so the
-      // teardown writes can be awaited here: no transaction is open, nothing
-      // deadlocks, and the flip is guaranteed to land before the finalize read.
-      // Queuing them instead only orders them in PGlite's favour — on a pooled
-      // Postgres the flip opens a new session and loses the race against the
-      // deploy's warm connection, which commits live.
+      // Decision: The `cutover-ready:` key is written after the routing-switch transaction commits and before the
+      // deploy's finalize transaction opens, so the teardown writes can be awaited here: no transaction is
+      // open, nothing deadlocks, and the flip lands before the finalize read. Queuing them instead only
+      // orders them in PGlite's favor; on a pooled Postgres the flip opens a new session and loses the
+      // race against the deploy's warm connection, which commits live.
       if (key.startsWith('cutover-ready:') && !teardownTriggered) {
         teardownTriggered = true;
         await env.db
@@ -560,7 +511,6 @@ describe('per-deploy sandbox integration', () => {
     expect(res.status).toBe(200);
     const events = await readAllEvents(res);
 
-    // No `done` event — deploy hit the teardown-race branch and emitted error.
     const done = getDoneEvent(events);
     expect(done).toBeUndefined();
     const errorEvent = events.find(
@@ -569,15 +519,13 @@ describe('per-deploy sandbox integration', () => {
     );
     expect(errorEvent).toBeDefined();
 
-    // Teardown's deletion remains authoritative: the compensation must not put
-    // `previousRouting` back, or a deleted project (or a later tenant reusing
-    // the slug) could be served by dispatch without consulting PostgreSQL.
+    // Decision: Teardown's deletion stays authoritative: the compensation mustn't put `previousRouting` back, or a
+    // deleted project (or a later tenant reusing the slug) could be served by dispatch without
+    // consulting PostgreSQL.
     expect(await env.ROUTING.get(project.slug)).toBeNull();
 
     putSpy.mockRestore();
 
-    // Both the user worker and the container app are deleted by the
-    // teardown-race rollback branch.
     const userWorkerKey = Array.from(cf.state.hostScripts.keys()).find((k) =>
       k.startsWith(`user-${project.slug}-`),
     );
@@ -588,8 +536,6 @@ describe('per-deploy sandbox integration', () => {
     );
     expect(sandboxApps).toHaveLength(0);
 
-    // The recorded calls include a DELETE on the user worker AND a DELETE
-    // on the per-deploy container app from the teardownRaceLost branch.
     const workerDeletes = cf.state.recordedCalls.filter(
       (c) =>
         c.method === 'DELETE' &&
@@ -603,16 +549,12 @@ describe('per-deploy sandbox integration', () => {
     expect(containerDeletes.length).toBeGreaterThanOrEqual(1);
   });
 
-  // ----------------------------------------------------------------------
-  // Mock CF: cross-script DO binding to non-existent script
-  // ----------------------------------------------------------------------
   it('mock regression: cross-script DO binding referencing a non-existent dispatch-namespace script returns CF error (validates the architectural constraint)', async () => {
     mockCfApi();
 
-    // Hand-craft a user-worker PUT with a cross-script DO binding to a
-    // dispatch script that does NOT exist. The mock's uploadWorker validator
-    // rejects this — same rejection the real CF API issues, which is the
-    // architectural reason per-deploy avoids cross-script bindings.
+    // Decision: The mock's uploadWorker validator rejects a cross-script DO binding to a dispatch script that
+    // doesn't exist, as the real CF API does. That's the architectural reason per-deploy avoids
+    // cross-script bindings.
     const metadata = {
       main_module: 'index.js',
       compatibility_date: '2024-01-01',
@@ -621,7 +563,7 @@ describe('per-deploy sandbox integration', () => {
           type: 'durable_object_namespace',
           name: 'SANDBOX',
           class_name: 'Sandbox',
-          script_name: 'no-such-host', // not seeded
+          script_name: 'no-such-host',
         },
       ],
     };
@@ -648,11 +590,8 @@ describe('per-deploy sandbox integration', () => {
     expect(body.errors[0]!.message).toMatch(/Cannot create binding for class in script/);
   });
 
-  // ----------------------------------------------------------------------
-  // Mock CF: cross-script DO binding to an EXISTING dispatch script is also
-  // rejected. CF rejects ALL cross-script DO bindings between dispatch
-  // namespace scripts, even when the target exists and is container-enabled.
-  // ----------------------------------------------------------------------
+  // Decision: CF rejects all cross-script DO bindings between dispatch namespace scripts, even when the target
+  // exists and is container-enabled.
   it('mock regression: cross-script DO binding to an EXISTING dispatch-namespace script is also rejected with 10061', async () => {
     const cf = mockCfApi();
 
@@ -700,9 +639,6 @@ describe('per-deploy sandbox integration', () => {
     expect(body.errors[0]!.message).toMatch(/do-host-existing/);
   });
 
-  // ----------------------------------------------------------------------
-  // Mock CF: 2nd container POST for same namespace_id returns 1608
-  // ----------------------------------------------------------------------
   it('mock regression: 2nd container POST for the same namespace_id returns CF code 1608 DURABLE_OBJECT_ALREADY_HAS_APPLICATION', async () => {
     const cf = mockCfApi();
 
@@ -734,12 +670,8 @@ describe('per-deploy sandbox integration', () => {
     expect(body.errors[0]!.code).toBe(1608);
   });
 
-  // ----------------------------------------------------------------------
-  // Project teardown deletes all retained deployments' container apps
-  // ----------------------------------------------------------------------
   it('project teardown deletes per-deploy container apps for ALL retained deployments via deterministic-name orphan recovery', async () => {
     skipOrphanSweepDelay();
-    // Solo plan: retainedDeployments=5 — both v1 and v2 stay retained.
     const user = await createTestUser(env.db, 'sb-td-user', 'github', undefined, 'solo');
     const project = await createTestProject(env.db, user.id, 'sb-teardown');
     const cf = mockCfApi();
@@ -748,7 +680,6 @@ describe('per-deploy sandbox integration', () => {
       JSON.stringify({ userId: user.id, plan: 'solo' }),
     );
 
-    // Deploy v1.
     const res1 = await deploy(project.id, user.jwt);
     expect(res1.status).toBe(200);
     const done1 = getDoneEvent(await readAllEvents(res1));
@@ -758,7 +689,6 @@ describe('per-deploy sandbox integration', () => {
       .toLowerCase()
       .replaceAll('_', '-');
 
-    // Deploy v2.
     const res2 = await deploy(project.id, user.jwt);
     expect(res2.status).toBe(200);
     const done2 = getDoneEvent(await readAllEvents(res2));
@@ -768,7 +698,6 @@ describe('per-deploy sandbox integration', () => {
       .toLowerCase()
       .replaceAll('_', '-');
 
-    // Both retention-keepable container apps exist before teardown.
     expect(
       Array.from(cf.state.containerApps.values()).some((a) => a.name === v1ContainerName),
     ).toBe(true);
@@ -776,7 +705,6 @@ describe('per-deploy sandbox integration', () => {
       Array.from(cf.state.containerApps.values()).some((a) => a.name === v2ContainerName),
     ).toBe(true);
 
-    // Tear down the project.
     const delRes = await app.fetch(
       new Request(`http://localhost/projects/${project.id}`, {
         method: 'DELETE',
@@ -787,7 +715,6 @@ describe('per-deploy sandbox integration', () => {
     expect(delRes.status).toBe(200);
     expect(await env.ROUTING.get(`project:${project.id}`)).toBeNull();
 
-    // Both per-deploy container apps are gone.
     expect(
       Array.from(cf.state.containerApps.values()).some((a) => a.name === v1ContainerName),
     ).toBe(false);
@@ -795,7 +722,6 @@ describe('per-deploy sandbox integration', () => {
       Array.from(cf.state.containerApps.values()).some((a) => a.name === v2ContainerName),
     ).toBe(false);
 
-    // DB cascaded.
     const remainingResources = await env.db
       .select()
       .from(resources)
@@ -805,9 +731,6 @@ describe('per-deploy sandbox integration', () => {
     expect(proj).toBeUndefined();
   });
 
-  // ----------------------------------------------------------------------
-  // Sandbox tenant uploads exclude platform usage and account authority.
-  // ----------------------------------------------------------------------
   it('sandbox deploy keeps the usage queue and account identity out of the tenant while injecting one __PLATFORM_PROXY', async () => {
     const user = await createTestUser(env.db, 'sb-p6-user', 'github', undefined, 'pro');
     const project = await createTestProject(env.db, user.id, 'sb-p6');
@@ -823,20 +746,18 @@ describe('per-deploy sandbox integration', () => {
     expect(userWorker).toBeDefined();
     const bindings = userWorker!.bindings;
 
-    // Metering is produced by the trusted API lease counter. Tenant Workers
-    // never receive producer authority, including sandbox-enabled apps.
+    // Decision: Metering comes from the trusted API lease counter. Tenant Workers don't get producer authority,
+    // sandbox-enabled apps included.
     const queueBindings = bindings.filter(
       (b) => b.type === 'queue' && b.name === 'USAGE_EVENTS_QUEUE',
     );
     expect(queueBindings).toHaveLength(0);
 
-    // AI, revalidation, and email share one `__PLATFORM_PROXY` service binding.
     const proxyBindings = bindings.filter(
       (b) => b.type === 'service' && b.name === '__PLATFORM_PROXY',
     );
     expect(proxyBindings).toHaveLength(1);
 
-    // Account identity stays in platform-owned routing state.
     const userIdBinding = bindings.find((b) => b.name === '__PLATFORM_USER_ID');
     expect(userIdBinding).toBeUndefined();
 
@@ -845,7 +766,6 @@ describe('per-deploy sandbox integration', () => {
     expect(projectIdBinding!.type).toBe('plain_text');
     expect((projectIdBinding as { text?: string }).text).toBe(project.id);
 
-    // Email uses the slug identity on every application Worker.
     const slugBindings = bindings.filter((b) => b.name === '__PLATFORM_PROJECT_SLUG');
     expect(slugBindings).toEqual([
       { type: 'plain_text', name: '__PLATFORM_PROJECT_SLUG', text: project.slug },
@@ -896,9 +816,8 @@ describe('per-deploy sandbox integration', () => {
       env,
     );
     expect(res.status).toBe(200);
-    // Drain the NDJSON stream so the deploy pipeline runs to completion
-    // (routing-switch + DB finalize). Without this the assertion below races
-    // the pipeline and reads KV before `ROUTING.put` ever fires.
+    // Decision: Drain the NDJSON stream so the deploy pipeline runs to completion (routing switch and DB
+    // finalize). Without this the assertion races the pipeline and reads KV before `ROUTING.put` fires.
     const done = getDoneEvent(await readAllEvents(res));
     expect(done).toBeDefined();
     expect(cf.mock.calls.some(([url]) => String(url).includes('/containers/'))).toBe(false);

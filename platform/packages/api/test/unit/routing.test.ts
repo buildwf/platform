@@ -123,7 +123,6 @@ describe('resolveRoutingUndo', () => {
         JSON.stringify(previous),
       ),
     ).toEqual({ restore: true, value: JSON.stringify(previous) });
-    // The compensation caller refreshes policy from the current project owner.
     expect(
       resolveRoutingUndo(
         JSON.stringify({ ...current, workerName: 'newer', version: 'c' }),
@@ -160,7 +159,6 @@ describe('resolveRoutingUndo', () => {
       JSON.stringify({ deploymentId: 'a', zeroTrust: before }),
     );
     expect(result.restore).toBe(true);
-    // Callers replace `zeroTrust` with protection read from PostgreSQL.
     expect(JSON.parse(result.value!)).toEqual({
       deploymentId: 'a',
       ...(before ? { zeroTrust: before } : {}),
@@ -255,7 +253,6 @@ describe('computeDispatchLimits', () => {
   });
 
   it('allows an override lower than the plan default', () => {
-    // Free default cpuMs is 10; an explicit 5 wins over the default.
     expect(computeDispatchLimits(PLAN_LIMITS.free, { cpuMs: 5 })).toEqual({
       cpuMs: 5,
       subRequests: 50,
@@ -263,9 +260,8 @@ describe('computeDispatchLimits', () => {
   });
 
   it('falls back to the plan default when a stored override is out of domain', () => {
-    // A rollback replays a stored manifest, and a manifest stored before
-    // ingest validated `limits` can carry values ingest now rejects. They
-    // must not erase (0) or corrupt (negative, fractional) the plan cap.
+    // Decision: A rollback replays a stored manifest, and one stored before ingest validated `limits` can hold
+    // values ingest now rejects. They mustn't erase (0) or corrupt (negative, fractional) the plan cap.
     for (const cpuMs of [0, -5, 3.7, 2 ** 53, '10' as unknown as number]) {
       expect(computeDispatchLimits(PLAN_LIMITS.free, { cpuMs })).toEqual({
         cpuMs: 10,
@@ -413,8 +409,6 @@ describe('applyRoutingSuspension', () => {
     expect(puts).toEqual([]);
   });
 
-  // --- reason precedence: usage paths must never clobber an admin suspension ---
-
   it('non-force suspend does NOT overwrite a different (admin) reason already present', async () => {
     const { store, kv, puts } = createKvStore({
       'slug-a': JSON.stringify({ projectId: 'p', suspended: 'admin_suspended' }),
@@ -527,11 +521,9 @@ describe('setProjectsRoutingSuspension', () => {
   });
 
   it('stamps the slug AND every domain route with a live KV entry — including a crash-window pending domain', async () => {
-    // `tryActivateDomain` writes `domain:<host>` to KV BEFORE flipping the DB row
-    // to `active`; a crash between leaves a `pending` row whose KV route is still
-    // served by dispatch. Suspension must stamp it too, or the project keeps
-    // serving past the cap on that hostname. A pending domain with NO KV route
-    // (the normal case) is a harmless no-op — applyRoutingSuspension skips it.
+    // Decision: tryActivateDomain writes `domain:<host>` to KV before flipping the DB row to `active`, so a crash
+    // between leaves a `pending` row whose route dispatch still serves. Suspension stamps it too, or the
+    // project keeps serving past the cap on that hostname.
     const { store, kv } = createKvStore({
       'slug-a': JSON.stringify({ projectId: 'proj_a' }),
       'domain:active.com': JSON.stringify({ projectId: 'proj_a' }),
@@ -544,7 +536,6 @@ describe('setProjectsRoutingSuspension', () => {
           [
             { project_id: 'proj_a', hostname: 'active.com', status: 'active' },
             { project_id: 'proj_a', hostname: 'crash-pending.com', status: 'pending' },
-            // Pending domain with no published KV route — must not error.
             { project_id: 'proj_a', hostname: 'no-route-pending.com', status: 'pending' },
           ],
         ],

@@ -37,9 +37,9 @@ import { renderAdminPage } from '../react/server.ts';
 
 const app = new Hono<ApiEnv>();
 app.onError(renderOperationError);
-// The same capability boundary the owner and operator email routes sit
-// behind: a platform that does not enable email must not have its policy,
-// settings or domains changed from the browser either.
+// Decision: The same capability boundary the owner and operator email routes sit behind: a platform
+// that doesn't enable email mustn't have its policy, settings or domains changed from the
+// browser either.
 app.use('*', async (context, next) => {
   if (!getPlatformCapabilities(context.env).email) {
     if (context.req.method === 'GET') {
@@ -103,7 +103,7 @@ async function emailOperationResult(
 
 export async function loadEmailSettingsData(context: Context<ApiEnv>) {
   const db = context.get('db');
-  // Refresh the best-effort display mirror before showing the authoritative SQL policy.
+  // Decision: Refresh the best-effort display mirror before showing the authoritative SQL policy.
   await repairEmailRecipientPolicyMirror(db, context.env.ROUTING);
   const [policy, management] = await Promise.all([
     getEmailRecipientPolicy(db),
@@ -116,10 +116,8 @@ export async function loadEmailSettingsData(context: Context<ApiEnv>) {
   };
 }
 
-// GET /email/ — installation-wide recipient policy and domain management
 app.get('/', (context) => renderFateListPage(context, 'email'));
 
-// POST /email/policy — the shared-sender recipient policy
 app.post('/policy', async (context) => {
   const body = await context.req.parseBody();
   const mode = String(body.mode ?? '');
@@ -134,7 +132,6 @@ app.post('/policy', async (context) => {
   );
 });
 
-// POST /email/settings — who manages email domains
 app.post('/settings', async (context) => {
   const body = await context.req.parseBody();
   const domains = String(body.domains ?? '');
@@ -205,7 +202,7 @@ export async function loadEmailProjectData(context: Context<ApiEnv>, projectId: 
         .orderBy(desc(emailOperations.created_at))
     : [];
 
-  // Distinguish an override from the default in the project controls row.
+  // Decision: Distinguish an override from the default in the project controls row.
   const control = controls[0];
   const monthlyLimit =
     control && control.monthly_limit !== DEFAULT_MONTHLY_LIMIT ? control.monthly_limit : undefined;
@@ -249,13 +246,11 @@ export async function loadEmailProjectData(context: Context<ApiEnv>, projectId: 
   };
 }
 
-// GET /email/:projectId — usage, caps, kill switch, destinations
 app.get('/:projectId', (context) => renderFateDetailPage(context, 'emailProject'));
 
-// POST /email/:projectId/domains/add — register a domain for the project as
-// an administrator (design doc 0078, "Administrator-managed domains"). The
-// same operation the operator CLI runs; a blank token means the platform's
-// own credential. The token is never echoed or audited.
+// Decision: Register a domain for the project as an administrator (design doc 0078,
+// "Administrator-managed domains"). The same operation the operator CLI runs; a blank token
+// means the platform's own credential. The token isn't echoed or audited.
 app.post('/:projectId/domains/add', async (context) => {
   const projectId = context.req.param('projectId');
   const project = await getProject(context.get('db'), projectId);
@@ -289,7 +284,6 @@ app.post('/:projectId/domains/add', async (context) => {
   );
 });
 
-// POST /email/:projectId/suspend — set the kill switch to a desired terminal state
 app.post('/:projectId/suspend', async (context) => {
   const projectId = context.req.param('projectId');
   const project = await getProject(context.get('db'), projectId);
@@ -312,17 +306,14 @@ app.post('/:projectId/suspend', async (context) => {
   );
 });
 
-// POST /email/:projectId/limit — set (or clear) the monthly outbound override
 app.post('/:projectId/limit', async (context) => {
   return setLimit(context, context.req.param('projectId'), 'monthly', 'limit');
 });
 
-// POST /email/:projectId/burst-limit — set (or clear) the per-minute override
 app.post('/:projectId/burst-limit', async (context) => {
   return setLimit(context, context.req.param('projectId'), 'burst', 'burstLimit');
 });
 
-// POST /email/:projectId/destinations/:destId/delete — revoke one recipient
 app.post('/:projectId/destinations/:destId/delete', async (context) => {
   const projectId = context.req.param('projectId');
   const destinationId = context.req.param('destId');
@@ -348,8 +339,8 @@ app.post('/:projectId/destinations/:destId/delete', async (context) => {
   );
 });
 
-// An administrator removes one exact assignment through the same durable
-// operation service as the owner API. Sibling routes keep their shared ingress.
+// Decision: An administrator removes one exact assignment through the same durable operation service as
+// the owner API. Sibling routes keep their shared ingress.
 app.post('/:projectId/domains/:domain/revoke', async (context) => {
   const projectId = context.req.param('projectId');
   const project = await getProject(context.get('db'), projectId);

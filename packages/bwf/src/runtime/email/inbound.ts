@@ -1,4 +1,4 @@
-// Managed delivery uses bounded HTTP envelopes and recorded action responses.
+// Decision: Managed delivery uses bounded HTTP envelopes and recorded action responses.
 // Native Cloudflare email events use the same proxy, then enact its actions on
 // the original message before returning.
 
@@ -25,7 +25,7 @@ import {
 import { fitsHeaderLine, replyReferences, threadingId } from './threading.ts';
 import type { Address, Attachment } from './types.ts';
 
-// SDK limits give handlers early errors. The gateway independently validates
+// Decision: SDK limits give handlers early errors. The gateway independently validates
 // untrusted tenant responses before admitting any action.
 const MAX_ACTIONS = EMAIL_MAX_ACTIONS;
 const MAX_ACTION_METADATA_BYTES = EMAIL_MAX_METADATA_BYTES;
@@ -72,7 +72,7 @@ export function readEnvString(name: string): string | undefined {
   return typeof raw === 'string' && raw.length > 0 ? raw : undefined;
 }
 
-// At most 56 characters, so `<slug>+noreply` fits RFC 5321's 64-octet local part.
+// Decision: At most 56 characters, so `<slug>+noreply` fits RFC 5321's 64-octet local part.
 const VALID_SLUG = /^[a-z0-9](?:[a-z0-9-]{0,54}[a-z0-9])?$/;
 
 /** `__PLATFORM_PROJECT_SLUG` when it can head a sender address. */
@@ -81,7 +81,7 @@ export function readProjectSlug(): string | undefined {
   return raw !== undefined && VALID_SLUG.test(raw) ? raw : undefined;
 }
 
-// The relay-lane marker `createMessageProxy` sets from `envelope.viaDomain`;
+// Decision: The relay-lane marker `createMessageProxy` sets from `envelope.viaDomain`;
 // undefined for platform-lane, own-account and hand-built messages.
 function readRelayDomain(message: ForwardableEmailMessage): string | undefined {
   const raw: unknown = (message as { __platformRelayDomain?: unknown }).__platformRelayDomain;
@@ -145,7 +145,7 @@ export async function parseEmail(message: ForwardableEmailMessage): Promise<Pars
   const { default: PostalMime } = await import('postal-mime');
   const cached = proxyRawCache.get(message);
   try {
-    // Inside the try: a native one-shot `raw` stream can fail mid-read.
+    // Decision: Inside the try: a native one-shot `raw` stream can fail mid-read.
     const source = cached ? await cached.read() : message.raw;
     return await PostalMime.parse(source);
   } catch (cause) {
@@ -246,7 +246,7 @@ function addressTooLong(field: 'from' | 'to', length: number): MimeError {
 }
 
 function invalidForwardHeaders(cause: unknown): MimeError {
-  // The detail may echo inbound-derived text, so it is bounded.
+  // Decision: The detail may echo inbound-derived text, so it is bounded.
   const detail = cause instanceof Error ? cause.message.slice(0, 320) : 'not a valid header set';
   return new MimeError('MIME_ERROR', `forward: invalid header — ${detail}`);
 }
@@ -271,7 +271,7 @@ function assertForwardHeadersWithinBounds(headers: Record<string, string>): void
         `forward: header name is ${name.length} characters, over the ${MAX_FORWARD_HEADER_LENGTH}-character limit.`,
       );
     }
-    // The router refuses a non-string value, which `new Headers()` would
+    // Decision: The router refuses a non-string value, which `new Headers()` would
     // have coerced.
     const value: unknown = headers[name];
     if (typeof value !== 'string') {
@@ -295,7 +295,7 @@ function assertForwardHeadersWithinBounds(headers: Record<string, string>): void
  * drop the reject; slice before replace to bound the work.
  */
 function normalizeRejectReason(reason: string): string {
-  // A JS handler can pass anything; the router treats a non-string as empty.
+  // Decision: A JS handler can pass anything; the router treats a non-string as empty.
   const raw = typeof reason === 'string' ? reason : '';
   if (raw.length === 0) {
     return 'rejected by handler';
@@ -311,7 +311,7 @@ function normalizeRejectReason(reason: string): string {
 async function readStreamToBytes(
   stream: ReadableStream<Uint8Array>,
   limit = Infinity,
-  // Names the limit that was crossed: one reply's cap or the shared budget.
+  // Decision: Names the limit that was crossed: one reply's cap or the shared budget.
   onOverflow: (total: number) => MimeError = replyTooLarge,
 ): Promise<Uint8Array> {
   const reader = stream.getReader();
@@ -335,14 +335,14 @@ async function readStreamToBytes(
       chunks.push(value);
     }
   } catch (error) {
-    // Do not await cancel: a custom handler stream may never settle it.
+    // Decision: Do not await cancel: a custom handler stream may never settle it.
     void reader.cancel().catch(() => {});
     throw error;
   } finally {
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
   const out = new Uint8Array(total);
@@ -376,14 +376,13 @@ export function createMessageProxy(
   const actions: Array<EmailAction> = [];
   const headers = new Headers(envelope.headers);
 
-  // A relayed recipient (on `viaDomain`) carries no `<slug>+` prefix, so a
+  // Decision: A relayed recipient (on `viaDomain`) carries no `<slug>+` prefix, so a
   // coincidental one on a customer address is never stripped.
   const slug =
     envelope.viaDomain === undefined || envelope.viaDomain === '' ? opts.slug : undefined;
 
   const userVisibleTo = stripSlugFromAddress(envelope.to, slug);
 
-  // Buffer `raw` once so it can be read repeatedly.
   let cachedRaw: Uint8Array | undefined;
   let bufferingPromise: Promise<Uint8Array> | undefined;
   function readRawOnce(): Promise<Uint8Array> {
@@ -410,7 +409,7 @@ export function createMessageProxy(
   }
 
   let rejected = false;
-  // The gateway counts every metadata/raw frame and the terminal frame, so
+  // Decision: The gateway counts every metadata/raw frame and the terminal frame, so
   // reserve that terminal here and reject an action before recording it.
   let actionWireBytesUsed = EMAIL_ACTION_TERMINAL_BYTES;
   let pendingReplies = 0;
@@ -432,7 +431,7 @@ export function createMessageProxy(
     return true;
   }
 
-  // `actions` only grows through forward/reply, and `setReject` purges both,
+  // Decision: `actions` only grows through forward/reply, and `setReject` purges both,
   // so its length is the queue depth.
   function assertQueueHasRoom(): void {
     if (actions.length + pendingReplies >= MAX_ACTIONS) {
@@ -444,7 +443,6 @@ export function createMessageProxy(
     from: envelope.from,
     to: userVisibleTo,
     headers,
-    // A fresh stream per access, backed by the buffered bytes.
     get raw(): ReadableStream<Uint8Array> {
       if (cachedRaw) {
         return bytesToReadableStream(cachedRaw);
@@ -464,7 +462,7 @@ export function createMessageProxy(
         return;
       }
       rejected = true;
-      // Reject is terminal and replaces queued deliveries, so it must remain
+      // Decision: Reject is terminal and replaces queued deliveries, so it must remain
       // available even when the action queue is full.
       let dropped = 0;
       for (let i = actions.length - 1; i >= 0; i--) {
@@ -498,12 +496,12 @@ export function createMessageProxy(
         throw addressTooLong('to', to.length);
       }
       validateAddressParts('to', to);
-      // `Headers` lowercases names; a plain record keeps the caller's casing.
+      // Decision: `Headers` lowercases names; a plain record keeps the caller's casing.
       let headersObj: Record<string, string> | undefined;
       if (fwdHeaders instanceof Headers) {
         headersObj = Object.fromEntries(fwdHeaders.entries());
       } else if (fwdHeaders) {
-        // Validate now so native replay cannot fail after earlier actions fired.
+        // Decision: Validate now so native replay cannot fail after earlier actions fired.
         try {
           void new Headers(fwdHeaders);
         } catch (e) {
@@ -535,7 +533,7 @@ export function createMessageProxy(
         );
         return;
       }
-      // Everything cheap first, so a doomed reply never buffers its stream.
+      // Decision: Everything cheap first, so a doomed reply never buffers its stream.
       assertQueueHasRoom();
       if (reply.from.length > MAX_ADDRESS_LENGTH) {
         throw addressTooLong('from', reply.from.length);
@@ -543,7 +541,7 @@ export function createMessageProxy(
       if (reply.to.length > MAX_ADDRESS_LENGTH) {
         throw addressTooLong('to', reply.to.length);
       }
-      // A hand-built `{ from, to, raw }` bypasses `normalizeEmail`.
+      // Decision: A hand-built `{ from, to, raw }` bypasses `normalizeEmail`.
       validateAddressParts('from', reply.from);
       validateAddressParts('to', reply.to);
       pendingReplies++;
@@ -561,7 +559,7 @@ export function createMessageProxy(
           );
           return;
         }
-        // A hand-built reply is not bounded by `buildMime`.
+        // Decision: A hand-built reply is not bounded by `buildMime`.
         const metadataOnlyAction = {
           type: 'reply' as const,
           from: reply.from,
@@ -585,7 +583,7 @@ export function createMessageProxy(
           }
           rawBytes = reply.raw;
         } else {
-          // A native `EmailMessage` has no `raw`: name that rather than fail
+          // Decision: A native `EmailMessage` has no `raw`: name that rather than fail
           // with a generic handler error.
           const raw: unknown = reply.raw;
           if (
@@ -600,8 +598,6 @@ export function createMessageProxy(
                 'no public accessor. Use replyEmail() from bwf/email, or pass the MIME bytes as raw.',
             );
           }
-          // Stop at the lower of the per-reply cap and the remaining budget,
-          // and name that one.
           const limit = Math.min(MAX_REPLY_BYTES, remaining);
           rawBytes = await readStreamToBytes(reply.raw, limit, (total) =>
             limit === MAX_REPLY_BYTES
@@ -622,7 +618,7 @@ export function createMessageProxy(
     },
   } as unknown as ForwardableEmailMessage;
 
-  // The wire-form recipient, for diagnostics; non-enumerable so it never
+  // Decision: The wire-form recipient, for diagnostics; non-enumerable so it never
   // serializes.
   if (envelope.to !== userVisibleTo) {
     Object.defineProperty(message, '__platformTo', {
@@ -633,7 +629,7 @@ export function createMessageProxy(
     });
   }
 
-  // Relay-lane marker: `buildReplyMessage` then defaults `from` to the
+  // Decision: Relay-lane marker: `buildReplyMessage` then defaults `from` to the
   // receiving address on the customer domain.
   if (typeof envelope.viaDomain === 'string' && envelope.viaDomain.length > 0) {
     Object.defineProperty(message, '__platformRelayDomain', {
@@ -699,7 +695,7 @@ export interface ReplyEmailOptions {
 const MAX_REPLY_SUBJECT_CHARS = 4096;
 
 function prefixReplySubject(original: string): string {
-  // Decode first so an encoded `Re:` is detected and the result is encoded
+  // Decision: Decode first so an encoded `Re:` is detected and the result is encoded
   // once. The subject is remote-controlled and a throw here would reject the
   // whole delivery, so it is best-effort: controls become a space, and an
   // empty, over-long or unfoldable ASCII subject becomes a bare `Re:`. The
@@ -717,7 +713,7 @@ function prefixReplySubject(original: string): string {
     return 'Re:';
   }
   const prefixed = /^re:/i.test(cleaned) ? cleaned : `Re: ${cleaned}`;
-  // Non-ASCII goes through `encodeWord`, whose words always fold.
+  // Decision: Non-ASCII goes through `encodeWord`, whose words always fold.
   if (/^[\x20-\x7e]*$/.test(prefixed) && !fitsHeaderLine('Subject', prefixed)) {
     return 'Re:';
   }
@@ -733,7 +729,7 @@ function decodeRfc2047(value: string): string {
     return value;
   }
   try {
-    // `matchAll`, not `replace` with a callback: replace collects every match
+    // Decision: `matchAll`, not `replace` with a callback: replace collects every match
     // first, which a subject of tiny encoded-words turns into a heap blowup.
     const parts: Array<string> = [];
     let last = 0;
@@ -741,7 +737,7 @@ function decodeRfc2047(value: string): string {
       const [match, charset, enc, payload] = m;
       const bytes =
         enc.toUpperCase() === 'B' ? base64ToBytes(payload) : quotedPrintableDecode(payload);
-      // Honor the declared charset; fall back to UTF-8 for a label
+      // Decision: Honor the declared charset; fall back to UTF-8 for a label
       // TextDecoder rejects.
       let decoder: TextDecoder;
       try {
@@ -760,16 +756,16 @@ function decodeRfc2047(value: string): string {
 }
 
 function quotedPrintableDecode(qp: string): Uint8Array {
-  // RFC 2047 Q-encoding: `_` is a space, `=XX` a hex byte. Each input
+  // Decision: RFC 2047 Q-encoding: `_` is a space, `=XX` a hex byte. Each input
   // character yields at most one byte, so a typed array of `qp.length` fits.
   const out = new Uint8Array(qp.length);
   let kept = 0;
   for (let i = 0; i < qp.length; i++) {
     const ch = qp.charCodeAt(i);
-    if (ch === 0x5f /* _ */) {
+    if (ch === 0x5f) {
       out[kept++] = 0x20;
-    } else if (ch === 0x3d /* = */ && i + 2 < qp.length) {
-      // Both must be hex (`parseInt('0G', 16)` is 0); a malformed escape
+    } else if (ch === 0x3d && i + 2 < qp.length) {
+      // Decision: Both must be hex (`parseInt('0G', 16)` is 0); a malformed escape
       // stays literal.
       const hex = qp.slice(i + 1, i + 3);
       if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
@@ -798,7 +794,7 @@ export async function buildReplyMessage(
   const originalMessageId = headers.get('Message-ID') ?? '';
   const originalReferences = headers.get('References') ?? '';
 
-  // Default `from`: the receiving address on your own zone or a relayed
+  // Decision: Default `from`: the receiving address on your own zone or a relayed
   // custom domain; `<slug>+noreply@<domain>` on the platform's shared sender,
   // which pins replies to the slug. A domain is never guessed.
   let fromAddr: Address;
@@ -820,7 +816,7 @@ export async function buildReplyMessage(
       }
       fromAddr = `${slug}+noreply@${domain}`;
     } else if (readEnvString('__PLATFORM_PROJECT_SLUG') !== undefined) {
-      // A platform slug too long for `<slug>+noreply@`: `message.to` would
+      // Decision: A platform slug too long for `<slug>+noreply@`: `message.to` would
       // build a sender the platform drops without telling the handler.
       throw new Error(
         "replyEmail: 'from' is required — this project's slug cannot build a " +
@@ -835,7 +831,7 @@ export async function buildReplyMessage(
   const toAddr: Address = opts.to ?? message.from;
   const subject = opts.subject ?? prefixReplySubject(originalSubject);
 
-  // Threading rides `threading`, since `headers` reserve these names. Both
+  // Decision: Threading rides `threading`, since `headers` reserve these names. Both
   // ids are remote-controlled: drop one that cannot fit a line or holds a
   // control character rather than fail the reply.
   const threading: { inReplyTo?: string; references?: string } = {};

@@ -12,7 +12,7 @@ export function createServerFetch<Context extends { request?: Request }>(
     const origin = store?.request ? new URL(store.request.url).origin : fallbackOrigin;
     const request = new Request(new URL(String(input), origin), init);
 
-    // External base URLs use real HTTP and must not inherit the visitor's credentials.
+    // Decision: External base URLs use real HTTP and must not inherit the visitor's credentials.
     if (new URL(request.url).origin !== origin) {
       return globalThis.fetch(request);
     }
@@ -26,7 +26,7 @@ export function createServerFetch<Context extends { request?: Request }>(
       }
     }
 
-    // app.fetch() does not observe cancellation itself. Race dispatch against the
+    // Decision: app.fetch() does not observe cancellation itself. Race dispatch against the
     // signal supplied by ofetch (including its timeout), and forward it to handlers.
     const signal = request.signal;
     signal.throwIfAborted();

@@ -30,9 +30,9 @@ import {
 } from '../../src/cli/platform-registry.ts';
 import type { RunWrangler } from '../../src/cli/provision.ts';
 
-// Runs the real Worker deploy, cutover checkpoint, and pre-traffic verification
-// against a stateful in-memory Cloudflare account. Only the provider process is
-// replaced; the guarded create still goes through the conditional-create proxy.
+// Decision: Runs the real Worker deploy, cutover checkpoint and pre-traffic verification against a
+// stateful in-memory Cloudflare account. Only the provider process is replaced; the guarded
+// create still goes through the conditional-create proxy.
 const wrangler = vi.hoisted(() => ({ run: null as RunWrangler | null }));
 vi.mock('../../src/cli/provision.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/cli/provision.ts')>()),
@@ -213,7 +213,7 @@ async function createFakeCloudflare() {
     async (_account: string, name: string, ..._rest: Array<unknown>) => {
       const resources = named.get(kind) ?? new Map<string, string>();
       named.set(kind, resources);
-      // AI Gateways are addressed by name.
+      // Decision: AI Gateways are addressed by name.
       const id =
         resources.get(name) ?? (kind === 'ai-gateway' ? name : `${kind}-${resources.size}`);
       resources.set(name, id);
@@ -295,7 +295,7 @@ async function createFakeCloudflare() {
     putR2Object: async (_account: string, bucket: string, key: string, value: string) => {
       r2.set(`${bucket}/${key}`, value);
     },
-    // Worker reads fall back to the provider process, which this fake models.
+    // Decision: Worker reads fall back to the provider process, which this fake models.
     request: async (path: string): Promise<never> => {
       throw new Error(`No Cloudflare API read expected: ${path}`);
     },
@@ -494,8 +494,8 @@ it('rolls forward a partially restored credential update without restoring old s
       ),
   ).toEqual([]);
 
-  // Older installers restored these Workers before Cloudflare rejected the
-  // API/proxy rollback because CF_API_TOKEN and R2 credentials had changed.
+  // Decision: Older installers restored these Workers before Cloudflare rejected the API and proxy
+  // rollback, because CF_API_TOKEN and the R2 credentials had changed.
   for (const name of [
     failed.deployment.resources.emailGatewayWorker,
     failed.deployment.resources.tailWorker,
@@ -701,7 +701,6 @@ it('still restores a failed cutover without credential updates', async () => {
           args.type === 'versions.deploy' && args.message?.startsWith('bwf platform restoration'),
       ),
   ).toBe(true);
-  // Neither the activations nor the restorations skip Cloudflare's checks.
   expect(
     cloud.commands.filter(
       ({ args }) => args.type === 'versions.deploy' && args.bypassDeploymentChecks !== undefined,
@@ -726,7 +725,6 @@ it('stages a fresh immutable version of every Worker before enabling a fresh ins
   expect(stagedKeys(result.manifest, 1)).toEqual([...WORKER_KEYS].sort());
   expect(stagedKeys(result.manifest, 2)).toEqual([...WORKER_KEYS].sort());
   expect(workerStepKeys(result.manifest)).toContain('worker-cutover:2:committed');
-  // The tail Worker config is identical in both generations, yet it is still restaged.
   const tail = result.manifest.deployment.resources.tailWorker;
   expect(
     cloud.commands
@@ -766,7 +764,7 @@ it('sends a replaced runtime token to Workers an interrupted install already dep
   const interrupted = currentManifest();
   expect(interrupted.status).toBe('failed');
   const { apiWorker, proxyWorker } = interrupted.deployment.resources;
-  // What `install --resume` builds: only an explicit runtime token is an update.
+  // Decision: What `install --resume` builds: only an explicit runtime token is an update.
   const resumeSecrets = (manifest: PlatformInstallationManifest, cloudflareApiToken: string) =>
     createPlatformInstallationSecrets({
       ...installationSecrets(),
@@ -780,7 +778,6 @@ it('sends a replaced runtime token to Workers an interrupted install already dep
       updateExistingWorkers: true,
     });
 
-  // The first resume stops after the API Worker received the replacement.
   cloud.failUpload(proxyWorker);
   const firstResume = cloud.secretUploads.length;
   await expect(
@@ -792,7 +789,6 @@ it('sends a replaced runtime token to Workers an interrupted install already dep
   const stopped = currentManifest();
   expect(readPendingInstallationSecrets(stopped)?.cloudflareApiToken).toBe('replacement-token');
 
-  // The next resume has no new token, yet still finishes the proxy update.
   const secondResume = cloud.secretUploads.length;
   const result = await runInstall(cloud, stopped, { secrets: resumeSecrets(stopped, '') });
   expect(result.manifest.status).toBe('installed');
@@ -809,8 +805,8 @@ it('sends a replaced runtime token to Workers an interrupted install already dep
 it('retries a restored enabling generation with every Worker restaged', async () => {
   const cloud = await createFakeCloudflare();
   const plan = await planInstallation(cloud, null);
-  // The tail Worker is created with a guarded deploy, so its first version
-  // upload is the enabling generation. Failing it leaves that generation restored.
+  // Decision: The tail Worker is created with a guarded deploy, so its first version upload is the
+  // enabling generation. Failing it leaves that generation restored.
   cloud.failUpload(plan.deployment.resources.tailWorker);
 
   await expect(runInstall(cloud, null)).rejects.toThrow('upload failed');
@@ -824,7 +820,6 @@ it('retries a restored enabling generation with every Worker restaged', async ()
   const retried = await runInstall(cloud, failed);
 
   expect(retried.manifest.status).toBe('installed');
-  // The staging generation still reuses an unchanged Worker version.
   expect(stagedKeys(retried.manifest, 3)).not.toContain('tail');
   expect(stagedKeys(retried.manifest, 4)).toEqual([...WORKER_KEYS].sort());
   expect(workerStepKeys(retried.manifest)).toContain('worker-cutover:4:committed');

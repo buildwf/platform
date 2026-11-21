@@ -10,10 +10,6 @@ const seedSql = resolve(__dirname, 'seed.sql');
 const drizzleDir = resolve(__dirname, '../drizzle');
 const localDbUrl = 'postgresql://void_dev:void_dev@localhost:5432/void_api_dev';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const force = process.argv.includes('--force');
 const adminEmailArgIndex = process.argv.indexOf('--admin-email');
 const adminEmailArg =
@@ -195,10 +191,6 @@ function showNextSteps(): void {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
 async function main(): Promise<void> {
   p.intro('Platform local dev setup');
 
@@ -225,7 +217,6 @@ async function main(): Promise<void> {
 
   const s = p.spinner();
 
-  // 1. Create platform_dev role and database (idempotent)
   s.start('Creating local database platform_api_dev');
   try {
     run(
@@ -233,28 +224,23 @@ async function main(): Promise<void> {
       platformDir,
     );
   } catch {
-    // Role already exists — fine
+    // Decision: The role already exists.
   }
   try {
     run('createdb -O platform_dev platform_api_dev 2>/dev/null', platformDir);
   } catch {
-    // Already exists — fine
+    // Decision: The database already exists.
   }
-  // Ensure platform_dev owns the database even if it was created before the role
+  // Decision: Ensure platform_dev owns the database even if it was created before the role.
   try {
     run(`psql -d postgres -c "ALTER DATABASE platform_api_dev OWNER TO platform_dev"`, platformDir);
-  } catch {
-    // Fine
-  }
+  } catch {}
 
   try {
     run(`psql "${localDbUrl}" -c "ALTER SCHEMA public OWNER TO platform_dev"`, platformDir);
-  } catch {
-    // Fine
-  }
+  } catch {}
   s.stop('Database platform_api_dev ready');
 
-  // 2. Apply Drizzle migrations
   s.start('Applying migrations');
   const journalPath = resolve(drizzleDir, 'meta/_journal.json');
   const journal = JSON.parse(readFileSync(journalPath, 'utf8'));
@@ -269,7 +255,7 @@ async function main(): Promise<void> {
       try {
         run(`psql "${localDbUrl}"`, platformDir, stmt);
       } catch {
-        // Table/index already exists — fine
+        // Decision: The table or index already exists.
       }
     }
   }
@@ -279,19 +265,16 @@ async function main(): Promise<void> {
   );
   s.stop('Applied migrations');
 
-  // 3. Seed shared data
   s.start('Seeding fake data');
   run(`psql "${localDbUrl}" -f "${seedSql}"`, platformDir);
   s.stop('Seeded 5 users, 6 projects, 13 deployments, 7 resources');
 
-  // 4. Add local admin user
   s.start('Creating local admin user');
   upsertLocalAdmin(adminEmail);
   s.stop('Created local admin user');
 
   p.log.success(`Configured local admin user: ${adminEmail}`);
 
-  // 5. Next steps
   showNextSteps();
 
   p.outro('Done!');

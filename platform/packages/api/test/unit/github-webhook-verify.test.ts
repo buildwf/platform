@@ -5,8 +5,8 @@ const SECRET = 'webhook-secret-shhh';
 
 const encoder = new TextEncoder();
 
-// Compute the expected `sha256=<hex>` header the same way GitHub does, using
-// WebCrypto directly so the test is independent of the implementation.
+// Decision: Computed with WebCrypto directly, the way GitHub does, so the test doesn't depend on the
+// implementation.
 async function computeSignature(rawBody: string, secret: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',

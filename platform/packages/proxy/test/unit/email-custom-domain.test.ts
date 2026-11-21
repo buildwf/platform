@@ -1,9 +1,7 @@
-/** Custom-domain sends use SQL admission and a customer-account send_raw credential. */
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-// `cloudflare:email` is a workerd built-in with no npm shim — same mock as
-// email.test.ts, hoisted above the worker import.
+// Decision: `cloudflare:email` is a workerd built-in with no npm shim, so it's mocked (hoisted above the
+// worker import).
 vi.mock('cloudflare:email', () => ({
   EmailMessage: class MockEmailMessage {
     constructor(
@@ -23,10 +21,7 @@ const EMAIL_SIGNING_SECRET = 'test-email-signing-key-independent';
 const PROD_DOMAIN = 'mail.buildwf.dev';
 const CUSTOM_DOMAIN = 'acme.com';
 const CUSTOM_FROM = `support@${CUSTOM_DOMAIN}`;
-/** Dummy fixture value for the leased credential — not a real token. */
 const LEASED = 'leased-credential-fixture-value';
-
-// --- HMAC helper (mirrors the worker's project token signing) ---
 
 function base64urlEncode(data: Uint8Array): string {
   let binary = '';
@@ -49,8 +44,6 @@ async function signHmac(data: string, secret: string): Promise<string> {
     new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(data))),
   );
 }
-
-// --- Mocks ---
 
 function createMockEnv() {
   const actions = new Map<
@@ -175,7 +168,6 @@ async function sendBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** A stubbed `api.cloudflare.com` that records calls; 200 success by default. */
 function stubCloudflare(handler?: (call: { url: string; init: RequestInit }) => Response) {
   const calls: Array<{ url: string; init: RequestInit }> = [];
   vi.stubGlobal(
@@ -185,8 +177,7 @@ function stubCloudflare(handler?: (call: { url: string; init: RequestInit }) => 
       if (handler) {
         return handler({ url, init });
       }
-      // The real send_raw result: snake_case `message_id`, and per-recipient
-      // lists (`delivered` echoes the accepted recipients here).
+      // Decision: The real send_raw result: snake_case `message_id` and per-recipient lists.
       const recipients =
         (JSON.parse(init.body as string) as { recipients?: Array<string> }).recipients ?? [];
       return new Response(
@@ -261,7 +252,6 @@ describe('POST /email/send — custom sender domain', () => {
       operationId: 'act_1',
     });
 
-    // The lease: one POST to the api's internal endpoint, HMAC-authed.
     expect(
       apiFetch.mock.calls.filter(([url]) => String(url).endsWith('/domain-credential')),
     ).toHaveLength(1);
@@ -279,8 +269,6 @@ describe('POST /email/send — custom sender domain', () => {
       await signHmac(`email-lease-v1\nproj_000000000001\n${CUSTOM_DOMAIN}`, EMAIL_SIGNING_SECRET),
     );
 
-    // The delivery: one POST to the CUSTOMER account's send_raw, leased
-    // credential as Bearer, envelope + MIME in the JSON body.
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe(
       'https://api.cloudflare.com/client/v4/accounts/acct_customer/email/sending/send_raw',
@@ -293,7 +281,6 @@ describe('POST /email/send — custom sender domain', () => {
       mime_message: `From: ${CUSTOM_FROM}\r\nSubject: hi\r\n\r\nhello\r\n`,
     });
 
-    // The platform binding is never touched on this path.
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
@@ -567,7 +554,6 @@ describe('POST /email/send — custom sender domain', () => {
         },
       ],
     });
-    // A distinct request leases again and can succeed after the refusal.
     const second = await postSend(env, await sendBody({ requestId: 'req_2' }));
     expect(second.status).toBe(200);
     expect(await second.json()).toEqual({

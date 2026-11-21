@@ -29,7 +29,7 @@ import {
   CLOUDFLARE_QUEUE_NAMES_BUILD_ENV,
 } from '../../src/shared/env.ts';
 
-// A real build of kitchen-sink must pass the deploy guard unmodified. Unit tests use hand-written
+// Decision: A real build of kitchen-sink must pass the deploy guard unmodified. Unit tests use hand-written
 // configs, so only this catches a plugin upgrade that emits a field the guard rejects.
 
 const ROOT = join(import.meta.dirname, '..', '..', '..', '..');
@@ -37,7 +37,7 @@ const SOURCE_PLAYGROUND = 'playground/kitchen-sink';
 let playground: IsolatedPlayground;
 let pg = '';
 
-// The guard accepts only real-shaped ids (D1 UUID, 32-hex KV).
+// Decision: The guard accepts only real-shaped ids (D1 UUID, 32-hex KV).
 const ACCOUNT_ID = '0123456789abcdef0123456789abcdef';
 const WORKER_NAME = 'platform-kitchen-sink';
 const REAL_D1_ID = '52b3bbc7-c473-4b26-9486-1345f5de61c4';
@@ -65,7 +65,7 @@ describe('playground/kitchen-sink --platform cloudflare real-build deploy guard'
     playground = createIsolatedPlayground(ROOT, SOURCE_PLAYGROUND);
     pg = playground.root;
     const typedPath = join(pg, 'bwf.config.ts');
-    // A normal deploy syncs the inferred Sandbox before Vite resolves its config.
+    // Decision: A normal deploy syncs the inferred Sandbox before Vite resolves its config.
     // Exercise that existing entry, rather than only the initially empty config.
     const sandbox = resolveSandboxConfig({ sandbox: { instanceType: 'standard-1' } }, pg);
     writeFileSync(
@@ -83,11 +83,11 @@ describe('playground/kitchen-sink --platform cloudflare real-build deploy guard'
     );
     const configPath = materializeCloudflareConfig(pg);
 
-    // The guard must follow only a deploy pointer this build wrote.
+    // Decision: The guard must follow only a deploy pointer this build wrote.
     rmSync(join(pg, 'dist'), { recursive: true, force: true });
     rmSync(join(pg, '.wrangler', 'deploy', 'config.json'), { force: true });
 
-    // Build `expected` before the build, as runCloudflareDeploy does, so a build that rewrites the
+    // Decision: Build `expected` before the build, as runCloudflareDeploy does, so a build that rewrites the
     // root config cannot change what the guard expects.
     const bwfConfig = readConfig(pg);
     const { desired, needsAI, needsSandbox, expectedCrons } =
@@ -112,7 +112,7 @@ describe('playground/kitchen-sink --platform cloudflare real-build deploy guard'
       env: {
         ...process.env,
         [CLOUDFLARE_DEPLOY_BUILD_ENV]: '1',
-        // Preflight passes the names it chose; a new account gets the Worker-scoped ones.
+        // Decision: Preflight passes the names it chose; a new account gets the Worker-scoped ones.
         [CLOUDFLARE_QUEUE_NAMES_BUILD_ENV]: JSON.stringify(desired.queueNames),
       },
     });
@@ -131,7 +131,6 @@ describe('playground/kitchen-sink --platform cloudflare real-build deploy guard'
     const pointer = JSON.parse(
       readFileSync(join(pg, '.wrangler', 'deploy', 'config.json'), 'utf-8'),
     ) as { configPath?: string };
-    // The pointer uses the platform's path separator.
     expect(toSlash(normalize(pointer.configPath ?? ''))).toBe('../../dist/ssr/wrangler.json');
   });
 

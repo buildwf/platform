@@ -63,7 +63,7 @@ const AUTH_CLIENT_FRAMEWORKS = ['react'] as const;
 type AuthClientFramework = (typeof AUTH_CLIENT_FRAMEWORKS)[number];
 const CLIENT_IMPORT_RE = /^@builtbyfriends\/bwf\/client(?:\/(react))?$/;
 const VIRTUAL_CLIENT_RE = /^virtual:platform-client-(browser|worker)(?::(react))?$/;
-// Rolldown resolveId hook filters currently require RegExp for `id`.
+// Decision: Rolldown resolveId hook filters currently require RegExp for `id`.
 const RESOLVE_ID_FILTER =
   /^(virtual:platform-(routes|client-worker(?::(react))?|client-browser(?::(react))?)|@builtbyfriends\/bwf(\/client(\/(react))?|\/queues)?)$/;
 const LOAD_ID_FILTER =
@@ -117,15 +117,15 @@ export function routingPlugin(
   let previewing = false;
   let authConfigPath: string | null = null;
 
-  // Inputs to the last successful route table and generated entries, including
+  // Decision: Inputs to the last successful route table and generated entries, including
   // authored auth settings that can change without changing the source scan.
   const routeInputsKey = () => JSON.stringify([scan, authConfigPath, compileOptions.auth]);
   let generatedRouteInputs: string | undefined;
-  // Size and mtime of the generated files that checkpoint wrote.
+  // Decision: Size and mtime of the generated files that checkpoint wrote.
   let generatedFiles: string | undefined;
   let pendingRegeneration = Promise.resolve();
 
-  // Startup and watcher callbacks share the scan and compile options. Keep their
+  // Decision: Startup and watcher callbacks share the scan and compile options. Keep their
   // writes and successful-input checkpoint together, even across async auth work.
   function regenerateInOrder<T>(regenerate: () => Promise<T>): Promise<T> {
     const result = pendingRegeneration.then(regenerate);
@@ -145,7 +145,7 @@ export function routingPlugin(
   const emailDir = paths.emailDir;
   const authConfigPaths = new Set(paths.authConfigCandidates.map((path) => normalizePath(path)));
   let authConfigEnvironment: RunnableDevEnvironment | undefined;
-  // Set when a file the auth config loaded changes, or a load fails, so the
+  // Decision: Set when a file the auth config loaded changes, or a load fails, so the
   // next load starts from an empty module graph.
   let authConfigStale = false;
   const envFilePaths = new Set(paths.envFileCandidates.map((path) => normalizePath(path)));
@@ -197,11 +197,10 @@ export function routingPlugin(
     authConfigPath = analysis.authConfigPath;
   }
 
-  // Pre-resolve all runtime module paths so generated code uses absolute paths.
-  // This is necessary because:
-  // 1. "platform" bare import would pull in the entire plugin
-  // 2. "hono" is a dep of void, not the user's project
-  // 3. Virtual modules have no filesystem location for relative resolution
+  // Decision: Pre-resolve all runtime module paths so generated code uses absolute paths:
+  // 1. A bare "platform" import would pull in the entire plugin.
+  // 2. "hono" is a dependency of bwf, not of the user's project.
+  // 3. Virtual modules have no filesystem location for relative resolution.
   const resolveFile = (specifier: string) => fileURLToPath(import.meta.resolve(specifier));
 
   const handlerFile = resolveFile('#self/handler');
@@ -220,7 +219,7 @@ export function routingPlugin(
         remotePath: resolveFile('#self/remote'),
       }
     : undefined;
-  // If the project has env.ts, splice boot-time validation into the worker
+  // Decision: If the project has env.ts, splice boot-time validation into the worker
   // entry. The user file path is absolute so generated entry's import resolves
   // regardless of bundler cwd; the validator helper resolves to bwf/env.
   function getEnvSchemaModule(): { importPath: string; helperPath: string } | undefined {
@@ -256,10 +255,10 @@ export function routingPlugin(
     bindingNames: options.bindingNames,
   };
 
-  // Vite's default until `configResolved` reads the real value; null when `publicDir: false`.
+  // Decision: Vite's default until `configResolved` reads the real value; null when `publicDir: false`.
   let publicDir: string | null = join(root, 'public');
   function reloadFileRules(): void {
-    // Config rules still apply without a public dir, and stale preload rules are cleared.
+    // Decision: Config rules still apply without a public dir, and stale preload rules are cleared.
     const merged = mergeRoutingRules({ dir: publicDir, routing: options.routing });
     lintRoutingPhases(merged);
     compileOptions.headerRules = merged.headerRules.length > 0 ? merged.headerRules : undefined;
@@ -269,7 +268,7 @@ export function routingPlugin(
   }
   reloadFileRules();
 
-  // Resolve auth after config hooks have run and the auth config path is known.
+  // Decision: Resolve auth after config hooks have run and the auth config path is known.
   function resolveAuthCompileOptions(): void {
     if (!options.isAuthEnabled() && !authConfigPath) {
       compileOptions.auth = null;
@@ -325,7 +324,7 @@ export function routingPlugin(
   async function loadAuthConfig(configPath: string | null) {
     const environment = authConfigEnvironment;
     if (authConfigStale && environment) {
-      // The runner checks each import against the graph. Invalidate all of
+      // Decision: The runner checks each import against the graph. Invalidate all of
       // it: a failed import stays in it under the specifier it could not
       // resolve, not under a file path.
       environment.moduleGraph.invalidateAll();
@@ -352,7 +351,7 @@ export function routingPlugin(
       return;
     }
 
-    // Better Auth's schema helpers load zod and most of better-auth; only auth apps need them.
+    // Decision: Better Auth's schema helpers load zod and most of better-auth; only auth apps need them.
     const { generateBwfAuthDatabaseModule, generateBwfAuthDrizzleSchema } =
       await import('./auth/drizzle.ts');
     const authRuntime: BwfAuthRuntimeOptions = {
@@ -422,7 +421,6 @@ export function routingPlugin(
     });
   }
 
-  // Immutable files stamped into the current client build's manifest.
   let clientImmutableFiles: Array<string> = [];
 
   /**
@@ -457,7 +455,7 @@ export function routingPlugin(
     ) {
       return null;
     }
-    // A client-only watch rebuild finds what an earlier bypass wrote instead of
+    // Decision: A client-only watch rebuild finds what an earlier bypass wrote instead of
     // the Worker build's rule.
     const workerBuildRule = isAssetBypassRule(assets.run_worker_first, assetsDir)
       ? ['/**']
@@ -492,7 +490,7 @@ export function routingPlugin(
     };
   }
 
-  // The Cloudflare bridge calls this after both compatible outputs exist.
+  // Decision: The Cloudflare bridge calls this after both compatible outputs exist.
   function finalizeCloudflareAssets(clientDir: string, assetsDir: string): void {
     if (!options.assetWorkerBypass || resolvedConfig?.command !== 'build') {
       return;
@@ -506,16 +504,16 @@ export function routingPlugin(
       } catch {
         return;
       }
-      // A user-authored `_headers` keeps the Worker in front, as before.
+      // Decision: A user-authored `_headers` keeps the Worker in front, as before.
       userHeaders = !generatedHeaders;
     }
     const plan = planAssetWorkerBypass(clientDir, assetsDir, userHeaders);
-    // `_headers` first: on its own it changes nothing, as the Worker sets
+    // Decision: `_headers` first: on its own it changes nothing, as the Worker sets
     // the same policy for these files. Write errors fail the build.
     if (plan?.headers) {
       writeFileSync(headersPath, plan.headers);
     } else if (generatedHeaders) {
-      // A `_headers` left by an earlier build must not outlive the bypass.
+      // Decision: A `_headers` left by an earlier build must not outlive the bypass.
       rmSync(headersPath);
     }
     if (plan?.wranglerText) {
@@ -532,14 +530,13 @@ export function routingPlugin(
       }
     : false;
 
-  /** Write the Cloudflare worker entry from the completed scan. */
   function writeWorkerEntry(): void {
     const policy = resolveCurrentAssetRoutingPolicy();
     writeFileIfChanged(
       join(outDir, 'entry.ts'),
       compileWorkerEntry({
         versionMetadataBinding: options.getVersionMetadataBinding?.(),
-        // Managed dispatch enforces HTTPS before the app Worker runs.
+        // Decision: Managed dispatch enforces HTTPS before the app Worker runs.
         alwaysUseHttps:
           options.routing?.alwaysUseHttps === true &&
           resolvedConfig?.command === 'build' &&
@@ -565,14 +562,14 @@ export function routingPlugin(
     );
   }
 
-  // Generate the entry file and tsconfig eagerly (at plugin creation time,
+  // Decision: Generate the entry file and tsconfig eagerly (at plugin creation time,
   // during bwfPlugin()). The CF plugin needs the `main` file to exist at
   // config resolution time, which is before any hooks like buildStart fire.
   // The tsconfig.json allows users to extend it from their root tsconfig
   // so generated types (.bwf/routes.d.ts) are discovered automatically.
   const outDir = join(root, '.bwf');
   mkdirSync(outDir, { recursive: true });
-  // Write initial entry — will be re-written with hasQueues once scan completes
+  // Decision: Write initial entry — will be re-written with hasQueues once scan completes
   writeFileIfChanged(
     join(outDir, 'entry.ts'),
     compileWorkerEntry({
@@ -594,7 +591,7 @@ export function routingPlugin(
     enforce: 'pre',
     configResolved(config) {
       resolvedConfig = config;
-      // `vite preview` reports `command: 'serve'` but runs the built bundle,
+      // Decision: `vite preview` reports `command: 'serve'` but runs the built bundle,
       // so it never compiles the route table as dev.
       compileOptions.dev = config.command === 'serve' && !previewing;
       compileOptions.assetsDir = config.build.assetsDir;
@@ -605,7 +602,7 @@ export function routingPlugin(
             (dependency) => specifier === dependency || specifier.startsWith(`${dependency}/`),
           );
           if (!excluded) {
-            // Virtual auth imports are invisible to the initial dependency scan.
+            // Decision: Virtual auth imports are invisible to the initial dependency scan.
             clientOptimizer.include ??= [];
             clientOptimizer.include.push(specifier);
           }
@@ -613,7 +610,7 @@ export function routingPlugin(
       }
       compileOptions.cloudflareQueueNames =
         config.command === 'build' ? readDeployBuildQueueNames() : undefined;
-      // Vite resolves `publicDir: false` to ''.
+      // Decision: Vite resolves `publicDir: false` to ''.
       const resolvedPublicDir =
         config.publicDir && config.publicDir.length > 0 ? config.publicDir : null;
       if (resolvedPublicDir !== publicDir) {
@@ -624,7 +621,7 @@ export function routingPlugin(
     config(_, env) {
       previewing = env.isPreview === true;
       routeEnvironment = env.command === 'serve' && !env.isPreview ? 'dev' : 'prod';
-      // Dev only, so builds never see the environment.
+      // Decision: Dev only, so builds never see the environment.
       const authConfigEnvironmentConfig =
         routeEnvironment === 'dev'
           ? {
@@ -633,7 +630,7 @@ export function routingPlugin(
                   consumer: 'server' as const,
                   dev: {
                     createEnvironment: (name: string, config: ResolvedConfig) =>
-                      // bwf invalidates it on saves; no HMR client to run.
+                      // Decision: bwf invalidates it on saves; no HMR client to run.
                       createRunnableDevEnvironment(name, config, {
                         hot: false,
                         runnerOptions: { hmr: false },
@@ -648,7 +645,7 @@ export function routingPlugin(
         env.command === 'build' && Boolean(process.env.PLATFORM_DEPLOY_PROJECT_ID);
 
       if (env.command === 'serve' && options.isAuthEnabled()) {
-        // Alias better-auth client subpaths to absolute file paths so
+        // Decision: Alias better-auth client subpaths to absolute file paths so
         // Vite can resolve them during SSR without the bare specifiers
         // needing to be hoisted into the user's node_modules (pnpm
         // strict mode). Without this, Vite discovers them lazily on
@@ -704,7 +701,6 @@ export function routingPlugin(
         writeQueueTypes();
         writeProcedureTypes();
 
-        // Bundle migrations into the worker (in-worker migration runner)
         const migrationsDir = paths.migrationsDir;
         if (existsSync(migrationsDir) || compileOptions.auth) {
           const { collectMigrations } = await import('./migrations/collect.ts');
@@ -722,7 +718,6 @@ export function routingPlugin(
           compileOptions.migrationPlanBundle =
             dialect === 'sqlite' ? buildMigrationPlanBundle(migrations) : undefined;
         }
-        // Re-write the entry from the completed scan.
         writeWorkerEntry();
 
         generatedRouteInputs = nextRouteInputs;
@@ -730,7 +725,7 @@ export function routingPlugin(
       });
     },
 
-    // `vite build --watch` reruns buildStart without the dev watcher below, so
+    // Decision: `vite build --watch` reruns buildStart without the dev watcher below, so
     // forget the analysis of each changed file here as well.
     watchChange(id) {
       invalidateSourceAnalysis(id);
@@ -748,12 +743,11 @@ export function routingPlugin(
         if (id === VIRTUAL_CLIENT_BROWSER_ID) {
           return VIRTUAL_CLIENT_BROWSER_ID;
         }
-        // Redirect bare "platform" imports to the lightweight handler
+        // Decision: Redirect bare "platform" imports to the lightweight handler
         // subpath to avoid pulling the entire plugin into the Worker bundle.
         if (id === '@builtbyfriends/bwf') {
           return handlerFile;
         }
-        // Redirect bwf/queues to the built runtime module
         if (id === '@builtbyfriends/bwf/queues') {
           return resolveFile('#self/queues');
         }
@@ -776,7 +770,7 @@ export function routingPlugin(
         if (id !== VIRTUAL_ROUTES_ID) {
           return;
         }
-        // The route table embeds the dev-trigger token. Only server environments import
+        // Decision: The route table embeds the dev-trigger token. Only server environments import
         // it; refusing the client environment keeps `/@id/virtual:platform-routes` from
         // returning it, either as the module or as code on Vite's error page.
         if (this?.environment?.name === 'client') {
@@ -799,7 +793,7 @@ export function routingPlugin(
     },
 
     hotUpdate() {
-      // bwf invalidates this environment itself; Vite's update pass would
+      // Decision: bwf invalidates this environment itself; Vite's update pass would
       // only log a page reload that nothing receives.
       if (this.environment.name === AUTH_CONFIG_ENVIRONMENT) {
         return [];
@@ -811,7 +805,6 @@ export function routingPlugin(
       authConfigEnvironment =
         authEnvironment && isRunnableDevEnvironment(authEnvironment) ? authEnvironment : undefined;
 
-      // Watch the source convention directories for file changes
       const watcher = devServer.watcher;
 
       const handleFileChange = async (path: string, event: 'add' | 'change' | 'unlink') => {
@@ -821,7 +814,7 @@ export function routingPlugin(
         if (authConfigChanged) {
           authConfigStale = true;
         }
-        // After a failed load, a new file may be the import that was missing.
+        // Decision: After a failed load, a new file may be the import that was missing.
         const authImportCreated =
           event === 'add' && authConfigStale && compileOptions.auth !== null;
 
@@ -841,7 +834,7 @@ export function routingPlugin(
 
         const shouldRestart = await regenerateInOrder(async () => {
           invalidateSourceAnalysis(normalizedPath);
-          // Re-scan and invalidate the virtual module in ALL environments.
+          // Decision: Re-scan and invalidate the virtual module in ALL environments.
           // The route table virtual module lives in the workerd environment,
           // not the client — so we must iterate all environments.
           const forceRegeneration =
@@ -854,7 +847,7 @@ export function routingPlugin(
           try {
             await rescan(true);
           } catch (error) {
-            // Keep the last good route table; the next change rescans.
+            // Decision: Keep the last good route table; the next change rescans.
             const message = error instanceof Error ? error.message : String(error);
             devServer.config.logger.error(message, {
               error: error instanceof Error ? error : undefined,
@@ -865,7 +858,7 @@ export function routingPlugin(
           resolveAuthCompileOptions();
           const nextRouteInputs = routeInputsKey();
 
-          // Saving a handler usually changes nothing the scan reports.
+          // Decision: Saving a handler usually changes nothing the scan reports.
           // Vite already invalidates the saved module, so the route table only needs
           // regenerating when the scan moved.
           const currentFiles = generatedFilesSignature();
@@ -875,7 +868,7 @@ export function routingPlugin(
             currentFiles !== generatedFiles;
 
           if (routeInputsChanged) {
-            // A failed forced update must also retry when the scan itself is unchanged.
+            // Decision: A failed forced update must also retry when the scan itself is unchanged.
             generatedRouteInputs = undefined;
           }
 
@@ -896,7 +889,7 @@ export function routingPlugin(
             writeWorkerEntry();
           }
 
-          // For structural changes (file add/remove), send full-reload to trigger
+          // Decision: For structural changes (file add/remove), send full-reload to trigger
           // a program reload so the workerd picks up new/removed routes.
           // For content-only changes, module invalidation alone is sufficient —
           // the workerd re-evaluates stale modules on the next request. Sending
@@ -920,7 +913,7 @@ export function routingPlugin(
           }
         });
 
-        // Restart runs buildStart again, so release the generation queue first.
+        // Decision: Restart runs buildStart again, so release the generation queue first.
         if (shouldRestart) {
           await devServer.restart();
         }
@@ -937,7 +930,7 @@ export function routingPlugin(
       watcher.on('change', (path) => onFileChange(path, 'change'));
       watcher.on('unlink', (path) => onFileChange(path, 'unlink'));
 
-      // File-based routing rule HMR: `public/_redirects` / `public/_headers`
+      // Decision: File-based routing rule HMR: `public/_redirects` / `public/_headers`
       // changes re-merge + invalidate the route module so rules take effect
       // without restarting the dev server. `vite dev` bakes rules into the compiled Hono app.
       if (publicDir) {
@@ -961,7 +954,7 @@ export function routingPlugin(
         watcher.on('unlink', handleRulesFileChange);
       }
 
-      // Later configureServer hooks can load app modules before buildStart.
+      // Decision: Later configureServer hooks can load app modules before buildStart.
       // Their imports may already reference the generated authentication tables.
       if (options.isAuthEnabled()) {
         await regenerateInOrder(async () => {

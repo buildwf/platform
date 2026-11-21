@@ -50,7 +50,7 @@ export async function recoverPlatformInstallations(
   ) => Promise<void> = verifyInstallationEndpoint,
   selector = '',
 ): Promise<ReadonlyArray<PlatformInstallationManifest>> {
-  // The routing namespace is the durable recovery root. Interrupted creates
+  // Decision: The routing namespace is the durable recovery root. Interrupted creates
   // can intentionally move it to a deterministic `-retry-*` name, and future
   // naming changes must not make an otherwise valid installation invisible.
   // The reserved manifest key plus the manifest's exact id/name binding is the

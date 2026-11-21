@@ -53,7 +53,7 @@ class SandboxCapability extends RpcTarget {
     this.#sandbox = sandbox;
   }
   async invoke(operation: string, args: Array<unknown>): Promise<unknown> {
-    // No raw stub, control binding, configuration, alarm or startup authority.
+    // Decision: Allowlist on purpose: no raw stub, control binding, configuration, alarm or startup authority.
     if (!['exec', 'files', 'fetch', 'running', 'destroy'].includes(operation)) {
       throw new TypeError(`Unsupported Sandbox operation: ${operation}`);
     }
@@ -169,9 +169,8 @@ export class SandboxController extends SandboxContainer<ControllerEnv> {
               controller.close();
               await finish?.();
             } else {
-              // Workers RPC eagerly pumps transferred streams, even if the
-              // application never reads them. A pending transport read must
-              // not keep an unattended background process alive forever.
+              // Decision: Workers RPC eagerly pumps transferred streams even if the application never reads them, so a
+              // pending transport read mustn't keep an unattended background process alive forever.
               if (!finish) {
                 await this.#touch();
               }
@@ -281,7 +280,7 @@ export class SandboxController extends SandboxContainer<ControllerEnv> {
       }
       await this.stopped();
     }
-    // A container with no durable admission record must never be adopted.
+    // Decision: A container with no durable admission record isn't adopted.
     if (this.container.running) {
       await this.container.destroy();
     }

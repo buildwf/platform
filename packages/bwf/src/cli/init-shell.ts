@@ -24,6 +24,6 @@ export function commandInProject(root: string, command: string): string {
     return command;
   }
   const path = relative(shell, directory);
-  // `cd` would read a leading dash as an option, and `cd -` as the previous directory.
+  // Decision: `cd` would read a leading dash as an option, and `cd -` as the previous directory.
   return `cd ${quoteShellPath(path.startsWith('-') ? `./${path}` : path)} && ${command}`;
 }

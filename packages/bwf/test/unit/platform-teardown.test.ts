@@ -82,7 +82,7 @@ const emailDeployment = createPlatformDeploymentManifest({
 const INSTALLATION_ID = 'example-a1b2c3d4';
 const FINGERPRINT = '2026-09-14T00:00:00.000Z';
 const RESUME = `bwf platform uninstall ${INSTALLATION_ID} --purge-resources`;
-// The installer records its intent right before it creates the AI Gateway.
+// Decision: The installer records its intent right before it creates the AI Gateway.
 const AI_GATEWAY_INTENT_AT = '2026-09-14T00:00:01.000Z';
 
 function hash(value: unknown): string {
@@ -225,7 +225,7 @@ function installedManifest(
   return manifest;
 }
 
-/** A Cloudflare account that enforces the delete rules seen live. */
+// Decision: A Cloudflare account that enforces the delete rules seen live.
 function cloudflare(manifest: PlatformInstallationManifest) {
   const calls: Array<string> = [];
   const ready = (kind: InstallationResourceKind) =>
@@ -289,16 +289,14 @@ function cloudflare(manifest: PlatformInstallationManifest) {
         { accountId: resource.accountId, name: resource.name },
       ]),
     ),
-    // A Worker the installation did not create that sends logs to the tail Worker.
     foreignTailProducer: false,
-    // Service bindings as the installer deploys them: the API Worker checks
-    // the proxy through one, and the proxy and email gateway call the API.
+    // Decision: Service bindings as the installer deploys them: the API Worker checks the proxy through one,
+    // and the proxy and email gateway call the API.
     serviceBindings: [
       { from: names.apiWorker as string, to: names.proxyWorker as string },
       { from: names.proxyWorker as string, to: names.apiWorker as string },
       { from: names.emailGatewayWorker as string, to: names.apiWorker as string },
     ],
-    // Workers outside the installation, which bind like any other Worker.
     foreignWorkers: new Set<string>(),
     emailRules: [] as Array<{ id: string; enabled: boolean; workerName: string | null }>,
     catchAll: null as { enabled: boolean; workerName: string | null } | null,
@@ -365,7 +363,7 @@ function cloudflare(manifest: PlatformInstallationManifest) {
         }
         live.workers.delete(resource.name);
       } else if (resource.kind === 'queue') {
-        // The API and dispatch Workers produce to the platform Queues.
+        // Decision: The API and dispatch Workers produce to the platform Queues.
         const bound = [names.apiWorker, names.dispatchWorker].find((name) =>
           live.workers.has(name),
         );
@@ -449,7 +447,7 @@ function cloudflare(manifest: PlatformInstallationManifest) {
         live.access.delete(id);
       }
     },
-    // Access ids are scoped to their account, like Cloudflare's API.
+    // Decision: Access ids are scoped to their account, like Cloudflare's API.
     getAccessResource: async (account: string, kind: string, id: string) => {
       calls.push(`GET access ${kind} ${id}`);
       const entry = live.access.get(id);
@@ -569,7 +567,6 @@ function changes(fake: ReturnType<typeof cloudflare>): Array<string> {
   return fake.calls.filter((call) => !call.startsWith('GET'));
 }
 
-/** Runs a plain uninstall that stops at its last write, after every resource was recorded as kept. */
 async function stopPlainUninstallAtLastWrite(
   fake: ReturnType<typeof cloudflare>,
   manifest: PlatformInstallationManifest,
@@ -705,17 +702,16 @@ describe('uninstall --purge-resources', () => {
 
     expect(deletes(fake)).toEqual(FULL_ORDER);
     expect(fake.calls.indexOf('PUT disabled')).toBeLessThan(fake.calls.indexOf(FULL_ORDER[0]!));
-    // Only the proxy Worker, which the API Worker binds to, is forced, and
-    // only after Cloudflare refused it and named no Worker outside the
-    // installation.
+    // Decision: Only the proxy Worker, which the API Worker binds to, is forced, and only after Cloudflare
+    // refused it and named no Worker outside the installation.
     expect(fake.calls.filter((call) => call.includes('force'))).toEqual([
       `DELETE worker ${names.proxyWorker} force`,
     ]);
     expect(fake.calls.indexOf(`GET worker-dependents ${names.proxyWorker}`)).toBeGreaterThan(
       fake.calls.indexOf(`DELETE worker ${names.proxyWorker}`),
     );
-    // Never touched: the adopted zone and KV, the adopted Access application,
-    // and a Queue consumer run by a Worker the installation did not create.
+    // Decision: Not touched: the adopted zone and KV, the adopted Access application, and a Queue consumer
+    // run by a Worker the installation didn't create.
     expect(fake.live.kv).toEqual([{ id: 'customer-kv-id', name: 'customer-kv' }]);
     expect(fake.live.access.has('company-app')).toBe(true);
     expect(fake.live.consumers.get('usage-id')).toEqual([
@@ -758,7 +754,6 @@ describe('uninstall --purge-resources', () => {
 
     await uninstallPlatform(fake, stopped, purgeResourcesArgs, dependencies());
 
-    // The failed DELETE is retried once; nothing else is sent twice.
     const sent = deletes(fake);
     const retried = `DELETE queue ${names.usageQueue}`;
     expect(sent.filter((call) => call === retried)).toHaveLength(2);
@@ -848,7 +843,6 @@ describe('uninstall --purge-resources', () => {
     persistInstallation(manifest, directories);
     const fake = cloudflare(manifest);
     fake.live.routes[1]!.script = 'someone-else';
-    // A later, unrelated stop makes the run resume.
     fake.live.foreignTailProducer = true;
 
     await expect(
@@ -1010,7 +1004,6 @@ describe('uninstall --purge-resources', () => {
     persistInstallation(manifest, directories);
     const fake = cloudflare(manifest);
 
-    // The namespace still holds an application Worker, so --purge-data stops.
     await expect(
       uninstallPlatform(
         fake,
@@ -1079,7 +1072,6 @@ describe('uninstall --purge-resources', () => {
     expect(changes(fake).slice(before)).toEqual([]);
     const final = listInstallationManifests()[0]!;
     expect(final.status).toBe('failed');
-    // Kept resources stay recorded as kept.
     expect(final.resources.find((resource) => resource.key === 'proxy-worker')?.state).toBe(
       'retained',
     );
@@ -1090,7 +1082,6 @@ describe('uninstall --purge-resources', () => {
     persistInstallation(manifest, directories);
     const fake = cloudflare(manifest);
     fake.live.access.set('access-app', { accountId: 'account', name: 'renamed' });
-    // A later, unrelated stop makes the run resume.
     fake.live.foreignTailProducer = true;
     await expect(
       uninstallPlatform(fake, manifest, purgeResourcesArgs, dependencies()),
@@ -1172,8 +1163,8 @@ describe('uninstall --purge-resources', () => {
     const manifest = installedManifest();
     persistInstallation(manifest, directories);
     const fake = cloudflare(manifest);
-    // While the run is going, another Worker takes the API Worker's name and
-    // still binds to the proxy.
+    // Decision: While the run is going, another Worker takes the API Worker's name and still binds to the
+    // proxy.
     const replacement = { ...manifest, ownershipNonce: 'replacement-owner-nonce-00000000' };
     const deleteResource = fake.deleteResource;
     fake.deleteResource = async (...args: Parameters<typeof deleteResource>) => {
@@ -1324,7 +1315,6 @@ describe('uninstall --purge-resources', () => {
     expect(changes(fake)).toEqual([]);
     expect(listInstallationManifests()[0]?.status).toBe('installed');
 
-    // The plan still prints and warns instead of failing.
     await uninstallPlatform(fake, manifest, { ...purgeResourcesArgs, plan: true }, oauth);
     expect(noteText('Uninstall plan')).toContain('Delete every resource');
     expect(String(vi.mocked(log.warn).mock.calls.at(-1)?.[0])).toContain(
@@ -1407,7 +1397,7 @@ describe('uninstall --purge-resources', () => {
     const manifest = installedManifest();
     persistInstallation(manifest, directories);
     const fake = cloudflare(manifest);
-    // Someone deleted the original gateway and made a new one with the same id.
+    // Decision: Someone deleted the original gateway and made a new one with the same id.
     fake.live.aiGateways[0]!.createdAt = '2026-10-01T00:00:00.000Z';
 
     await uninstallPlatform(fake, manifest, purgeResourcesArgs, dependencies());
@@ -1439,7 +1429,6 @@ describe('uninstall --purge-resources', () => {
     persistInstallation(manifest, directories);
     const fake = cloudflare(manifest);
     let reads = 0;
-    // Both checks before the first change see no project; one is created after.
     const readProjects = async () => (++reads > 2 ? ['late-project'] : []);
 
     await expect(

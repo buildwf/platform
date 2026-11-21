@@ -1,6 +1,6 @@
 import type { RuntimeEnvironment } from './routing-worker.ts';
 
-// `c.rewrite()` cannot reach files the asset layer serves. `.html` is excluded: routes may use it.
+// Decision: `c.rewrite()` cannot reach files the asset layer serves. `.html` is excluded: routes may use it.
 export const ASSET_EXTENSIONS: Array<string> = [
   'png',
   'jpg',
@@ -62,7 +62,7 @@ export function createManifestLoader(): ManifestLoader {
     if (!assets || typeof assets.fetch !== 'function') {
       return null;
     }
-    // Concurrent cold requests share one fetch and parse. A missing or failed
+    // Decision: Concurrent cold requests share one fetch and parse. A missing or failed
     // manifest is not cached, so a later request retries.
     pending ??= (async () => {
       const response = await assets.fetch(

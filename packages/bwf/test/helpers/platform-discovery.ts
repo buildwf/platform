@@ -2,10 +2,8 @@ import { MIN_PLATFORM_VERSION } from '../../src/cli/client.ts';
 
 const DISCOVERY_PATH = '/.well-known/platform';
 
-/** Optional discovery fields. A field left out is absent, as on an older platform. */
 export type PlatformDiscoveryFeatures = { directWorkerUpload?: unknown };
 
-/** A valid discovery response for `apiUrl` that advertises `platformVersion`. */
 export function platformDiscoveryResponse(
   apiUrl: string,
   platformVersion: string = MIN_PLATFORM_VERSION,
@@ -40,10 +38,8 @@ export function isPlatformDiscoveryRequest(input: unknown): boolean {
   return new URL(url).pathname === DISCOVERY_PATH;
 }
 
-/**
- * Wraps a fetch mock so the CLI's platform version check is answered here and
- * never reaches the mock. Call counts and queued responses stay unchanged.
- */
+// Decision: Wraps a fetch mock so the CLI's platform version check is answered here and
+// never reaches the mock. Call counts and queued responses stay unchanged.
 export function withPlatformDiscovery(
   fetchMock: unknown,
   platformVersion: string = MIN_PLATFORM_VERSION,

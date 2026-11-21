@@ -21,7 +21,6 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-/** Runs the built bin with `process.versions` replaced before any CLI module loads. */
 function runWithVersions(versions: Record<string, string> | null, args: Array<string>) {
   const execArgv: Array<string> = [];
   if (versions) {
@@ -52,7 +51,7 @@ describe('bwf runtime check (built bin)', () => {
         'Update .node-version or the node on PATH. In GitHub Actions add actions/setup-node\n' +
         'with `node-version: lts/*` and `check-latest: true` before this step.\n',
     );
-    // `--version` output would mean the main CLI module ran.
+    // Decision: `--version` output would mean the main CLI module ran.
     expect(result.stdout).toBe('');
   });
 

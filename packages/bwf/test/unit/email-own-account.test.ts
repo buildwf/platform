@@ -1,16 +1,11 @@
-/**
- * Email on the developer's OWN Cloudflare account (`bwf deploy --platform
- * cloudflare`).
- *
- * Two things differ from the managed platform and both are exercised here
- * with `cloudflare:email` faked, since the real module exists only in workerd:
- *
- *   outbound  sendEmail() -> env.SEND_EMAIL.send(new EmailMessage(...)),
- *             one envelope per recipient, no proxy hop
- *   inbound   Cloudflare calls the worker's `email()` with a REAL
- *             `ForwardableEmailMessage` and ignores the return value, so the
- *             generated entry must ENACT the recorded actions on it
- */
+// Decision: Email on the developer's own Cloudflare account (`bwf deploy --platform cloudflare`).
+// Two things differ from the managed platform, and both are tested here with
+// `cloudflare:email` faked, since the real module exists only in workerd:
+//   outbound  sendEmail() -> env.SEND_EMAIL.send(new EmailMessage(...)),
+//             one envelope per recipient, no proxy hop
+//   inbound   Cloudflare calls the worker's `email()` with a real `ForwardableEmailMessage`
+//             and ignores the return value, so the generated entry has to enact the
+//             recorded actions on it
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { compileWorkerEntry } from '../../src/router/compile.ts';
 import { sendEmail } from '../../src/runtime/email.ts';
@@ -26,10 +21,9 @@ import { createEmailTestHarness } from '../../src/runtime/email/testing.ts';
 import { envContext } from '../../src/runtime/env-raw.ts';
 import { withRuntimeEnv } from '../../src/runtime/env.ts';
 
-// Stand-in for workerd's `EmailMessage`. It only needs to be a recognisable
-// class that keeps its constructor arguments, so a test can assert which
-// envelope reached the binding and that a genuine instance (not a duck-typed
-// object) was handed to `reply()`.
+// Decision: Stand-in for workerd's `EmailMessage`. It only needs to be a recognisable class that keeps
+// its constructor arguments, so a test can assert which envelope reached the binding and that
+// a genuine instance (not a duck-typed object) was handed to `reply()`.
 const fake = vi.hoisted(() => {
   class FakeEmailMessage {
     constructor(
@@ -60,7 +54,6 @@ async function readAll(raw: ReadableStream<Uint8Array> | string): Promise<string
   return out + decoder.decode();
 }
 
-/** An error shaped the way Email Service throws them: `Error` + `code`. */
 function bindingError(code: string, message: string): Error & { code: string } {
   return Object.assign(new Error(message), { code });
 }
@@ -109,7 +102,6 @@ describe('sendEmail (SEND_EMAIL binding)', () => {
       ['support@mail.acme.com', 'alice@example.com'],
       ['support@mail.acme.com', 'bob@example.com'],
     ]);
-    // Each envelope carries the shared MIME, on a fresh stream.
     const bodies = await Promise.all(sent.map((m) => readAll(m.raw)));
     for (const body of bodies) {
       expect(body).toContain('Subject: Welcome');
@@ -257,11 +249,6 @@ describe('sendEmail (SEND_EMAIL binding)', () => {
   });
 });
 
-/**
- * A `ForwardableEmailMessage` as workerd hands it to `email()`: a one-shot
- * raw stream, a `Headers` instance, and the three native methods, each
- * recording its call.
- */
 function nativeMessage(opts: { from: string; to: string; mime: string }): {
   message: ForwardableEmailMessage;
   calls: {
@@ -315,11 +302,6 @@ const INBOUND_MIME =
   '\r\n' +
   'my order is missing\r\n';
 
-/**
- * Runs the GENERATED `handleEmail` from `compileWorkerEntry` with the real
- * runtime wired in and the user handler injected — the seam between "record
- * the actions" and "enact them on the native message" is what is under test.
- */
 function buildHandleEmail(
   userHandler: (
     message: ForwardableEmailMessage,
@@ -390,7 +372,7 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
   });
 
   it('enacts a forward recorded after parseEmail drained the native raw stream', async () => {
-    // Native forwarding must still work after parsing consumes the raw stream.
+    // Decision: Native forwarding has to work after parsing consumes the raw stream.
     const handleEmail = buildHandleEmail(async (message) => {
       const parsed = await parseEmail(message);
       await message.forward('ops@acme.com', new Headers({ 'X-Subject': parsed.subject ?? '' }));
@@ -412,11 +394,11 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
   });
 
   it('fires nothing on the native message when a later forward carries an invalid header record', async () => {
-    // The plain-record form is stored verbatim, so a bad header must fail in
-    // the handler's own call, before the first forward is enacted.
+    // Decision: The plain-record form is stored verbatim, so a bad header has to fail in the handler's own
+    // call, before the first forward is enacted.
     const handleEmail = buildHandleEmail(async (message) => {
       await message.forward('ops@acme.com');
-      // The record form is a runtime affordance (JS handlers, or a cast):
+      // Decision: The record form is a runtime affordance (JS handlers, or a cast):
       // `ForwardableEmailMessage.forward` is typed against `Headers`.
       const record = { 'X-Platform-Trace': 'abc\r\nBcc: leak@evil.test' } as unknown as Headers;
       await message.forward('archive@acme.com', record);
@@ -441,8 +423,8 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
 
   it('enacts replyEmail as a real EmailMessage sent from the delivered address', async () => {
     const handleEmail = buildHandleEmail(async (message) => {
-      // Both reads of the one-shot native stream must work: the proxy
-      // buffers it so a parse followed by a reply is the ordinary case.
+      // Decision: Both reads of the one-shot native stream have to work: the proxy buffers it, so a parse
+      // followed by a reply is the ordinary case.
       const parsed = await parseEmail(message);
       await replyEmail(message, { text: `re: ${parsed.text?.trim()}` });
     });
@@ -452,7 +434,6 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
       mime: INBOUND_MIME,
     });
 
-    // No __PLATFORM_PROJECT_SLUG: the reply sender is message.to itself.
     const actions = await handleEmail(message, {}, {});
 
     expect(calls.replies).toHaveLength(1);
@@ -490,9 +471,9 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
   });
 
   it('hands the native setReject() the reason the platform router would send', async () => {
-    // The parser unfolds the encoded CRLF, but the decoded subject still
-    // contains a NUL. The proxy must bound and normalize the reason before
-    // replaying it through native setReject(), matching the platform router.
+    // Decision: The parser unfolds the encoded CRLF, but the decoded subject still contains a NUL. The proxy
+    // has to bound and normalize the reason before replaying it through native setReject(),
+    // matching the platform router.
     const handleEmail = buildHandleEmail(async (message) => {
       const parsed = await parseEmail(message);
       message.setReject(`unwanted: ${parsed.subject}${'!'.repeat(2000)}`);
@@ -510,8 +491,8 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
 
     const actions = await handleEmail(message, {}, {});
 
-    // The parsed prefix is 22 characters, leaving room for 978 "!".
-    // Replacing the remaining NUL with a space preserves the window's length.
+    // Decision: The parsed prefix is 22 characters, leaving room for 978 "!". Replacing the remaining NUL
+    // with a space keeps the window's length.
     const expected = `unwanted: spam Bcc: x ${'!'.repeat(978)}`;
     expect(calls.rejects).toEqual([expected]);
     expect(actions).toEqual([{ type: 'reject', reason: expected }]);
@@ -536,15 +517,11 @@ describe('generated handleEmail on a native ForwardableEmailMessage', () => {
   });
 });
 
-/**
- * A verified custom-domain receipt carries `viaDomain` and a recipient
- * without a `<slug>+` prefix, while
- * provisioning still injects `__PLATFORM_PROJECT_SLUG` unconditionally. The
- * generated `handleEmail` must suppress the slug so the dispatcher runs in
- * no-prefix mode — left applied, the strip would take
- * everything up to the first `+` and `support+T-42@acme.com` would dispatch
- * as `T-42` to `_default` or a wrong `[user]` param.
- */
+// Decision: A verified custom-domain receipt carries `viaDomain` and a recipient without a `<slug>+`
+// prefix, while provisioning still injects `__PLATFORM_PROJECT_SLUG` unconditionally. The
+// generated `handleEmail` suppresses the slug so the dispatcher runs in no-prefix mode. Left
+// applied, the strip would take everything up to the first `+`, and `support+T-42@acme.com`
+// would dispatch as `T-42` to `_default` or a wrong `[user]` param.
 describe('generated handleEmail on a verified custom-domain receipt', () => {
   function relayEnvelope(to = 'support+T-42@acme.com') {
     return {
@@ -567,8 +544,8 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
       });
     });
 
-    // The slug deliberately equals the local-part prefix: stripping keyed on
-    // the slug alone would turn `support+T-42@` into `T-42@`.
+    // Decision: The slug deliberately equals the local-part prefix: stripping keyed on the slug alone would
+    // turn `support+T-42@` into `T-42@`.
     const actions = await handleEmail(relayEnvelope(), { __PLATFORM_PROJECT_SLUG: 'support' }, {});
 
     expect(seen).toEqual([{ to: 'support+T-42@acme.com', slug: undefined, platformTo: undefined }]);
@@ -604,10 +581,9 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
       {},
     )) as Array<{ type: string; from: string; to: string }>;
 
-    // The spec's "Inbound identity": a reply to a relayed message leaves
-    // from the address that received it, on the customer domain — the
-    // platform's reply pin accepts exactly that shape for the receiving
-    // project, and the shared-sender `<slug>+noreply@` default would fail it.
+    // Decision: The spec's "Inbound identity": a reply to a relayed message leaves from the address that
+    // received it, on the customer domain. The platform's reply pin accepts that shape for the
+    // receiving project, and the shared-sender `<slug>+noreply@` default would fail it.
     expect(actions).toMatchObject([
       { type: 'reply', from: 'support+T-42@acme.com', to: 'sender@example.com' },
     ]);
@@ -635,12 +611,10 @@ describe('generated handleEmail on a verified custom-domain receipt', () => {
   });
 });
 
-/**
- * A project with an email alias receives on `<alias>@<domain>` as well as
- * `<slug>@<domain>`. The platform router already matched the prefix to this
- * project, so the generated `handleEmail` strips the name the recipient used,
- * not the injected `__PLATFORM_PROJECT_SLUG`.
- */
+// Decision: A project with an email alias receives on `<alias>@<domain>` as well as `<slug>@<domain>`.
+// The platform router already matched the prefix to this project, so the generated
+// `handleEmail` strips the name the recipient used, not the injected
+// `__PLATFORM_PROJECT_SLUG`.
 describe('generated handleEmail on a project email alias', () => {
   function sharedEnvelope(to: string) {
     return {
@@ -680,7 +654,6 @@ describe('generated handleEmail on a project email alias', () => {
       {},
     );
 
-    // Keyed on `proj`, the dispatcher would read `alias` as an address.
     expect(seen).toEqual([{ to: 'alias@mail.buildwf.dev', slug: 'alias' }]);
   });
 

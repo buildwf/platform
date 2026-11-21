@@ -147,7 +147,7 @@ function formRecordToObject(
       if (index === null) {
         throw new Error('Form field shape is inconsistent');
       }
-      // Sparse indices allocate slots too. Charge growth before writing, across
+      // Decision: Sparse indices allocate slots too. Charge growth before writing, across
       // all arrays, while allowing existing slots to be filled or overwritten.
       reserveNodes(Math.max(0, index + 1 - parent.length));
       parent[index] = value;
@@ -194,7 +194,7 @@ async function readBody(c: CloudContext): Promise<unknown> {
   if (!isFormContentType(c.req.header('content-type'))) {
     return c.req.json();
   }
-  // `[]` keys are arrays at runtime even when the declared return type is not.
+  // Decision: `[]` keys are arrays at runtime even when the declared return type is not.
   const parsed = (await c.req.parseBody()) as Record<string, FormEntry | Array<FormEntry>>;
   return formRecordToObject(parsed);
 }
@@ -238,7 +238,7 @@ export async function runValidation<V extends ValidatorSlots>(
     let raw: unknown;
     const formBody = isFormContentType(c.req.header('content-type'));
     try {
-      // Multipart and URL-encoded bodies are what `useForm` sends for files.
+      // Decision: Multipart and URL-encoded bodies are what `useForm` sends for files.
       // JSON stays on `c.req.json()` so scalar types there are unchanged.
       raw = await readBody(c);
     } catch {

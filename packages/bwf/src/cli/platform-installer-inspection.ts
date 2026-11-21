@@ -411,7 +411,7 @@ export async function readPlatformWorkerVersionSnapshot(
       ? ((annotations as Record<string, string>)['workers/message'] ?? null)
       : null;
   const metadata = parseCloudflareVersionMessage(message);
-  // A version made outside bwf has no bwf record of its triggers. Only a run
+  // Decision: A version made outside bwf has no bwf record of its triggers. Only a run
   // that replaces those changes, with the operator's consent, gives bwf's own.
   if (metadata?.schema !== 2 && unrecordedTriggerConfig) {
     return {

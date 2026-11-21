@@ -4,19 +4,14 @@ import { provisionBindings } from '../../src/provisioning/provision.ts';
 import { RESERVED_BINDING_NAMES, isReservedBindingName } from '../../src/reserved-bindings.ts';
 import type { DeployManifest } from '../../src/types.ts';
 
-/**
- * The deploy pipeline concatenates the platform's bindings with the user's
- * vars and secrets into one `metadata.bindings` array, and Cloudflare resolves
- * duplicate names last-wins with no error. Every platform-injected name must
- * therefore be rejected as a user binding — and the two lists live in
- * different modules, so nothing but a test keeps them in step.
- *
- * These tests call the REAL producers with a manifest that declares no user
- * bindings, so everything that comes back is platform-injected by definition.
- */
+// Decision: The deploy pipeline joins platform bindings with the user's vars and secrets into one
+// `metadata.bindings` array, and Cloudflare resolves duplicate names last-wins with no error. So
+// each platform name has to be reserved, and the two lists live in different modules: only this
+// test keeps them in step. It calls the real producers with no user bindings, so all results are
+// platform-injected.
 
-// `getProjectResources` is the only db call `provisionBindings` makes for a
-// manifest with no resource bindings.
+// Decision: getProjectResources is the only db call provisionBindings makes for a manifest with no
+// resource bindings.
 const stubDb = {
   select: () => ({ from: () => ({ where: async () => [] }) }),
 } as unknown as Db;
@@ -74,9 +69,6 @@ describe('reserved binding names cover every platform-injected binding', () => {
   });
 
   it('names every binding the producers actually emit today', async () => {
-    // The dual of the tests above: they catch a NEW platform binding that was
-    // never reserved. This one catches a reserved name silently DROPPED from
-    // the set. Retired Sandbox producer names are checked separately above.
     expect(new Set(await platformBindingNames())).toEqual(
       new Set([
         '__PLATFORM_PROXY',
@@ -89,10 +81,9 @@ describe('reserved binding names cover every platform-injected binding', () => {
   });
 
   it('reserves SEND_EMAIL even though no worker receives that binding today', () => {
-    // Outbound mail goes through `__PLATFORM_PROXY/email/send`; the proxy holds
-    // the account-level send_email binding. Reserved anyway so the name stays
-    // free for custom-domain email and cannot collide with framework code
-    // that still references it.
+    // Decision: Outbound mail goes through `__PLATFORM_PROXY/email/send`, and the proxy holds the account-level
+    // send_email binding. SEND_EMAIL stays reserved so the name is free for custom-domain email and
+    // can't collide with framework code that still references it.
     expect(isReservedBindingName('SEND_EMAIL')).toBe(true);
   });
 
@@ -103,9 +94,8 @@ describe('reserved binding names cover every platform-injected binding', () => {
   });
 
   it('does NOT reserve a bare BWF_PROJECT_SLUG', () => {
-    // There is exactly one project-slug binding and it is `__PLATFORM_PROJECT_SLUG`
-    // (what the framework reads). Reserving an undotted `BWF_PROJECT_SLUG`
-    // nothing injects would only take a usable name away from users.
+    // Decision: The only project-slug binding is `__PLATFORM_PROJECT_SLUG` (what the framework reads). Reserving
+    // an undotted BWF_PROJECT_SLUG that nothing injects would only take a usable name from users.
     expect(isReservedBindingName('BWF_PROJECT_SLUG')).toBe(false);
   });
 

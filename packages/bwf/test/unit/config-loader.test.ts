@@ -4,11 +4,8 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { loadBwfConfig } from '../../src/config-loader.ts';
 
-/**
- * Coverage for the bwf.config.ts loader. jiti only aliases `@builtbyfriends/bwf/config`,
- * so tsconfig path aliases fail to resolve — they get detected and produce
- * the same hint as env.ts.
- */
+// Decision: jiti only aliases `@builtbyfriends/bwf/config`, so tsconfig path aliases fail to resolve.
+// The loader detects that and gives the same hint as env.ts.
 
 const roots: Array<string> = [];
 
@@ -60,7 +57,6 @@ describe('loadBwfConfig', () => {
     writeFileSync(join(root, 'shared.ts'), 'export const SUFFIX = "-b";\n');
     expect(loadBwfConfig(root)?.value).toEqual({ sourceDir: 'two-b' });
 
-    // A truncated or foreign cache entry is ignored, not evaluated.
     for (const file of readdirSync(cache)) {
       writeFileSync(join(cache, file), 'throw new Error("stale cache entry");');
     }

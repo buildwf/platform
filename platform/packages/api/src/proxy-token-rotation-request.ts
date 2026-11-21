@@ -2,9 +2,8 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { DbOrTx } from './db/client.ts';
 import { projectCleanupJobs, projectMembers } from './schema.ts';
 
-// Rotation requests, apart from the runner in `proxy-token-rotation.ts` so the
-// `db/` modules can write one inside their transactions without importing
-// `db.ts` back.
+// Decision: Rotation requests live apart from the runner in `proxy-token-rotation.ts` so the `db/` modules can
+// write one inside their transactions without importing `db.ts` back.
 
 export const PROXY_TOKEN_ROTATION_JOB_KIND = 'proxy-token-rotation';
 
@@ -26,8 +25,8 @@ export function rotationLog(event: string, projectId: string, detail = ''): void
   console.log(`[proxy-token-rotation] ${event} ${projectId}${detail ? ` ${detail}` : ''}`);
 }
 
-// What a request does to an existing job. Both writers below share these, so
-// one statement for many projects leaves the rows one request per project would.
+// Decision: What a request does to an existing job. Both writers below share these, so one statement for many
+// projects leaves the same rows as one request per project.
 const jobStarted = sql`${projectCleanupJobs.payload}->>'phase' <> 'requested'`;
 const flagAgain = sql`CASE WHEN ${projectCleanupJobs.payload}->>'phase' <> 'requested'
     THEN ${projectCleanupJobs.payload} || '{"again":"1"}'::jsonb

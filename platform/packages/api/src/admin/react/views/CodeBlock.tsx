@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { loadCodeHighlighter, type CodeLanguage, type CodeToken } from '../code-highlighting.ts';
 
-// Keep unusually large output readable without expensive tokenization on the main thread.
+// Decision: Keep unusually large output readable without expensive tokenization on the main thread.
 const MAX_HIGHLIGHT_LENGTH = 100_000;
 
 export function CodeBlock({ code, language = 'text' }: { code: string; language?: CodeLanguage }) {
@@ -18,8 +18,8 @@ export function CodeBlock({ code, language = 'text' }: { code: string; language?
       return;
     }
     let cancelled = false;
-    // SSR and the first client render show the complete code immediately. Only the browser
-    // loads Shiki; highlighting must not delay navigation or make the Worker tokenize code.
+    // Decision: SSR and the first client render show the complete code immediately. Only the browser loads
+    // Shiki; highlighting mustn't delay navigation or make the Worker tokenize code.
     void loadCodeHighlighter()
       .then((highlight) => {
         if (!cancelled && highlight) {
@@ -27,7 +27,7 @@ export function CodeBlock({ code, language = 'text' }: { code: string; language?
         }
       })
       .catch(() => {
-        // Plain code remains available if the browser cannot initialize the regex engine.
+        // Decision: Plain code stays available if the browser can't initialize the regex engine.
       });
     return () => {
       cancelled = true;

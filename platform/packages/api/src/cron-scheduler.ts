@@ -21,7 +21,6 @@ export function cfCronToUnix(expr: string): string {
   fields[4] = fields[4]
     .split(',')
     .map((part) => {
-      // Handle range with optional step: "2-6/2" → "1-5/2"
       const [rangeOrValue, step] = part.split('/');
       const stepSuffix = step != null ? `/${step}` : '';
 
@@ -29,13 +28,11 @@ export function cfCronToUnix(expr: string): string {
         return `*${stepSuffix}`;
       }
 
-      // Handle range: "2-6" → "1-5"
       if (rangeOrValue.includes('-')) {
         const [start, end] = rangeOrValue.split('-').map((value) => shiftDow(value));
         return `${start}-${end}${stepSuffix}`;
       }
 
-      // Single value (may have L/# suffix)
       return `${shiftDow(rangeOrValue)}${stepSuffix}`;
     })
     .join(',');
@@ -44,20 +41,18 @@ export function cfCronToUnix(expr: string): string {
 }
 
 function shiftDow(value: string): string {
-  // Preserve abbreviations (MON, FRI, etc.) and L/# suffixes
   const match = value.match(/^(\d+)(.*)/);
   if (!match) {
     return value;
-  } // abbreviation like MON, SUN
+  }
   const shiftedDayOfWeek = Math.max(0, parseInt(match[1], 10) - 1);
   return `${shiftedDayOfWeek}${match[2]}`;
 }
 
-/** Check if a cron expression matches the given minute. */
 export function cronMatchesMinute(cronExpr: string, now: number): boolean {
   try {
-    // Add 1ms so prev() returns the current minute when now is exactly on the boundary.
-    // Cron resolution is per-minute so this is safe.
+    // Decision: Add 1ms so prev() returns the current minute when now is exactly on the boundary. Cron
+    // resolution is per minute, so this is safe.
     const interval = CronExpressionParser.parse(cfCronToUnix(cronExpr), {
       currentDate: new Date(now + 1),
       tz: 'UTC',
@@ -86,9 +81,7 @@ export function getNextFireTime(
       if (next < earliest) {
         earliest = next;
       }
-    } catch {
-      // Skip invalid cron expressions
-    }
+    } catch {}
   }
   return earliest < Infinity ? earliest : null;
 }
@@ -128,8 +121,8 @@ export function chunkMessages<T>(
   return chunks;
 }
 
-// Every code path that calls deleteDispatchScript on a user worker MUST also
-// call clearCronScheduler / syncCronScheduler from cron-scheduler-client.ts.
+// Decision: Each code path that calls deleteDispatchScript on a user worker must also call
+// clearCronScheduler or syncCronScheduler from cron-scheduler-client.ts.
 export class CronScheduler extends DurableObject<ApiEnv['Bindings']> {
   private state: CronState | null = null;
 
@@ -184,7 +177,7 @@ export class CronScheduler extends DurableObject<ApiEnv['Bindings']> {
   private async handleStatus(): Promise<Response> {
     const state = await this.getState();
     const alarm = await this.ctx.storage.getAlarm();
-    // Omit proxyToken from status response to avoid leaking secrets.
+    // Decision: Leave proxyToken out of the status response so it doesn't leak the secret.
     const { proxyToken: _, ...safeState } = state ?? {};
     return Response.json({ state: state ? safeState : null, nextAlarm: alarm });
   }
@@ -195,9 +188,8 @@ export class CronScheduler extends DurableObject<ApiEnv['Bindings']> {
       return;
     }
 
-    // State without a proxyToken has no auth credentials.
-    // Skip invocation to avoid sending unauthenticated requests — the next
-    // deploy will resync state with the token.
+    // Decision: State without a proxyToken has no credentials. Skip the call so no unauthenticated request goes
+    // out; the next deploy resyncs the state with the token.
     if (!state.proxyToken) {
       console.warn(
         `CronScheduler: missing proxyToken for ${state.workerName}, skipping until next deploy resync`,
@@ -205,23 +197,14 @@ export class CronScheduler extends DurableObject<ApiEnv['Bindings']> {
       return;
     }
 
-    // Use `alarmInfo.scheduledTime` (the cron minute the alarm was originally
-    // scheduled for) rather than `Date.now()`. Workerd retries `alarm()` after
-    // a throw, but `Date.now()` reads wall-clock at retry time — so:
-    //   - Queue-message `scheduledTime` would carry the retry instant rather
-    //     than the original cron minute (wrong for downstream consumers).
-    //   - If a retry crosses a minute boundary, `cronMatchesMinute` would
-    //     evaluate the wrong minute. For sparse crons (`0 * * * *`) the cross-
-    //     minute case yields `matching.length === 0` → the firing is silently
-    //     lost.
-    // Using the scheduled time pins both checks to the same minute regardless
-    // of when the retry executes.
-    //
-    // Invariant: workerd always passes `alarmInfo` to `alarm()` on modern
-    // runtimes (the `alarmInfo?` optionality in `@cloudflare/workers-types` is
-    // a source-compat artifact). The `?? Date.now()` and `?? 0` retryCount
-    // fallbacks below are defensive — they only matter for unit tests that
-    // invoke `alarm()` directly without an `alarmInfo` argument.
+    // Decision: Use `alarmInfo.scheduledTime` (the cron minute the alarm was set for), not `Date.now()`. Workerd
+    // retries `alarm()` after a throw, and `Date.now()` then reads the retry time, so:
+    // - the queue message's `scheduledTime` would carry the retry instant, not the cron minute;
+    // - a retry that crosses a minute boundary makes `cronMatchesMinute` check the wrong minute, and
+    //   for sparse crons (`0 * * * *`) the firing is silently lost.
+    // Workerd passes `alarmInfo` on current runtimes (the `?` in workers-types is for source
+    // compatibility). The `?? Date.now()` and `?? 0` fallbacks are for unit tests that call `alarm()`
+    // without `alarmInfo`.
     const now = alarmInfo?.scheduledTime ?? Date.now();
     const matching = state.schedules.filter((schedule) => cronMatchesMinute(schedule.cron, now));
 
@@ -238,10 +221,9 @@ export class CronScheduler extends DurableObject<ApiEnv['Bindings']> {
       return;
     }
 
-    // Hand off to the cron-fires queue: this DO cannot dispatch to the user
-    // worker directly (see `CronFireMessage`).
-    // The worker fans an expression out to every matching job. Deliver the
-    // expression once, even when multiple named jobs share it.
+    // Decision: Hand off to the cron-fires queue: this DO can't dispatch to the user worker directly (see
+    // `CronFireMessage`). The worker fans an expression out to each matching job, so send each
+    // expression once, even when several named jobs share it.
     const expressions = [...new Set(matching.map((schedule) => schedule.cron))];
     const messages = expressions.map((cron) => ({
       body: {
@@ -271,32 +253,25 @@ export class CronScheduler extends DurableObject<ApiEnv['Bindings']> {
       if (failures.length === chunks.length) {
         const retryCount = alarmInfo?.retryCount ?? 0;
         if (retryCount >= ALARM_RETRY_BUDGET) {
-          // Workerd retries are about to exhaust. If we throw again, the
-          // alarm would be permanently dropped — leaving the DO with active
-          // schedules but no alarm, requiring a deploy or manual `/sync` to
-          // recover. Accept that this firing is lost, schedule the NEXT cron
-          // minute, and return. Sparse crons lose one fire window; per-minute
-          // crons lose at most one minute. Either is recoverable on the next
-          // valid alarm.
+          // Decision: Workerd retries are about to run out. Another throw would drop the alarm for good, leaving the
+          // DO with schedules but no alarm until a deploy or manual `/sync`. So accept that this firing is
+          // lost, schedule the next cron minute and return. Sparse crons lose one window; per-minute crons
+          // lose at most one minute.
           console.error(
             `CronScheduler: retry budget exhausted (retryCount=${retryCount}) for ${state.workerName}; abandoning this fire and scheduling next alarm`,
           );
           await this.scheduleNextAlarm();
           return;
         }
-        // No fires were enqueued (likely CF Queues API outage). Within retry
-        // budget: throw so workerd retries the alarm with backoff. The retry
-        // re-evaluates via `alarmInfo.scheduledTime`, so the original cron
-        // minute is preserved. Safe because nothing succeeded — there is no
-        // double-fire risk. Critically, we throw BEFORE calling
-        // scheduleNextAlarm() so the runtime keeps the current alarm in place
-        // for retry. See:
+        // Decision: No fires were enqueued (likely a Queues outage). Within the retry budget, throw so workerd
+        // retries the alarm with backoff; the retry re-reads `alarmInfo.scheduledTime`, so the cron minute
+        // stays the same. Nothing succeeded, so there's no double-fire risk. Throw before
+        // scheduleNextAlarm() so the runtime keeps the current alarm for the retry. See
         // https://developers.cloudflare.com/durable-objects/api/alarms/#alarm-handler-method
         throw new Error(`CronScheduler: all sendBatch chunks failed: ${reasons}`);
       }
-      // Partial success: some fires landed, others were lost. Re-running
-      // would double-fire the successful chunks, so we accept the loss and
-      // let the next matching minute proceed normally.
+      // Decision: Partial success: some fires landed and others were lost. A re-run would double-fire the chunks
+      // that landed, so accept the loss and let the next matching minute run normally.
     }
 
     await this.scheduleNextAlarm();
@@ -306,7 +281,8 @@ export class CronScheduler extends DurableObject<ApiEnv['Bindings']> {
   private async isProjectSuspended(): Promise<boolean> {
     const projectId = this.ctx.id.name;
     if (!projectId) {
-      // Alarms armed before the runtime stored names: fire as before until the next sync.
+      // Decision: Alarms armed before the runtime stored DO names have no name: keep firing them as before until
+      // the next sync.
       return false;
     }
     try {

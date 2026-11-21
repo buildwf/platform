@@ -5,11 +5,9 @@ import { runGithubDisconnect } from '../../src/cli/github-cmd.ts';
 import * as output from '../../src/cli/output.ts';
 import { makeConnection, makeProject, projectId, slug } from '../helpers/github-cli.ts';
 
-// `vi.spyOn(clack, 'confirm')` cannot intercept the handler's named `confirm`
-// import under this project's ESM Vitest config ("Module namespace is not
-// configurable in ESM"). Mock the module instead, keeping every other export
-// real (log/cancel/isCancel/select/text) so only `confirm` is replaced with a
-// drivable spy. `vi.mock` is hoisted above the imports above.
+// Decision: `vi.spyOn(clack, 'confirm')` can't intercept the handler's named `confirm` import under this
+// project's ESM Vitest config ("Module namespace is not configurable in ESM"). Mock the module
+// instead, keeping the other exports real, so only `confirm` is replaced with a drivable spy.
 vi.mock('@voidzero-dev/vite-plus-prompts', async (imp) => ({
   ...(await imp<typeof import('@voidzero-dev/vite-plus-prompts')>()),
   confirm: vi.fn(),
@@ -50,9 +48,8 @@ let errorSpy: ReturnType<typeof vi.spyOn>;
 let originalIsTTY: boolean | undefined;
 
 beforeEach(() => {
-  // The mocked `confirm` is a persistent vi.fn() from the module factory;
-  // vi.restoreAllMocks() does not reset its call history, so clear it per-test
-  // to keep the `toHaveBeenCalledTimes(1)` assertion honest.
+  // Decision: The mocked `confirm` is a persistent vi.fn() from the module factory; vi.restoreAllMocks()
+  // doesn't reset its call history, so clear it per test to keep the call-count assertion honest.
   vi.mocked(confirm).mockReset();
   originalIsTTY = process.stdin.isTTY;
   Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });

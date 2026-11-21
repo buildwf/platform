@@ -18,13 +18,12 @@ d1.post('/query', async (context) => {
     return context.json({ error: 'binding and sql required' }, 400);
   }
 
-  // Try WfP dispatch first (native bindings, ~1-5ms)
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/d1/query', body);
   if (dispatchRes) {
     return dispatchRes;
   }
 
-  // Fallback: CF REST API (for old deploys without /__platform handler)
+  // Decision: Falls back to the Cloudflare REST API for old deploys without the /__platform handler.
   let dbId: string;
   try {
     dbId = await resolveResource(context.env.API, context.env.JWT_SECRET, projectId, 'd1', binding);
@@ -89,15 +88,13 @@ d1.post('/batch', async (context) => {
     return context.json({ error: 'binding and statements required' }, 400);
   }
 
-  // Try WfP dispatch first (native db.batch() with transactional guarantees)
   const dispatchRes = await dispatchToWorker(context.env, projectId, '/d1/batch', body);
   if (dispatchRes) {
     return dispatchRes;
   }
 
-  // There is no sequential fallback: D1Database.batch() promises one atomic
-  // native batch. If the active worker cannot provide that capability, fail
-  // before issuing any statement rather than partially applying the batch.
+  // Decision: No sequential fallback: D1Database.batch() promises one atomic batch. If the active worker can't
+  // provide that, it fails before running any statement instead of applying part of the batch.
   return context.json({ error: 'atomic D1 batch unavailable for active deployment' }, 503);
 });
 

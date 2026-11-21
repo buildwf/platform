@@ -104,7 +104,7 @@ async function domainAdd(
 ): Promise<void> {
   const domain = await client.addDomain(projectId, hostname);
 
-  // Cert DCV uses HTTP-DCV, so no user-facing SSL-validation records exist.
+  // Decision: Cert DCV uses HTTP-DCV, so there are no user-facing SSL-validation records.
   const recordSections = [
     domain.cname_target ? cnameRecord(hostname, domain.cname_target) : undefined,
     domain.ownership_verification ? ownershipRecord(domain.ownership_verification) : undefined,
@@ -156,8 +156,8 @@ export type RolledUpStatus = {
 };
 
 export function computeRollup(status: DomainStatusResponse): RolledUpStatus {
-  // Priority order matters: `error` and `awaiting_deployment` describe
-  // user-actionable conditions that should override CF's state-machine view.
+  // Decision: Order matters: `error` and `awaiting_deployment` describe user-actionable conditions that should
+  // override CF's state-machine view.
   if (status.verification_errors && status.verification_errors.length > 0) {
     return {
       state: 'error',
@@ -194,7 +194,7 @@ export function computeRollup(status: DomainStatusResponse): RolledUpStatus {
   ) {
     return {
       state: 'issuing_cert',
-      // ssl_status !== 'active' always holds here, so the CNAME block renders below.
+      // Decision: ssl_status isn't 'active' here, so the CNAME block renders below.
       diagnostic:
         'Cloudflare is issuing the SSL certificate automatically (typically <5 minutes). If this persists, confirm the traffic CNAME below is published.',
     };
@@ -207,11 +207,10 @@ export function computeRollup(status: DomainStatusResponse): RolledUpStatus {
     };
   }
 
-  // `active` is keyed off the DB status, but only reached after the per-field
-  // signals above have already surfaced cert-renewal / re-validation windows
-  // (e.g. `issuing_cert` catches `cf_status === 'active' && ssl_status !== 'active'`
-  // even when the DB row says active). Reaching this branch means CF and SSL
-  // are both healthy.
+  // Decision: `active` is keyed off the DB status, but only reached after the per-field signals above have
+  // surfaced cert-renewal and re-validation windows (for example `issuing_cert` catches
+  // `cf_status === 'active' && ssl_status !== 'active'` even when the DB row says active). Reaching
+  // this branch means CF and SSL are both healthy.
   if (status.status === 'active' && status.ssl_status === 'active') {
     return { state: 'active', diagnostic: 'Live.' };
   }
@@ -235,7 +234,7 @@ async function domainStatus(
   ];
 
   if (verbose) {
-    // `Hostname:` is already shown by the rollup above.
+    // Decision: `Hostname:` is already shown by the rollup above.
     rollupLines.push('', 'Details:');
     rollupLines.push(`  Status:      ${status.status}`);
     rollupLines.push(`  SSL Status:  ${status.ssl_status}`);
@@ -249,13 +248,11 @@ async function domainStatus(
 
   note(rollupLines.join('\n'), 'Domain Status');
 
-  // Surface the DNS records the user may still need to publish. The ownership
-  // TXT shows while `ownership_verification` is present (CF drops it once
-  // verified). The traffic CNAME shows whenever the cert is not yet active —
-  // HTTP-DCV cannot validate until the hostname proxies through Cloudflare, so
-  // a missing/misconfigured CNAME silently blocks issuance even after ownership
-  // is verified. Once `ssl_status === 'active'` the domain is live and both
-  // records are correct, so neither is shown.
+  // Decision: Show the DNS records the user may still need to publish. The ownership TXT shows while
+  // `ownership_verification` is present (CF drops it once verified). The traffic CNAME shows while the
+  // cert isn't active: HTTP-DCV can't validate until the hostname proxies through Cloudflare, so a
+  // missing or misconfigured CNAME quietly blocks issuance even after ownership is verified. Once
+  // `ssl_status === 'active'` the domain is live and both records are correct, so neither is shown.
   const pendingRecords = [
     status.ssl_status !== 'active' ? cnameRecord(status.hostname, status.cname_target) : undefined,
     status.ownership_verification ? ownershipRecord(status.ownership_verification) : undefined,

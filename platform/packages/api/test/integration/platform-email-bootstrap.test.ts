@@ -88,8 +88,8 @@ describe('POST /internal/platform/email-bootstrap', () => {
       mx: { 'mail.example.com': ['route1.mx.cloudflare.net'] },
       catchAllRule: { enabled: true, workerName: 'platform-email-gateway' },
     });
-    // Retain the real installed identities and completed operation, but model
-    // the old bootstrap's exact key/step and provider observation.
+    // Decision: Keep the real installed identities and completed operation, but model the old bootstrap's exact
+    // key, step and provider observation.
     const first = await emailConnections.ensureSharedEmailConnection(env.db, bindings());
     await emailConnections.runEmailOperation(env.db, bindings(), first!);
     const [legacy] = await env.db.select().from(emailOperations);
@@ -129,8 +129,6 @@ describe('POST /internal/platform/email-bootstrap', () => {
       'publish',
     ]);
 
-    // The installer endpoint resumes this exact new operation, without
-    // trusting the completed legacy checkpoint or duplicating PATCH.
     const response = await app.fetch(request(), bindings());
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ state: 'ready', operationId: upgraded });

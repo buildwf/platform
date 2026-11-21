@@ -144,7 +144,7 @@ describe('project Access verification', () => {
 
   it('calls the global fetch without binding it to the verifier by default', async () => {
     const requests: Array<string> = [];
-    // Workers rejects a host fetch invoked with any receiver other than the global object.
+    // Decision: Workers rejects a host fetch called with any receiver other than the global object.
     vi.stubGlobal('fetch', function (this: unknown, input: string | URL | Request) {
       if (this !== undefined && this !== globalThis) {
         throw new TypeError('Illegal invocation: function called with incorrect `this` reference.');

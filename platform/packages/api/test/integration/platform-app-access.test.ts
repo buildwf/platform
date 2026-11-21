@@ -224,7 +224,7 @@ function accessApi(identity?: { issuer: string; jwk: Record<string, unknown> }) 
 }
 
 describe('uninstall before any platform user exists', () => {
-  // A failed install closes traffic; the installer's probe still reaches the route.
+  // Decision: A failed install closes traffic, but the installer's probe still reaches the route.
   const closed = () => ({ ...bindings(), PLATFORM_TRAFFIC_STATE: 'enabled' });
 
   it('turns off installer-managed Zero Trust and deletes its Access applications', async () => {
@@ -281,7 +281,6 @@ describe('uninstall before any platform user exists', () => {
     accessApi();
     await claim();
     expect((await app.fetch(request(setup()), bindings())).status).toBe(200);
-    // First administrator setup finishes after the route found no user.
     const disable = zeroTrustInstallation.disablePlatformZeroTrust;
     vi.spyOn(zeroTrustInstallation, 'disablePlatformZeroTrust').mockImplementationOnce(
       async (...args) => {
@@ -315,7 +314,6 @@ describe('uninstall before any platform user exists', () => {
         )
       ).status,
     ).toBe(404);
-    // Without the installer probe the closed platform answers before the route.
     expect((await app.fetch(turnOffRequest({ token: 'wrong' }), closed())).status).toBe(503);
     expect(
       (await app.fetch(turnOffRequest(), { ...closed(), PLATFORM_APP_ACCESS: undefined })).status,
@@ -533,7 +531,6 @@ describe('installer app access handoff', () => {
     await expect(
       setProjectZeroTrustProtection(bindings('public'), env.db, project.id, true),
     ).rejects.toThrow('Choose company identity providers');
-    // Public-only management credentials can be renewed without inventing identity policies.
     await configurePlatformZeroTrust(bindings('public'), env.db, {
       apiToken: 'renewed',
       identityProviderIds: [],

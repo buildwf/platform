@@ -1,10 +1,6 @@
 import { vi } from 'vite-plus/test';
 import { cfError, cfSuccess } from './helpers.ts';
 
-// ---------------------------------------------------------------------------
-// Customer-side Cloudflare and DNS fetch stub
-// ---------------------------------------------------------------------------
-
 export type StubFailTag =
   | 'verifyToken'
   | 'zones'
@@ -35,9 +31,8 @@ export type RecordedCall = {
   tag: StubFailTag;
   method: string;
   url: string;
-  /** Parsed JSON body for string bodies; parsed metadata for the script PUT. */
   body?: unknown;
-  /** Secrets PUT shape: name/type/text shape — never the text itself. */
+  // Decision: The secret PUT is recorded by name, type and text shape, not the text itself.
   secret?: { name: string; type: string; textShape: string };
 };
 
@@ -49,14 +44,10 @@ export function stubCustomerCf(
     mx?: Record<string, Array<string>>;
     dnsStatus?: number;
     existingScripts?: ReadonlyArray<string>;
-    /**
-     * Initial catch-all state, applied to every zone. Absent → CF's real
-     * default for a zone that never had a rule written: a DISABLED drop
-     * rule (live probes). `null` → no rule at all (CF 404). GET/PUT then
-     * keep mutating the per-zone state.
-     */
+    // Decision: Starting catch-all state for each zone. Absent gives CF's real default for a zone that never had
+    // a rule written: a disabled drop rule (seen in live probes). `null` gives no rule at all (CF 404).
+    // GET and PUT then change the per-zone state.
     catchAllRule?: { enabled: boolean; workerName: string | null } | null;
-    /** GET email/routing's result; default { enabled: true }. */
     routingSettings?: Record<string, unknown>;
     routingRules?: Array<{
       enabled: boolean;
@@ -65,14 +56,11 @@ export function stubCustomerCf(
       name?: string;
       workerName?: string;
     }>;
-    /** GET sending/subdomains entries; default []. */
     sendingSubdomains?: ReadonlyArray<{ name: string; enabled: boolean }>;
-    /** POST sending/subdomains/preview `errors`; default []. */
     sendingPreviewErrors?: ReadonlyArray<{ code: string; existing?: { name: string } }>;
     failOn?: Partial<Record<StubFailTag, { message: string; status: number; code?: number }>>;
-    /** Tags whose configured failure is returned before the provider-side mutation occurs. */
+    // Decision: Tags whose configured failure is returned before the provider-side change happens.
     failBeforeEffect?: ReadonlyArray<StubFailTag>;
-    /** Side-effect hook fired right after a call is recorded (mid-request seams). */
     on?: Partial<Record<StubFailTag, () => void | Promise<void>>>;
   } = {},
 ) {
@@ -87,9 +75,7 @@ export function stubCustomerCf(
     await config.on?.[call.tag]?.();
   };
 
-  // Per-zone catch-all rule state, lazily seeded from the config.
   const catchAllStates = new Map<string, { enabled: boolean; workerName: string | null } | null>();
-  // Per-script sha256 of the last secret PUT text (never the text).
   const secretHashes = new Map<string, string>();
   const relaySecrets = new Map<string, string>();
   const scriptSubdomains = new Map<string, boolean>();
@@ -99,8 +85,6 @@ export function stubCustomerCf(
     if (!routingRuleStates.has(zoneId)) {
       routingRuleStates.set(zoneId, new Map());
     }
-    // Seeds configured rules on first access; status tests may also add a
-    // foreign rule after setup to model drift.
     for (const [index, rule] of (config.routingRules ?? []).entries()) {
       const id = rule.id ?? `foreign-rule-${index}`;
       if (!routingRuleStates.get(zoneId)!.has(id)) {
@@ -313,8 +297,8 @@ export function stubCustomerCf(
       return cfSuccess(config.sendingSubdomains ?? []);
     }
 
-    // The settings GET is anchored at the exact path — /email/routing/dns
-    // and /email/routing/rules/... must not match it.
+    // Decision: Anchor the settings GET at the exact path, so /email/routing/dns and /email/routing/rules/...
+    // don't match it.
     if (/\/zones\/[^/]+\/email\/routing$/.test(path) && method === 'GET') {
       await record({ tag: 'routingSettingsGet', method, url });
       const failure = fail('routingSettingsGet');
@@ -406,8 +390,6 @@ export function stubCustomerCf(
       if (failure) {
         return failure;
       }
-      // The write mutates the zone's rule: a worker action names the worker,
-      // anything else (the reset's drop) is a disabled non-worker rule.
       const actions = (body as { actions?: Array<{ type: string; value?: Array<string> }> })
         ?.actions;
       const worker = actions?.find((action) => action.type === 'worker');
@@ -429,16 +411,15 @@ export function stubCustomerCf(
         secret: {
           name: String(parsed.name),
           type: String(parsed.type),
-          // Shape, never the value: length class + alphabet.
+          // Decision: Record the shape, not the value: length class and alphabet.
           textShape: `len=${text.length} ${/^[A-Za-z0-9_-]+$/.test(text) ? 'base64url' : 'other'}`,
         },
       });
       if (config.failBeforeEffect?.includes('secretPut')) {
         return fail('secretPut') ?? cfSuccess({});
       }
-      // The worker's CURRENT secret, tracked by sha256 only — the same
-      // form the ROUTING mirror stores — so a test can prove worker, row
-      // and mirror carry ONE secret without the value ever being recorded.
+      // Decision: Track the worker's current secret by sha256 only, the same form the ROUTING mirror stores, so a
+      // test can prove the worker, row and mirror hold one secret without recording the value.
       secretHashes.set(secretsMatch[1]!, await sha256Hex(text));
       relaySecrets.set(secretsMatch[1]!, text);
       return fail('secretPut') ?? cfSuccess({});
@@ -452,7 +433,7 @@ export function stubCustomerCf(
         return failure;
       }
       if (config.existingScripts?.includes(scriptMatch[1]!)) {
-        // The raw script GET answers source bytes, not a v4 envelope.
+        // Decision: The raw script GET returns source bytes, not a v4 envelope.
         return new Response('export default {}', { status: 200 });
       }
       return new Response('not found', { status: 404 });
@@ -473,8 +454,8 @@ export function stubCustomerCf(
       return fail('scriptDelete') ?? cfSuccess({});
     }
 
-    // Project teardown also deletes deployment Workers in the platform's
-    // dispatch namespace. These email tests never create one.
+    // Decision: Project teardown also deletes deployment Workers in the platform's dispatch namespace. These
+    // email tests don't create one.
     if (
       method === 'DELETE' &&
       /\/accounts\/[^/]+\/workers\/dispatch\/namespaces\/[^/]+\/scripts\/[^/]+$/.test(path)

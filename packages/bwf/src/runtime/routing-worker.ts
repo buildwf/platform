@@ -2,7 +2,7 @@ import { redirectToHttps } from '@builtbyfriends/edge';
 import type { ExecutionContext } from 'hono';
 import { createManifestLoader, type ManifestLoader } from './routing-assets.ts';
 
-// Native bwf routing records intentional 404s before Hono wraps HEAD responses.
+// Decision: Native bwf routing records intentional 404s before Hono wraps HEAD responses.
 export const intentionalNotFoundRequests: WeakSet<Request> = new WeakSet();
 
 export type AssetBinding = { fetch: (request: Request) => Promise<Response> };
@@ -66,7 +66,7 @@ export function applyAssetCachePolicy(
   } else if (!policy) {
     headers.set('Cache-Control', 'no-store');
   }
-  // Cache API and fetch responses can have immutable headers. Preserve the
+  // Decision: Cache API and fetch responses can have immutable headers. Preserve the
   // original response and change only this application-owned wrapper.
   return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
 }
@@ -87,7 +87,7 @@ export function createAssetCachePolicy(
       return applyAssetCachePolicy(request, asset, assetsDir);
     }
     if (!files) {
-      // Optional cache metadata must not make a successfully served asset fail.
+      // Decision: Optional cache metadata must not make a successfully served asset fail.
       files = loadManifest(request, env).then(
         (manifest) =>
           new Set(

@@ -44,10 +44,10 @@ const operation = (() => {
     return null;
   }
 })() as CloudflareOperation;
-// This dedicated transport process uses the same OAuth store for login,
-// deployment, and ancillary API calls. API-token overrides still win.
+// Decision: This dedicated transport process uses the same OAuth store for login, deployment and ancillary
+// API calls. API-token overrides still win.
 process.env.CLOUDFLARE_AUTH_USE_KEYRING ??= 'true';
-// Proxy configuration is scoped to this disposable transport process.
+// Decision: Proxy configuration is scoped to this disposable transport process.
 if (hasProxyEnvironment(process.env)) {
   setGlobalProxyFromEnv();
 }
@@ -64,7 +64,7 @@ function apiBaseUrl(): string {
 }
 
 function cfEnvironment(): NodeJS.ProcessEnv {
-  // The pinned bin otherwise delegates to any cf installed by the project.
+  // Decision: Otherwise the pinned bin delegates to any cf the project installed.
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     CF_DELEGATION: '1',
@@ -77,9 +77,8 @@ function cfEnvironment(): NodeJS.ProcessEnv {
     CF_NO_OSC_PROGRESS: '1',
     CLOUDFLARE_AUTH_USE_KEYRING: process.env.CLOUDFLARE_AUTH_USE_KEYRING,
   };
-  // cf uses Node's built-in fetch for API operations. Node does not consult
-  // HTTP(S)_PROXY for fetch unless its environment proxy support is enabled.
-  // Match the proxy handling of our direct API reads below.
+  // Decision: cf uses Node's built-in fetch for API operations. Node doesn't consult HTTP(S)_PROXY for fetch
+  // unless its environment proxy support is on. Match the proxy handling of our direct API reads below.
   if (hasProxyEnvironment(env)) {
     env.NODE_USE_ENV_PROXY = '1';
   }
@@ -125,7 +124,7 @@ function runCf(
     windowsHide: true,
     maxBuffer: bounds?.maxOutputBytes ?? 32 * 1024 * 1024,
     ...(bounds ? { timeout: bounds.timeoutMs } : {}),
-    // An interactive command shares this process's terminal, so cf can ask there.
+    // Decision: An interactive command shares this process's terminal, so cf can ask there.
     stdio: interactive ? 'inherit' : ['ignore', 'pipe', 'pipe'],
   });
   const stderr = [
@@ -416,9 +415,9 @@ async function assertExistingProvisionableResources(
   directory: string,
   account: string,
 ): Promise<void> {
-  // cf 1.0.0-beta.5 turns on Wrangler's automatic provisioning for every
-  // prebuilt upload, with no exposed flag to turn it off. A named R2 bucket,
-  // Queue, or dispatch namespace may otherwise be created during an upload.
+  // Decision: cf 1.0.0-beta.5 turns on Wrangler's automatic provisioning for all prebuilt uploads, with no
+  // exposed flag to turn it off. Otherwise a named R2 bucket, Queue or dispatch namespace may be
+  // created during an upload.
   const { readBuildOutput } = await import('@cloudflare/build-output-utils');
   const built = await readBuildOutput(directory);
   const bindings = built.workers.default.config.env ?? {};
@@ -507,7 +506,7 @@ function apiHeaders(): Promise<Record<string, string>> {
 async function readApiHeaders(): Promise<Record<string, string>> {
   const key = process.env.CLOUDFLARE_API_KEY ?? process.env.CF_API_KEY;
   const email = process.env.CLOUDFLARE_EMAIL ?? process.env.CF_EMAIL;
-  // Prefer an API token, as cf does, so direct requests use the same credential as cf commands.
+  // Decision: Prefer an API token, as cf does, so direct requests use the same credential as cf commands.
   const token = process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN;
   if (key && email && !token) {
     return { 'User-Agent': getBwfUserAgent(), 'X-Auth-Key': key, 'X-Auth-Email': email };
@@ -544,7 +543,7 @@ async function sessionCredential(): Promise<
   }
   const identity = runCf(['auth', 'whoami']);
   if (identity.status !== 0) {
-    // Forward cf's own reason; the parent scrubs and bounds it before showing it.
+    // Decision: Forward cf's own reason. The parent scrubs and bounds it before showing it.
     return {
       failure: [
         `cf auth whoami exited with code ${String(identity.status)}.`,
@@ -605,7 +604,7 @@ async function auth(): Promise<Result> {
   if ('token' in credential) {
     return result(0, '', '', credential);
   }
-  // A Global API Key has no bearer. Mark it, so the parent can name the next step.
+  // Decision: A Global API Key has no bearer. Mark it, so the parent can name the next step.
   return result(
     1,
     '',
@@ -657,7 +656,7 @@ function queueConsumerWorkers(queue: Json): Array<string | null> | undefined {
   for (const entry of consumers) {
     const consumer = object(entry);
     const { script_name: scriptName, script } = consumer;
-    // The same identity rules as consumer removal: any doubt leaves the list unread.
+    // Decision: The same identity rules as consumer removal: any doubt leaves the list unread.
     if (
       (scriptName !== undefined && (typeof scriptName !== 'string' || !scriptName)) ||
       (script !== undefined && (typeof script !== 'string' || !script)) ||
@@ -678,7 +677,7 @@ function queueConsumerWorkers(queue: Json): Array<string | null> | undefined {
 }
 
 async function readAllQueues(): Promise<Array<Json>> {
-  // cf queues list has no page option, so read the API's paginated response directly.
+  // Decision: cf queues list has no page option, so read the API's paginated response directly.
   const queues: Array<Json> = [];
   const seen = new Set<string>();
   for (let page = 1; page <= 1000; page++) {
@@ -743,7 +742,7 @@ async function resources(): Promise<Result> {
       const database = d1Database(operation.database);
       const source =
         operation.file !== undefined ? readFileSync(operation.file, 'utf8') : operation.sql;
-      // cf sends the body as is, and the query API fails on CRLF inside a trigger body.
+      // Decision: cf sends the body as is, and the query API fails on CRLF inside a trigger body.
       const sql = normalizeD1SqlLineEndings(source);
       return withSecretFile(JSON.stringify({ sql }), (path) =>
         runCf(['d1', 'query', database.id, '--body', '@' + path]),
@@ -793,18 +792,18 @@ async function resources(): Promise<Result> {
       if ('bookmark' in operation.target && !isD1Bookmark(operation.target.bookmark)) {
         throw new Error('D1 Time Travel bookmark was malformed.');
       }
-      // One argv item each, so cf cannot read the value as a flag.
+      // Decision: One argv item each, so cf can't read the value as a flag.
       const target =
         'bookmark' in operation.target
           ? `--bookmark=${operation.target.bookmark}`
           : `--timestamp=${operation.target.timestamp}`;
-      // bwf asks before it restores. cf cannot ask in this non-interactive child, so it would
-      // refuse without --force.
+      // Decision: bwf asks before it restores. cf can't ask in this non-interactive child, so it would refuse
+      // without --force.
       const called = runCf(['d1', 'time-travel', 'restore', database.id, target, '--force']);
       if (called.status !== 0) {
         return called;
       }
-      // The database is restored now, so a response without the previous bookmark is not a failure.
+      // Decision: The database is restored now, so a response without the previous bookmark isn't a failure.
       return result(0, '', called.stderr, { previousBookmark: previousD1Bookmark(called.stdout) });
     }
     case 'containers.list':
@@ -1045,7 +1044,7 @@ async function setSecretsOnWorkerWithoutCode(
   });
   if (created.status === 409) {
     const retried = retry();
-    // 10007 or 10013: the Worker still has no deployment.
+    // Decision: 10007 or 10013: the Worker still has no deployment.
     if (retried.status === 0 || (retried.errorCode !== 10007 && retried.errorCode !== 10013)) {
       return retried;
     }
@@ -1314,7 +1313,7 @@ async function workerChanges(): Promise<Result> {
         [
           ...(request.type === 'worker.deploy' ? ['deploy'] : ['workers', 'versions', 'create']),
           '--prebuilt',
-          // One argv item, so a message that starts with "-" is not read as a flag.
+          // Decision: One argv item, so a message that starts with "-" isn't read as a flag.
           ...(request.message ? [`--message=${request.message}`] : []),
           ...(request.secretsFilePath ? ['--secrets-file', request.secretsFilePath] : []),
         ],
@@ -1323,18 +1322,16 @@ async function workerChanges(): Promise<Result> {
         request.interactive === true,
       ),
     );
-    // cf wrote an interactive upload to the terminal, so only its exit status is known.
+    // Decision: cf wrote an interactive upload to the terminal, so only its exit status is known.
     if (called.status !== 0 || request.interactive === true) {
       return called;
     }
-    // cf renders uploads for the terminal; decode once at the process boundary.
-    // Callers receive an identity and URLs, never a fabricated CLI transcript.
+    // Decision: cf renders uploads for the terminal; decode once at the process boundary.
+    // Callers get an identity and URLs, not a made-up CLI transcript.
     let uploaded: Json = {};
     try {
       uploaded = object(parsedJson(called.stdout));
-    } catch {
-      /* Human upload presentation. */
-    }
+    } catch {}
     const printed = readCfUploadOutput(called);
     const versionId = uploaded.version_id ?? uploaded.id ?? uploaded.versionId ?? printed.versionId;
     if (typeof versionId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(versionId)) {
@@ -1440,8 +1437,8 @@ async function tail(): Promise<Result> {
                   : typeof detail.mailFrom === 'string'
                     ? `Email from ${detail.mailFrom}`
                     : 'Worker event';
-            // Request URLs, log lines and exceptions carry data from app visitors,
-            // so terminal control sequences are dropped before printing.
+            // Decision: Request URLs, log lines and exceptions carry data from app visitors, so terminal control
+            // sequences are dropped before printing.
             process.stdout.write(
               `${sanitizeTerminalLogText(prefix)} - ${log.outcome ?? 'unknown'} @ ${new Date(Number(log.eventTimestamp)).toLocaleString()}\n`,
             );
@@ -1489,8 +1486,8 @@ async function tail(): Promise<Result> {
         signal: AbortSignal.timeout(5_000),
       }).catch(() => {});
     }
-    // Node's WebSocket can remain in CLOSING after the remote tail is deleted.
-    // This is a dedicated CLI process, so leave promptly after Ctrl+C.
+    // Decision: Node's WebSocket can stay in CLOSING after the remote tail is deleted. This is a dedicated CLI
+    // process, so leave promptly after Ctrl+C.
     if (stopped.signal.aborted) {
       process.exit(0);
     }
@@ -1534,7 +1531,7 @@ async function main(): Promise<Result> {
   return resources();
 }
 
-// Login, tail and an interactive upload write to the terminal, not a result envelope.
+// Decision: Login, tail and an interactive upload write to the terminal, not a result envelope.
 const terminalOperation =
   operation?.type === 'auth.login' ||
   operation?.type === 'tail' ||

@@ -36,7 +36,7 @@ import {
 import { savePlatformConnection, writeInstallationManifest } from './platform-registry.ts';
 import { platformManagedWorkerTraffic } from './platform-traffic.ts';
 
-// Keep the outer installer's failure handler on the latest manifest even when a
+// Decision: Keep the outer installer's failure handler on the latest manifest even when a
 // remote create or checkpoint throws partway through this phase.
 export async function reconcilePlatformInstallationResources(
   manifest: PlatformInstallationManifest,

@@ -183,12 +183,11 @@ describe('detectPreset', () => {
   });
 });
 
-// SSG detection (step 2) runs BEFORE the `hasBackendFiles` check (step 3), so an
-// SSG repo that also has `routes/` / `middleware/` / `crons/` / `queues/` /
-// `email/` returns a pure static preset and the backend is
-// dropped with no diagnostic at all. `strictBackend` makes the ambiguous case
-// loud — but only on the UNCONFIGURED auto-detect path, because `--dir` and a
-// configured `inference.appType` are the user stating their intent.
+// Decision: SSG detection (step 2) runs before the `hasBackendFiles` check (step 3), so an SSG repo that
+// also has `routes/`, `middleware/`, `crons/`, `queues/` or `email/` returns a pure static
+// preset and the backend is dropped with no diagnostic. `strictBackend` makes the ambiguous
+// case loud, but only on the unconfigured auto-detect path, because `--dir` and a configured
+// `inference.appType` are the user stating their intent.
 describe('detectPreset — strictBackend', () => {
   const vitepressPkg = { devDependencies: { vitepress: '^1.0.0' } };
 
@@ -211,7 +210,6 @@ describe('detectPreset — strictBackend', () => {
     expect(message).toContain('routes/');
     expect(message).toContain('middleware/');
     expect(message).toContain('crons/');
-    // ...and tells the user both ways out, so the error is actionable.
     expect(message).toContain('"appType": "static"');
     expect(message).toContain('"appType": "platform"');
     expect(message).toContain('"build"');
@@ -237,8 +235,8 @@ describe('detectPreset — strictBackend', () => {
 
   it('does NOT throw for an explicit --dir (the user said what they want)', () => {
     const root = setupProject({ pkg: vitepressPkg, dirs: ['.vitepress', 'routes'] });
-    // `--dir` short-circuits at step 1, before SSG detection is even reached —
-    // and `resolveStaticDeployPreset` never passes strictBackend on that path.
+    // Decision: `--dir` short-circuits at step 1, before SSG detection, and `resolveStaticDeployPreset`
+    // doesn't pass strictBackend on that path.
     expect(detectPreset(root, { dir: '.vitepress/dist', strictBackend: true })).toEqual({
       buildCommand: null,
       outputDir: toSlash(resolve(root, '.vitepress/dist')),
@@ -247,7 +245,6 @@ describe('detectPreset — strictBackend', () => {
   });
 
   it('does NOT throw when a non-SSG project has backend files', () => {
-    // Step 3 already returns null for these; the guard must not change that.
     const root = setupProject({
       pkg: { dependencies: { vite: '^6.0.0' } },
       dirs: ['routes'],
@@ -270,8 +267,8 @@ describe('findBackendSources', () => {
     ]);
   });
 
-  // `email/` compiles to the worker's `email()` export. A static deploy uploads
-  // no worker, so leaving it out here drops every inbound handler silently.
+  // Decision: `email/` compiles to the worker's `email()` export. A static deploy uploads no worker, so
+  // leaving it out here would silently drop each inbound handler.
   it('counts email/ as a backend, and agrees with hasBackendFiles', () => {
     const root = setupProject({ dirs: ['email'] });
     expect(findBackendSources(root)).toEqual(['email/']);
@@ -318,8 +315,8 @@ describe('project Vite commands', () => {
 });
 
 describe('resolveProjectCommand shell safety (project root with spaces)', () => {
-  // A dedicated root whose path contains a space + a single quote — both are
-  // shell-significant and must be quoted before the string reaches execSync.
+  // Decision: A root whose path contains a space and a single quote: both are shell-significant and have
+  // to be quoted before the string reaches execSync.
   const SPACED_TMP = join(import.meta.dirname, ".tmp preset o'space");
 
   beforeEach(() => {
@@ -334,8 +331,8 @@ describe('resolveProjectCommand shell safety (project root with spaces)', () => 
     mkdirSync(join(SPACED_TMP, 'node_modules', '.bin'), { recursive: true });
     writeFileSync(join(SPACED_TMP, 'package.json'), JSON.stringify({ dependencies: {} }));
     const binPath = join(SPACED_TMP, 'node_modules', '.bin', binName);
-    // Executable that prints a sentinel + its args so we can confirm the shell
-    // launched THIS binary (not a truncated `/…/.tmp` prefix from word-splitting).
+    // Decision: The executable prints a sentinel and its args, so the test can confirm the shell launched
+    // this binary (not a truncated prefix from word-splitting).
     writeFileSync(binPath, `#!/bin/sh\necho "PLATFORM_BIN_OK args=$*"\n`);
     chmodSync(binPath, 0o755);
     return { root: SPACED_TMP, binPath };
@@ -345,14 +342,11 @@ describe('resolveProjectCommand shell safety (project root with spaces)', () => 
     const { root, binPath } = setupSpacedProject('vitepress');
     const cmd = resolveProjectCommand(root, 'vitepress build');
 
-    // The bin path (which contains a space and a single quote) must be quoted
-    // as a single token, not left as a bare substring the shell would split.
     expect(cmd).not.toBe(`${binPath} build`);
     expect(cmd.endsWith(' build')).toBe(true);
     if (process.platform === 'win32') {
       expect(cmd).toBe(`"${toSlash(binPath)}" build`);
     } else {
-      // POSIX single-quote wrap, embedded `'` escaped as '\''.
       expect(cmd).toBe(`'${binPath.replace(/'/g, "'\\''")}' build`);
     }
   });
@@ -372,7 +366,6 @@ describe('resolveProjectCommand shell safety (project root with spaces)', () => 
     'shell-quotes the vite build path for a spaced root',
     () => {
       const { binPath } = setupSpacedProject('vp');
-      // vite-plus present → `vite build` resolves to the local `vp` binary.
       writeFileSync(
         join(SPACED_TMP, 'package.json'),
         JSON.stringify({ devDependencies: { 'vite-plus': '^1.0.0' } }),

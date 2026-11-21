@@ -15,7 +15,7 @@ import { getRequestedProjectSlug, requireProjectBySlug } from './resolve-project
 type ProjectTeamArgs = Exclude<Extract<ProjectArgs, { subcommand: 'team' }>, { action: '' }>;
 
 function clean(value: string | null | undefined): string {
-  // Tenant text must not execute terminal control sequences.
+  // Decision: Tenant text must not execute terminal control sequences.
   // eslint-disable-next-line no-control-regex
   return (value ?? '—').replace(/[\u0000-\u001f\u007f]/g, ' ');
 }
@@ -74,7 +74,7 @@ function invitationResponseError(error: unknown, apiUrl: string): unknown {
   if (!(error instanceof PlatformApiError)) {
     return error;
   }
-  // New APIs explain the rejection, including scoped-token and suspension cases.
+  // Decision: New APIs explain the rejection, including scoped-token and suspension cases.
   // Do not mistake every 403 for an invitation addressed to another account.
   if (platformErrorMessage(parsePlatformErrorBody(error.body))) {
     return error;

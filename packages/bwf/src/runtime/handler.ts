@@ -32,7 +32,7 @@ export class BwfAssetRewriteError extends Error {
   }
 }
 
-// `routing.rewrites` and `routing.fallbacks` keep RewriteDestination, whose
+// Decision: `routing.rewrites` and `routing.fallbacks` keep RewriteDestination, whose
 // destinations may contain placeholders or static files.
 type RewritePath = TypedRoutes extends true ? RouteUrl : RewriteDestination;
 
@@ -43,7 +43,7 @@ export interface CloudContextVariables {
   [key: string]: unknown;
 }
 
-// Generated env types augment this stable global interface. Public module
+// Decision: Generated env types augment this stable global interface. Public module
 // augmentation alone cannot reach CloudBindings after declaration bundling
 // moves its source interface into a shared declaration chunk.
 declare global {
@@ -138,11 +138,11 @@ declare module 'hono' {
  * created with {@link defineHandler} and {@link defineMiddleware}.
  * `redirect` accepts a {@link RouteUrlInput}.
  */
-// `c` must still be assignable to Hono's `Context`, as in `getCookie(c)` and
+// Decision: `c` must still be assignable to Hono's `Context`, as in `getCookie(c)` and
 // `etag()`. An interface with its own members is compared member by member,
 // and two of them are not assignable on their own:
 // - `redirect`: a narrower `location` rejects some of the strings Hono's
-//   accepts.
+// accepts.
 // - `set`: TypeScript compares `Set<CloudEnv>` by its type argument.
 // Each member begins with a signature that Hono's `Context` accepts. `this:
 // never` makes that signature uncallable, so `c.redirect()` and `c.set()`
@@ -168,9 +168,9 @@ export interface CloudContext extends Context<CloudEnv> {
 }
 
 type HandlerFn = (c: CloudContext) => unknown | Promise<unknown>;
-// `R` is the loader's data, so `defineHandler<Props>(async (c) => ...)` works.
+// Decision: `R` is the loader's data, so `defineHandler<Props>(async (c) => ...)` works.
 type LoaderFn<R> = (c: CloudContext) => R | Response | Promise<R | Response>;
-// For loaders that LoaderFn cannot infer, such as `cond ? loadA() : loadB()`.
+// Decision: For loaders that LoaderFn cannot infer, such as `cond ? loadA() : loadB()`.
 type LoaderOutput<F extends HandlerFn> = Exclude<Awaited<ReturnType<F>>, Response>;
 type MiddlewareFn = (c: CloudContext, next: Next) => ReturnType<MiddlewareHandler<CloudEnv>>;
 type BasicAuthOptionValue = string | (() => string);
@@ -247,7 +247,7 @@ export type TypedHandler<V extends ValidatorSlots = {}, R = unknown> = {
 export function defineHandler<R>(
   handler: LoaderFn<R>,
 ): TypedHandler<{}, Exclude<Awaited<R>, Response>>;
-// Middleware keeps a typed leaf's validators and output (e.g. withValidator).
+// Decision: Middleware keeps a typed leaf's validators and output (e.g. withValidator).
 export function defineHandler<V extends ValidatorSlots, R>(
   ...args: [MiddlewareFn, ...Array<MiddlewareFn>, TypedHandler<V, R>]
 ): TypedHandler<V, R>;
@@ -317,7 +317,7 @@ export function defineHandler(...args: Array<MiddlewareFn | HandlerFn>): TypedHa
   }
   const middlewares = args.slice(0, -1) as Array<MiddlewareFn>;
   const handler = args[args.length - 1] as HandlerFn;
-  // Pages read the recorded composition to render inside the same chain.
+  // Decision: Pages read the recorded composition to render inside the same chain.
   const composed = setHandlerComposition(
     async (c: CloudContext) =>
       executeComposedHandler(c, middlewares, async () => convertReturnValue(await handler(c))),
@@ -368,7 +368,7 @@ export namespace defineHandler {
  * At runtime it simply returns the function passed to it.
  */
 export function defineMiddleware(handler: MiddlewareFn): MiddlewareHandler<CloudEnv> {
-  // The callback's context accepts destination objects. Hono's handler type
+  // Decision: The callback's context accepts destination objects. Hono's handler type
   // does not, so the same function is not assignable without a cast. The
   // routing runtime replaces `redirect` before this runs.
   return handler as MiddlewareHandler<CloudEnv>;
@@ -452,7 +452,7 @@ export function basicAuth(options: BasicAuthOptions): MiddlewareHandler<CloudEnv
 
     const username = resolveBasicAuthOption(options.username, '');
     const password = resolveBasicAuthOption(options.password, '');
-    // An unset secret must not turn into a gate that accepts an empty password.
+    // Decision: An unset secret must not turn into a gate that accepts an empty password.
     if (!password) {
       throw new Error(
         'basicAuth: the password resolved to an empty value. Set the credential before serving requests.',

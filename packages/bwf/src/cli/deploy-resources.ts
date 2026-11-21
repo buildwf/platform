@@ -109,16 +109,10 @@ export function deriveWorkerName(root: string): string {
     if (typeof pkg.name === 'string' && pkg.name.length > 0) {
       pkgName = pkg.name;
     }
-  } catch {
-    // no package.json / unreadable — fall through to the directory basename.
-  }
+  } catch {}
   return toValidWorkerName(pkgName ?? basename(root) ?? '');
 }
 
-/**
- * Fail when two KV bindings would share one namespace. KV titles are not account-unique and
- * the provisioner adopts a namespace by title, so check desired titles and recorded ids.
- */
 /**
  * Desired Cloudflare resources, computed from source before the build and shared by the
  * provision and drift paths. Names prefer the value stored in the root config, so a
@@ -161,7 +155,7 @@ export async function computeDesiredCloudflareResources(
   const config = parseRootWranglerConfig(configPath);
   const workerName = readWranglerTopLevelString(config, 'name') ?? deriveWorkerName(root);
 
-  // `migrations_dir` is relative to the root config, and sourceDir moves the folder.
+  // Decision: `migrations_dir` is relative to the root config, and sourceDir moves the folder.
   const migrationsDirRelative = paths.sourceDir
     ? `./${paths.sourceDir}/db/migrations`
     : './db/migrations';
@@ -169,12 +163,12 @@ export async function computeDesiredCloudflareResources(
   const desired: DesiredResourceSet = { kvNamespaces: [], queues: [] };
   const reasons = new Map<string, string>();
 
-  // needsDatabase covers source use, auth and checked-in migrations, like the managed manifest.
+  // Decision: needsDatabase covers source use, auth and checked-in migrations, like the managed manifest.
   const databaseReason = analysis.reasons.database[0]!;
   if (needsDatabase && dialect === 'sqlite') {
     const binding = bindingNames?.d1 ?? 'DB';
-    // An explicitly authored name is the intended remote identity even before bwf
-    // has pinned its ID. Only inferred local placeholders need a generated name.
+    // Decision: An explicitly authored name is the intended remote identity even before bwf has pinned its ID.
+    // Only inferred local placeholders need a generated name.
     const storedName = readStoredResourceName(config, 'd1_databases', binding, 'database_name');
     const storedId = readStoredResourceName(config, 'd1_databases', binding, 'database_id');
     const authoredName = bwfConfig.cloudflare?.d1_databases?.find(
@@ -198,20 +192,18 @@ export async function computeDesiredCloudflareResources(
     reasons.set(binding, databaseReason);
   }
 
-  // KV
   if (bindings.needsKV) {
     const binding = bindingNames?.kv ?? 'KV';
     desired.kvNamespaces.push({ binding, title: suffixedResourceName(workerName, 'kv') });
     reasons.set(binding, analysis.reasons.kv[0]!);
   }
 
-  // R2
   if (bindings.needsR2) {
     const binding = bindingNames?.r2 ?? 'STORAGE';
     const storedName = readStoredResourceName(config, 'r2_buckets', binding, 'bucket_name');
-    // Only a generated binding in a typed project uses `default` as a local
-    // placeholder. In an authored root config, or an explicit typed Cloudflare
-    // binding, it is a valid bucket name and must keep its identity.
+    // Decision: Only a generated binding in a typed project uses `default` as a local placeholder. In an authored
+    // root config, or an explicit typed Cloudflare binding, it's a valid bucket name and has to keep its
+    // identity.
     const generatedDefault =
       storedName === 'default' &&
       basename(configPath) === MATERIALIZED_CLOUDFLARE_FILE &&
@@ -228,8 +220,8 @@ export async function computeDesiredCloudflareResources(
     reasons.set(binding, analysis.reasons.r2[0]!);
   }
 
-  // Queue names are account-unique, so each is named after the Worker. Preflight keeps a
-  // queue this Worker already consumes under its old name.
+  // Decision: Queue names are account-unique, so each is named after the Worker. Preflight keeps a queue this
+  // Worker already consumes under its old name.
   if (analysis.queues.length > 0) {
     desired.queueNames = Object.fromEntries(
       analysis.queues.map((q) => [
@@ -240,7 +232,7 @@ export async function computeDesiredCloudflareResources(
     desired.queues = Object.values(desired.queueNames);
   }
 
-  // The connection string is used only on create; later runs read the stored id.
+  // Decision: The connection string is used only on create; later runs read the stored id.
   if (needsDatabase && dialect !== 'sqlite') {
     const binding = 'HYPERDRIVE';
     desired.hyperdrive = {

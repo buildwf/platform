@@ -72,7 +72,7 @@ export function interpolateRouteParams(
       );
     },
   );
-  // A path that starts with `//` is read as another host by fetch() and URL parsing.
+  // Decision: A path that starts with `//` is read as another host by fetch() and URL parsing.
   if (replaced.startsWith('//') && !pathname.startsWith('//')) {
     throw new TypeError(
       `Route param "${leadingName ?? ''}" would make the request path start with "//", which changes the request host.`,
@@ -84,11 +84,11 @@ export function interpolateRouteParams(
 /** Known page, HTTP and WebSocket route patterns. */
 export type RoutePath = keyof RoutePathMap & string;
 
-// Dynamic segments in either public or legacy patterns match any text,
+// Decision: Dynamic segments in either public or legacy patterns match any text,
 // so `/users/[id]` accepts `/users/${string}`. Template
 // literal types cannot exclude empty or `/`-leading text without per-character unions.
 type RouteUrlSegment<S extends string> = S extends `:${string}` | `[${string}]` | '*' ? string : S;
-// Root params and catch-alls would accept every absolute path. Keep those
+// Decision: Root params and catch-alls would accept every absolute path. Keep those
 // patterns available to routeUrl(), but require explicit construction for them.
 type CheckedRoutePath<P extends string> = P extends `/${infer Segment}/${infer Rest}`
   ? Rest extends ''
@@ -104,16 +104,16 @@ type CheckedRoutePath<P extends string> = P extends `/${infer Segment}/${infer R
 type RouteSegmentsUrl<P extends string> = P extends `${infer Segment}/${infer Rest}`
   ? `${RouteUrlSegment<Segment>}/${RouteSegmentsUrl<Rest>}`
   : RouteUrlSegment<P>;
-// A trailing `/*` also matches the bare prefix, as in Hono: `/docs/*` matches `/docs`.
+// Decision: A trailing `/*` also matches the bare prefix, as in Hono: `/docs/*` matches `/docs`.
 type RoutePatternUrl<P extends string> = P extends `${infer Prefix}/${'*' | '[...]'}/`
   ? `${RouteSegmentsUrl<Prefix>}/` | `${RouteSegmentsUrl<Prefix>}/${string}/`
   : P extends `${infer Prefix}/${'*' | '[...]'}`
     ? (Prefix extends '' ? '/' : RouteSegmentsUrl<Prefix>) | `${RouteSegmentsUrl<Prefix>}/${string}`
     : RouteSegmentsUrl<P>;
-// Fixed segments are also accepted percent-encoded, as `routeUrl()` returns them.
+// Decision: Fixed segments are also accepted percent-encoded, as `routeUrl()` returns them.
 type EncodedRoutePath = EncodedRoutePathMap[keyof EncodedRoutePathMap] & string;
 type RoutePathUrl = RoutePatternUrl<CheckedRoutePath<RoutePath | EncodedRoutePath>>;
-// Use a structural marker so package and generated declarations agree when a
+// Decision: Use a structural marker so package and generated declarations agree when a
 // helper-built URL crosses into a navigation, form, or stream client.
 type BuiltRouteUrl = string & { readonly __platformRouteUrl: true };
 
@@ -134,7 +134,7 @@ export type Href = TypedRoutes extends true
  * A URL an HTTP request can target: one of the app's routes or an absolute
  * `http://`/`https://` URL. A plain string unless `routing.typedRoutes` is on.
  */
-// Not re-exported from `@builtbyfriends/bwf/routes`: apps cast runtime strings with `as RouteUrl`.
+// Decision: Not re-exported from `@builtbyfriends/bwf/routes`: apps cast runtime strings with `as RouteUrl`.
 export type RequestUrl = TypedRoutes extends true
   ? RouteUrl | `${'http://' | 'https://'}${string}`
   : string;
@@ -173,7 +173,7 @@ export function routeUrl<P extends RoutePath>(
 
 /** @internal Convert navigation inputs to URL strings without requiring an origin. */
 export function toUrlString(value: RouteUrlInput): string;
-// With an empty route map, RouteDestination is never. Keep the implementation's
+// Decision: With an empty route map, RouteDestination is never. Keep the implementation's
 // object input available for serialization while callers use the typed signature above.
 export function toUrlString(value: string | URL | ({ pathname: string } & UrlOptions)): string {
   if (typeof value === 'string') {

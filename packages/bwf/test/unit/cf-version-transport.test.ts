@@ -116,7 +116,7 @@ it.each([
       { capture: true },
     );
     if (readable) {
-      // Cloudflare omits `bindings` for a version that has none.
+      // Decision: Cloudflare omits `bindings` for a version that has none.
       expect(result.status).toBe(0);
       expect(result.data).toMatchObject({ bindings: [], resources: { bindings: [] } });
     } else {
@@ -210,7 +210,7 @@ it(
         signal: null,
         error: null,
       });
-      // cf deliberately omits the API code from this local error.
+      // Decision: cf deliberately omits the API code from this local error.
       expect(result.errorCode).toBeUndefined();
       expect(requests).toEqual(['/client/v4/accounts/account-id/workers/services/platform-test']);
       expect(userAgents).toEqual([cfUserAgent]);
@@ -252,7 +252,7 @@ it(
         capture: true,
       });
       expect(result).toMatchObject({ status: 1, signal: null, error: null });
-      // cf 1.0.0-beta.21 and later print upload messages on stderr.
+      // Decision: cf 1.0.0-beta.21 and later print upload messages on stderr.
       expect(result.stdout).toBe('');
       expect(cloudflareCommandDiagnostic(result)).toBe(
         'You are about to upload a Worker that was last updated via the script API.\n' +
@@ -306,7 +306,6 @@ it(
         capture: true,
       });
       expect(result).toMatchObject({ status: 1, signal: null, error: null });
-      // The diff that explains the conflict shows values from both configurations.
       expect(result.stderr).toContain('remote-value-do-not-echo');
       expect(result.stderr).toContain('local-value-do-not-echo');
       expect(cloudflareCommandDiagnostic(result)).toBe(
@@ -382,7 +381,6 @@ it.each([false, true])(
         { type: 'versions.upload', workerName: 'platform-test' },
         { capture: true },
       );
-      // cf prints the binding table, with values, before it uploads.
       expect(result.stderr).toContain('local-value-do-not-echo');
       if (rejected) {
         expect(result.status).toBe(1);
@@ -405,7 +403,7 @@ it.each([false, true])(
   REAL_CF_TIMEOUT_MS,
 );
 
-// This exercises multiple fresh cf subprocesses. Windows CI has exceeded 30s
+// Decision: This exercises multiple fresh cf subprocesses. Windows CI has exceeded 30s
 // across those startups; bound each child and give the complete protocol a
 // separate Windows budget, including assertion and cleanup overhead.
 it.each([
@@ -511,7 +509,7 @@ it.each([
       const calls: Array<Array<string>> = [];
       const runCf: Parameters<typeof createCfVersionRunner>[0]['runCf'] = async (args, options) => {
         calls.push(args);
-        // These mutation acknowledgements retain the activation protocol's state;
+        // Decision: These mutation acknowledgements retain the activation protocol's state;
         // all discovery reads and the actual version POST use the real transports.
         if (args.slice(0, 3).join(' ') === 'workers deployments create') {
           traffic = JSON.parse(args[args.indexOf('--versions') + 1]!);
@@ -717,9 +715,7 @@ it.runIf(process.platform !== 'win32')(
       if (group) {
         try {
           process.kill(-group, 'SIGKILL');
-        } catch {
-          /* Already terminated. */
-        }
+        } catch {}
       }
     }
   },

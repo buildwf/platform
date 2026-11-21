@@ -37,7 +37,6 @@ export async function runLink(root: string, slug?: string): Promise<void> {
   const projects = await client.listProjects();
 
   if (slug) {
-    // Non-interactive: link by slug
     const resolved = resolveProjectBySlug(projects, slug);
     if (!resolved) {
       cancel(`project: No project found with slug '${slug}'.`);
@@ -51,7 +50,6 @@ export async function runLink(root: string, slug?: string): Promise<void> {
     return;
   }
 
-  // Interactive: prompt user to select or create
   const result = await promptProjectSelection(projects, 'Select a project:', root, {
     confirmExisting: true,
   });

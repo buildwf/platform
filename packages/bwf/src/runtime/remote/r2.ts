@@ -59,7 +59,7 @@ export class ProxyR2Bucket {
     }
     const res = await this.client.fetch('/r2/get', { binding: this.binding, key });
 
-    // Check if the proxy returned null (JSON response for 404).
+    // Decision: Check if the proxy returned null (JSON response for 404).
     // Clone first so we don't consume the body if the object exists.
     const ct = res.headers.get('content-type') ?? '';
     if (ct.includes('application/json')) {
@@ -90,7 +90,6 @@ export class ProxyR2Bucket {
     } else if (ArrayBuffer.isView(value)) {
       base64 = bytesToBase64(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
     } else {
-      // Blob or ReadableStream
       base64 = bytesToBase64(new Uint8Array(await new Response(value).arrayBuffer()));
     }
 
@@ -106,7 +105,7 @@ export class ProxyR2Bucket {
     if (options?.httpMetadata) {
       const meta = options.httpMetadata;
       body.httpMetadata = serializeR2HttpMetadata(meta);
-      // Older handlers and the REST fallback read only the content type.
+      // Decision: Older handlers and the REST fallback read only the content type.
       if (meta instanceof Headers) {
         body.contentType = meta.get('content-type') ?? undefined;
       } else {
@@ -121,13 +120,13 @@ export class ProxyR2Bucket {
     if (conditional) {
       body.onlyIf = serializeR2Conditional(options.onlyIf!);
     }
-    // A separate endpoint prevents older proxies/workers from silently ignoring onlyIf.
+    // Decision: A separate endpoint prevents older proxies/workers from silently ignoring onlyIf.
     const res = await this.client.fetch(conditional ? '/r2/put-conditional' : '/r2/put', body);
     const result = (await res.json()) as RemoteR2Object | null | { success: true };
     if (result === null) {
       return null;
     }
-    // `{ success: true }` comes from the REST fallback or an older handler.
+    // Decision: `{ success: true }` comes from the REST fallback or an older handler.
     const stored = 'key' in result ? result : undefined;
     if (!stored && conditional) {
       throw new Error(
@@ -144,7 +143,6 @@ export class ProxyR2Bucket {
       return makeR2Object(stored);
     }
 
-    // Return a minimal R2Object
     return makeR2Object({
       key,
       size: 0,
@@ -180,7 +178,7 @@ export class ProxyR2Bucket {
       cursor: string | null;
       delimitedPrefixes?: Array<string>;
     };
-    // Older handlers and the REST fallback ignore these options and return no prefixes.
+    // Decision: Older handlers and the REST fallback ignore these options and return no prefixes.
     // The proxy also uses the REST fallback when it cannot reach a current deployment for a moment.
     if (
       !Array.isArray(data.delimitedPrefixes) &&
@@ -285,7 +283,7 @@ function makeR2Object(data: RemoteR2Object): R2Object {
     storageClass: 'Standard',
     range: undefined,
     writeHttpMetadata(headers: Headers) {
-      // Same headers as native R2.
+      // Decision: Same headers as native R2.
       const fields: Array<[string, string | undefined]> = [
         ['content-type', httpMetadata.contentType],
         ['content-language', httpMetadata.contentLanguage],
@@ -304,7 +302,7 @@ function makeR2Object(data: RemoteR2Object): R2Object {
 }
 
 function makeR2ObjectBody(key: string, res: Response): R2ObjectBody {
-  // Older handlers and the REST fallback send only standard headers.
+  // Decision: Older handlers and the REST fallback send only standard headers.
   const meta = res.headers.get(R2_OBJECT_HEADER);
   const obj = makeR2Object(
     meta

@@ -47,7 +47,6 @@ function nextTile(
       const other = Math.floor(random() * (index + 1));
       [bag[index], bag[other]] = [bag[other]!, bag[index]!];
     }
-    // Avoid an immediate repeat when starting the next shuffled set.
     if (bag[0] === top.framework) {
       [bag[0], bag[1]] = [bag[1]!, bag[0]!];
     }

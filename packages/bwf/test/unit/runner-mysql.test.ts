@@ -17,7 +17,6 @@ import { holdMySqlMigrationLease } from '../../src/runtime/migration-lock-mysql.
 const mysqlConnections = vi.hoisted(() => [] as Array<unknown>);
 const mysqlServer = vi.hoisted(() => ({ database: undefined as unknown }));
 
-// Every connection the hosted handler opens reaches the test's FakeMySqlDatabase.
 vi.mock('mysql2/promise', () => ({
   createConnection: async (options: unknown) => {
     mysqlConnections.push(options);
@@ -40,24 +39,20 @@ function mySqlError(message: string, code: string): Error {
   return Object.assign(new Error(message), { code });
 }
 
-/** `expiresAt` is the stored DATETIME, which has no time zone, in milliseconds. */
+// Decision: `expiresAt` is the stored DATETIME, which has no time zone, in milliseconds.
 type Lease = { owner: string; expiresAt: number };
 type Session = { utcOffsetMs?: number; database?: string };
 
-/**
- * One MySQL database shared by every connection and client of a test. It keeps the tracking rows,
- * the deploy lease and named locks, and logs each statement with its session and time.
- * `SELECT SLEEP(n)` waits n seconds, so runs can overlap. Each session has a time zone, which
- * NOW(6) follows and UTC_TIMESTAMP(6) does not, and the name DATABASE() reports.
- */
+// Decision: One MySQL database shared by each connection and client of a test. It keeps the tracking
+// rows, the deploy lease and named locks, and logs each statement with its session and time.
+// `SELECT SLEEP(n)` waits n seconds, so runs can overlap. Each session has a time zone, which
+// NOW(6) follows and UTC_TIMESTAMP(6) doesn't, and the name DATABASE() reports.
 class FakeMySqlDatabase {
   readonly log: Array<{ session: number; sql: string; at: number }> = [];
   readonly failures = new Map<string, Error>();
-  /** Statements that fail on their next run only, keyed by their first characters. */
   readonly failOnce = new Map<string, Error>();
   readonly applied: Array<string> = [];
   lease: Lease | undefined;
-  /** DATABASE() for the sessions the hosted handler opens. */
   readonly handlerDatabase: string;
   private leaseTable = false;
   private readonly locks = new Map<string, number>();
@@ -158,7 +153,6 @@ class FakeMySqlDatabase {
     const clock = /UTC_TIMESTAMP\(6\)/.test(sql)
       ? now
       : now + (this.sessions[session - 1]!.utcOffsetMs ?? 0);
-    // The statement's own expiry filter, if it has one.
     const filter = /`expires_at` ([<>]) (?:NOW|UTC_TIMESTAMP)\(6\)/.exec(sql)?.[1];
     const matches = (lease: Lease) =>
       filter === undefined || (filter === '<' ? lease.expiresAt < clock : lease.expiresAt > clock);
@@ -188,7 +182,7 @@ class FakeMySqlDatabase {
       this.lease = { owner: String(params[0]), expiresAt: clock + Number(params[1]) * 1000 };
       return { affectedRows: 1 };
     }
-    // The release keeps the row and moves its expiry into the past.
+    // Decision: The release keeps the row and moves its expiry into the past.
     if (sql.startsWith('UPDATE') && sql.includes('- INTERVAL 1 SECOND')) {
       if (!this.lease || this.lease.owner !== params[0]) {
         return { affectedRows: 0 };
@@ -235,7 +229,6 @@ async function migrate(
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };
 }
 
-/** Runs `start` to its end while fake time moves on one second at a time. */
 async function withFakeTime<T>(start: () => Promise<T>): Promise<T> {
   vi.useFakeTimers({
     toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
@@ -255,11 +248,8 @@ async function withFakeTime<T>(start: () => Promise<T>): Promise<T> {
   }
 }
 
-/**
- * A client for `applyMySqlMigrations`. It owns database `app`, grants the lock unless `locked`,
- * and throws for statements in `failures`. With `committed`, MySQL has already committed the
- * open transaction (after DDL), so rolling back to a savepoint fails as it does in MySQL.
- */
+// Decision: With `committed`, MySQL has already committed the open transaction (after DDL), so rolling
+// back to a savepoint fails as it does in MySQL.
 function fakeClient(
   options: {
     applied?: Array<string>;
@@ -355,7 +345,8 @@ describe('MySQL migration runner', () => {
     expect(migrationQueries(database.statements())).toEqual(statements);
   });
 
-  // Hyperdrive takes one statement per query, and the repair note counts the statements that ran.
+  // Decision: Hyperdrive takes one statement per query, and the repair note counts the statements that
+  // ran.
   it('runs each statement of a file without breakpoints as its own query', async () => {
     const sql = '-- hand-written\nCREATE TABLE a (id int);\nCREATE TABLE b (id int); -- done\n';
     const statements = ['CREATE TABLE a (id int);', 'CREATE TABLE b (id int);'];
@@ -371,7 +362,7 @@ describe('MySQL migration runner', () => {
     expect(migrationQueries(database.statements())).toEqual(statements);
   });
 
-  // Two runs at once would both apply a pending data migration.
+  // Decision: Two runs at once would both apply a pending data migration.
   it('holds a named lock for the database while it reads and applies migrations', async () => {
     const { client, calls, sql } = fakeClient();
 
@@ -382,7 +373,7 @@ describe('MySQL migration runner', () => {
     expect(calls.at(-1)).toEqual({ sql: 'SELECT RELEASE_LOCK(?)', params: [LOCK_NAME] });
   });
 
-  // Vitess (PlanetScale) names the GET_LOCK column after the call and ignores the alias.
+  // Decision: Vitess (PlanetScale) names the GET_LOCK column after the call and ignores the alias.
   it('takes the lock when the server ignores the column alias', async () => {
     const client: MySqlClient = {
       async query<T extends Array<Record<string, unknown>> = Array<Record<string, unknown>>>(
@@ -494,7 +485,7 @@ describe('MySQL migration runner', () => {
     expect(sql()).not.toContain('SAVEPOINT `platform_migration`');
   });
 
-  // MySQL rolls back the whole transaction itself here, so the file left nothing behind.
+  // Decision: MySQL rolls back the whole transaction itself here, so the file left nothing behind.
   it.each([
     {
       failing: 'UPDATE d SET n = n + 1;',
@@ -534,7 +525,7 @@ describe('MySQL migration runner', () => {
     },
   );
 
-  // A lost connection makes ROLLBACK fail too; the error must still name the file.
+  // Decision: A lost connection makes ROLLBACK fail too; the error still has to name the file.
   it('names the failed file when the rollback fails too', async () => {
     const cause = mySqlError(
       'Connection lost: The server closed the connection.',
@@ -581,7 +572,7 @@ describe('MySQL hosted migration handler', () => {
         { name: '002_backfill.sql', applied: false, error: "Table 'app.nope' doesn't exist" },
       ],
     });
-    // Session 1 runs the migrations; the lease uses its own connection.
+    // Decision: Session 1 runs the migrations; the lease uses its own connection.
     expect(database.statements(1).slice(2)).toEqual([
       'BEGIN',
       'CREATE TABLE c (n INT);',
@@ -624,7 +615,7 @@ describe('MySQL hosted migration handler', () => {
     });
   });
 
-  // A stored program keeps the rest of its part, and one query here takes one statement, so the
+  // Decision: A stored program keeps the rest of its part, and one query here takes one statement, so the
   // server rejects SQL after the program as a syntax error.
   const programThenInsert = 'CREATE PROCEDURE p() BEGIN SELECT 1; END;\nINSERT INTO c VALUES (1);';
   const breakpointNote =
@@ -681,8 +672,8 @@ describe('MySQL hosted migration handler', () => {
   });
 });
 
-// The CLI runner holds a named lock; a deploy, which reaches MySQL through Hyperdrive, holds a
-// lease row. Each checks for the other, so runs on one database never apply a file twice.
+// Decision: The CLI runner holds a named lock; a deploy, which reaches MySQL through Hyperdrive, holds a
+// lease row. Each checks for the other, so runs on one database don't apply a file twice.
 describe('MySQL migration lock across runners', () => {
   const RACE = [
     {
@@ -696,7 +687,7 @@ describe('MySQL migration lock across runners', () => {
   it('applies a pending file once when two deploys share a database', async () => {
     const { database, bodies, finishedAt } = await withFakeTime(async () => {
       const database = useDatabase(new FakeMySqlDatabase());
-      // The second starts while the first sleeps, before either has recorded the file.
+      // Decision: The second starts while the first sleeps, before either has recorded the file.
       const first = migrate(RACE);
       await new Promise((resolve) => setTimeout(resolve, 20));
       const results = await Promise.all([first, migrate(RACE)]);
@@ -705,7 +696,7 @@ describe('MySQL migration lock across runners', () => {
 
     expect(seeded(database)).toBe(1);
     expect(bodies.map((body) => body.ok)).toEqual([true, true]);
-    // Released by expiring the row: the next run's INSERT IGNORE finds it and takes it over.
+    // Decision: Released by expiring the row: the next run's INSERT IGNORE finds it and takes it over.
     expect(database.lease?.expiresAt).toBeLessThan(finishedAt);
   });
 
@@ -724,7 +715,7 @@ describe('MySQL migration lock across runners', () => {
     expect(cli).toEqual(['0001_seed.sql']);
   });
 
-  // Vitess reports a connection's target in DATABASE(): Hyperdrive may connect to `app@primary`
+  // Decision: Vitess reports a connection's target in DATABASE(): Hyperdrive may connect to `app@primary`
   // while the CLI connects to `app`.
   it('makes a deploy wait for a CLI run that names a Vitess target', async () => {
     const { database, deploy } = await withFakeTime(async () => {
@@ -845,7 +836,7 @@ describe('MySQL migration lock across runners', () => {
     expect(database.lease?.owner).toBe('other');
   });
 
-  // Hyperdrive ends statements after 60 seconds, so this only happens if that limit changes.
+  // Decision: Hyperdrive ends statements after 60 seconds, so this only happens if that limit changes.
   it('stops a deploy whose lease expired during a statement', async () => {
     const { database, result } = await withFakeTime(async () => {
       const database = useDatabase(new FakeMySqlDatabase());
@@ -873,7 +864,7 @@ describe('MySQL migration lock across runners', () => {
   });
 });
 
-// Better Auth reads the schema, then adds what is missing, so two runs at once both add it.
+// Decision: Better Auth reads the schema, then adds what's missing, so two runs at once both add it.
 describe('MySQL Better Auth migrations under the lock', () => {
   it("runs a deploy's Better Auth migrations before another deploy takes the lease", async () => {
     const { bodies, runs } = await withFakeTime(async () => {
@@ -884,7 +875,7 @@ describe('MySQL Better Auth migrations under the lock', () => {
         await database.query(database.connect(), 'SELECT SLEEP(5)');
         runs.push({ start, end: Date.now() });
       };
-      // An app without migration files: the lease covers only the auth migrations.
+      // Decision: An app without migration files: the lease covers only the auth migrations.
       const first = migrate([], auth);
       await new Promise((resolve) => setTimeout(resolve, 20));
       const results = await Promise.all([first, migrate([], auth)]);
@@ -999,7 +990,6 @@ describe('MySQL Better Auth migrations under the lock', () => {
   it('does not start Better Auth migrations after another run took the lease', async () => {
     const database = useDatabase(new FakeMySqlDatabase());
     const query = database.query.bind(database);
-    // Another run takes the lease while this one reads its applied files.
     vi.spyOn(database, 'query').mockImplementation(async (session, sql, params) => {
       if (sql === 'SELECT `name` FROM `_void_migrations`') {
         database.lease = { owner: 'other', expiresAt: Date.now() + 3_600_000 };
@@ -1026,7 +1016,7 @@ describe('MySQL Better Auth migrations under the lock', () => {
       let renewals = 0;
       let failRenewal: ((error: Error) => void) | undefined;
       const lease = {
-        // The first renewal runs before the work; the timer's renewal is still waiting on MySQL.
+        // Decision: The first renewal runs before the work; the timer's renewal is still waiting on MySQL.
         renew: () =>
           renewals++ === 0
             ? Promise.resolve()
@@ -1058,7 +1048,7 @@ describe('MySQL Better Auth migrations under the lock', () => {
     }
   });
 
-  // `vp dev` runs Better Auth's migrations this way when they change the database of the files.
+  // Decision: `vp dev` runs Better Auth's migrations this way when they change the database of the files.
   it('runs follow-up work in a CLI run before it releases the named lock', async () => {
     const database = useDatabase(new FakeMySqlDatabase());
     let holder: unknown;
@@ -1077,7 +1067,7 @@ describe('MySQL Better Auth migrations under the lock', () => {
     expect(database.statements().at(-1)).toBe('SELECT RELEASE_LOCK(?)');
   });
 
-  // `vp dev` passes the database it holds the lock of.
+  // Decision: `vp dev` passes the database it holds the lock of.
   it('runs local Better Auth migrations on the database it is given', async () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-auth-url-'));
     writeFileSync(join(root, '.env'), 'DATABASE_URL=mysql://localhost/env\n');
@@ -1101,10 +1091,10 @@ describe('MySQL Better Auth migrations under the lock', () => {
 });
 
 describe('MySQL connections in Workers', () => {
-  // Workers forbid eval, which mysql2 uses to build row parsers unless disableEval is set.
+  // Decision: Workers forbid eval, which mysql2 uses to build row parsers unless disableEval is set.
   it('opens the hosted migration connections with eval disabled', async () => {
     expect((await migrate([])).body).toMatchObject({ ok: true });
-    // Hyperdrive does not take several statements in one query.
+    // Decision: Hyperdrive doesn't take several statements in one query.
     expect(mysqlConnections).toEqual([
       { uri: 'mysql://localhost/app', disableEval: true },
       { uri: 'mysql://localhost/app', disableEval: true },

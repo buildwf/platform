@@ -153,8 +153,6 @@ describe('runPlatformLogin', () => {
   });
 
   it('shows the failure page and throws when the code exchange fails', async () => {
-    // Override fetch so the localhost callback still hits the real server, but
-    // the API token exchange returns a non-ok response (expired code, etc.).
     vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
       const url =
         input instanceof Request ? input.url : input instanceof URL ? input.href : input.toString();
@@ -170,7 +168,7 @@ describe('runPlatformLogin', () => {
     });
 
     const loginPromise = runPlatformLogin('https://api.test', 'github', resolveLoginUrl);
-    // Attach the rejection assertion up front so the exchange failure doesn't
+    // Decision: Attach the rejection assertion up front so the exchange failure doesn't
     // surface as an unhandled rejection.
     const rejection = expect(loginPromise).rejects.toThrow(/Failed to exchange login code/);
 

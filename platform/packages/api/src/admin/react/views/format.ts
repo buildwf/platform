@@ -36,8 +36,8 @@ export function formatDateTime(iso: string, tz?: string) {
   } else {
     ago = `${Math.floor(seconds / 86400)}d ago`;
   }
-  // The relative age may tick between SSR and hydration. Preserve the server
-  // text until the next React render without treating that tick as a mismatch.
+  // Decision: The relative age may tick between SSR and hydration. Keep the server text until the next
+  // React render without treating that tick as a mismatch.
   return createElement(
     'span',
     { className: 'platform-admin-date-time', suppressHydrationWarning: true },

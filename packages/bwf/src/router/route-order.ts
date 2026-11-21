@@ -39,7 +39,7 @@ export function compareRouteSpecificity(
   const bSegments = b.pattern.split('/');
   const aKinds = aSegments.map(routeSegmentKind);
   const bKinds = bSegments.map(routeSegmentKind);
-  // A static route never shares a URL with a more specific one, and Pages looks
+  // Decision: A static route never shares a URL with a more specific one, and Pages looks
   // up the leading run of static routes exactly.
   const aStatic = aKinds.every((kind) => kind === 'static');
   const bStatic = bKinds.every((kind) => kind === 'static');

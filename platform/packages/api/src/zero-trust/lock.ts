@@ -30,8 +30,8 @@ export async function lockZeroTrustConfiguration(
       ? sql`SELECT pg_advisory_xact_lock_shared(hashtext('zero-trust:configuration'))`
       : sql`SELECT pg_advisory_xact_lock(hashtext('zero-trust:configuration'))`,
   );
-  // A separate statement takes a snapshot after the lock is granted, so it
-  // sees a record committed while this request waited.
+  // Decision: A separate statement takes a new snapshot after the lock is granted, so it sees a record committed
+  // while this request waited.
   if ((await getPlatformSetting(db, PLATFORM_UNINSTALL_SETTING)) !== null) {
     throw new ZeroTrustUnavailableError(
       'The platform is being uninstalled, so Zero Trust changes and deployments are refused.',

@@ -85,8 +85,8 @@ function authenticationError(
   error: unknown,
   attempt: LoginAttemptDetails = {},
 ): Response {
-  // Provider responses may contain secrets or untrusted data. Log only the
-  // failure code, never provider bodies, tokens, or error messages.
+  // Decision: Provider responses may contain secrets or untrusted data. Log only the failure code, not
+  // provider bodies, tokens or error messages.
   const code =
     error instanceof AuthenticationConfigurationError || error instanceof LoginFailure
       ? error.code
@@ -632,8 +632,8 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
         maxAge: 300,
       });
       context.header('Cache-Control', 'no-store');
-      // This page submits an origin-checked confirmation form. Keep the origin
-      // while withholding the OAuth callback path and query from referrers.
+      // Decision: This page submits an origin-checked confirmation form. Keep the origin while withholding the
+      // OAuth callback path and query from referrers.
       context.header('Referrer-Policy', 'strict-origin');
       return platformBrowserPage(
         context,
@@ -702,8 +702,8 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
       context.header('Cache-Control', 'no-store');
       context.header('Referrer-Policy', 'no-referrer');
       if (attempt.purpose === 'link') {
-        // Native confirmation needs its same-origin Origin header; retain only
-        // the origin so OAuth callback codes and state stay out of referrers.
+        // Decision: Native confirmation needs its same-origin Origin header; keep only the origin so OAuth
+        // callback codes and state stay out of referrers.
         context.header('Referrer-Policy', 'strict-origin');
         const proof = randomLoginProof();
         await db.insert(platformAuthAttempts).values({
@@ -779,8 +779,8 @@ export async function completePlatformLogin(context: Context<ApiEnv>): Promise<R
       });
       return context.redirect('/admin/');
     }
-    // Bind ordinary account-link launches to the browser that just proved the existing
-    // account. A copied launch URL must never let another browser attach its identity.
+    // Decision: Bind ordinary account-link launches to the browser that just proved the existing account.
+    // A copied launch URL mustn't let another browser attach its identity.
     setCookie(context, 'platform_account_session', token, {
       httpOnly: true,
       secure: true,

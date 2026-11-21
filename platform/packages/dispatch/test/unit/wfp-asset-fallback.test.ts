@@ -257,7 +257,7 @@ describe('WfP asset fallback on CF stub', () => {
         assetManifestId: 'dep_abc',
       },
       servingManifest: { '/logo.png': 'hashxyz' },
-      staticAssets: {}, // no bytes on hand
+      staticAssets: {},
       workerResponse: stubResponse(),
     });
 
@@ -665,8 +665,6 @@ describe('WfP asset fallback on CF stub', () => {
 
     const res = await app.fetch(new Request('https://my-app.void.app/api/items'), env, createCtx());
 
-    // JSON passes through; fallback must NOT be triggered even though the
-    // manifest has a matching path and bytes.
     expect(res.headers.get('content-type')).toBe('application/json');
     expect(await res.text()).toBe(largeBody);
   });

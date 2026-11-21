@@ -423,7 +423,7 @@ describe('typed HTTP execution', () => {
     );
     const response = await app.fetch(new Request('https://app.test/a'), {}, context);
     expect(response.status).toBe(404);
-    // Only the destination's rules apply, as in edge routing and platform dispatch.
+    // Decision: Only the destination's rules apply, as in edge routing and platform dispatch.
     expect(response.headers.get('x-rule')).toBe('one');
     expect(response.headers.get('X-Platform-Routing')).toBe('fallback[/a] -> /b (unknown)');
     expect(response.headers.get('X-Platform-No-Match')).toBe('1');
@@ -472,7 +472,6 @@ describe('typed Worker fetch execution', () => {
     expect(await missing.json()).toEqual({ ready: true });
     expect(missing.headers.get('cache-control')).toBe('no-store');
   });
-  // An async Standard Schema validator, like zod's async refine.
   const upper = {
     '~standard': {
       version: 1 as const,
@@ -480,7 +479,7 @@ describe('typed Worker fetch execution', () => {
       validate: async (value: unknown) => ({ value: String(value).toUpperCase() }),
     },
   };
-  // The entry validates before it opens the request scope that the app's reads run in.
+  // Decision: The entry validates before it opens the request scope that the app's reads run in.
   it('serves an env.ts value with an async validator to app requests', async () => {
     defineEnv({ TOKEN: upper });
     try {
@@ -495,7 +494,7 @@ describe('typed Worker fetch execution', () => {
       defineEnv({});
     }
   });
-  // Remote dev mode replaces the env with a copy before it opens the request scope.
+  // Decision: Remote dev mode replaces the env with a copy before it opens the request scope.
   it('serves an env.ts value with an async validator to remote dev requests', async () => {
     defineEnv({ TOKEN: upper });
     try {
@@ -517,12 +516,11 @@ describe('typed Worker fetch execution', () => {
       defineEnv({});
     }
   });
-  // Cloudflare can keep an isolate running when only its bindings change, so a request that
-  // holds the old values can overlap one that holds the new values.
+  // Decision: Cloudflare can keep an isolate running when only its bindings change, so a request that holds
+  // the old values can overlap one that holds the new values.
   it('serves each of two overlapping requests the async value of its own env', async () => {
     defineEnv({ TOKEN: upper });
     try {
-      // Both requests validate before either reads.
       let waiting = 0;
       let release = () => {};
       const bothValidated = new Promise<void>((resolve) => {

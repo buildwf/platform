@@ -259,7 +259,7 @@ export function parsePlatformIdentityUrl(value: unknown, name: string, originOnl
       `${name} must be a credential-free HTTPS ${originOnly ? 'origin' : 'URL'} without query or fragment.`,
     );
   }
-  // OIDC issuer strings are compared exactly, including a significant trailing slash.
+  // Decision: OIDC issuer strings are compared exactly, including a significant trailing slash.
   return originOnly ? url.origin : input;
 }
 

@@ -249,7 +249,7 @@ export async function loadDeploymentDetailPage(context: AdminContext, path: stri
       manifest = JSON.parse(deployment.manifest) as DeployManifest;
     }
   } catch {
-    // Preserve the detail page when an old deployment has malformed manifest JSON.
+    // Decision: Preserve the detail page when an old deployment has malformed manifest JSON.
   }
   return {
     id: path,

@@ -212,9 +212,9 @@ export function convertBindings(
   );
   for (const [index, entry] of getRecords(source, 'pipelines').entries()) {
     const sourcePath = pathFor('pipelines', index);
-    // The deprecated `pipeline` field names a legacy pipeline, which
-    // `@cloudflare/config` doesn't support. It isn't a stream ID, so write a
-    // placeholder for the user to replace instead of copying it.
+    // Decision: The deprecated `pipeline` field names a legacy pipeline, which `@cloudflare/config` doesn't
+    // support. It isn't a stream ID, so write a placeholder for the user to replace instead of
+    // copying it.
     const isLegacy = entry.stream === undefined && entry.pipeline !== undefined;
     const options = optionsFromRecord(
       {
@@ -496,10 +496,9 @@ export function convertBindings(
         continue;
       }
 
-      // A Workflow defined by another Worker keeps its settings on that
-      // Worker's export; this Worker only binds to it. A Workflow this Worker
-      // defines, including one whose `script_name` names this Worker, also gets
-      // an `exports.workflow` entry (see convertExports).
+      // Decision: A Workflow defined by another Worker keeps its settings on that Worker's export; this Worker only
+      // binds to it. A Workflow this Worker defines, including one whose `script_name` names this Worker,
+      // also gets an `exports.workflow` entry (see convertExports).
       const external = !isLocalWorkflow(entry, source);
       const worker = external
         ? String(entry.script_name)

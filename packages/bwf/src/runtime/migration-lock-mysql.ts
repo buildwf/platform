@@ -90,7 +90,7 @@ export async function acquireMySqlMigrationLease(
         );
       }
     },
-    // Expires the row instead of deleting it. When a delete meets two waiting inserts of the same
+    // Decision: Expires the row instead of deleting it. When a delete meets two waiting inserts of the same
     // key, InnoDB ends one of them with a deadlock.
     async release() {
       await query(
@@ -103,9 +103,9 @@ export async function acquireMySqlMigrationLease(
   const deadline = Date.now() + DEPLOY_WAIT_MS;
   for (;;) {
     if (await take(query, owner)) {
-      // Taken before this check, so a CLI run that starts later sees the lease and stops.
+      // Decision: Taken before this check, so a CLI run that starts later sees the lease and stops.
       const [lock] = rowsOf(await query('SELECT IS_USED_LOCK(?)', [lockName]));
-      // Vitess names the column after the call and ignores any alias.
+      // Decision: Vitess names the column after the call and ignores any alias.
       if (Object.values(lock ?? {})[0] == null) {
         return lease;
       }
@@ -154,7 +154,7 @@ async function take(query: MySqlLeaseQuery, owner: string): Promise<boolean> {
   try {
     return await tryTake(query, owner);
   } catch (error) {
-    // MySQL rolled the statement back as a deadlock victim, so the lease is not taken: poll again.
+    // Decision: MySQL rolled the statement back as a deadlock victim, so the lease is not taken: poll again.
     if (errnoOf(error) === 1213) {
       return false;
     }
@@ -170,7 +170,7 @@ async function tryTake(query: MySqlLeaseQuery, owner: string): Promise<boolean> 
   if (affectedRows(inserted) === 1) {
     return true;
   }
-  // The lease of a run that stopped early.
+  // Decision: The lease of a run that stopped early.
   const taken = await query(
     "UPDATE `_void_migration_lock` SET `owner` = ?, `expires_at` = UTC_TIMESTAMP(6) + INTERVAL ? SECOND WHERE `name` = 'app' AND `expires_at` < UTC_TIMESTAMP(6)",
     [owner, LEASE_SECONDS],

@@ -16,9 +16,6 @@ import {
   withLegacyDeploy,
 } from './helpers.ts';
 
-// An app that is the front door to Platform acts for its own people: no Platform login, and a
-// publish approved in the app.
-
 const app = withLegacyDeploy(rawApp);
 const origin = 'https://platform.example.com';
 const redirect = 'https://chat.example.com/platform/callback';
@@ -96,7 +93,6 @@ describe('app-person grant', () => {
       login: 'samr',
       email: 'sam@example.com',
     });
-    // Each token works on its own, so two bots of one person don't undo each other.
     expect((await call('previews.create', issued.access_token, { workspace: 'w1' })).status).toBe(
       200,
     );
@@ -145,7 +141,6 @@ describe('app-person grant', () => {
     };
     const id = await publish();
 
-    // Someone else in the same app can't approve it.
     expect((await token({ person: 'p2', publish_request: id })).status).toBe(400);
 
     const approved = await token({ person: 'p1', publish_request: id });
@@ -156,7 +151,6 @@ describe('app-person grant', () => {
       approval_id: string;
     };
     expect(credential.scope).toBe('deploy:approve');
-    // Without an installed application there is no hostname to give.
     expect(credential).not.toHaveProperty('url');
     expect(credential.approval_id).toBe(id);
     const [project] = await env.db
@@ -168,9 +162,7 @@ describe('app-person grant', () => {
     expect(record.approved_at).not.toBeNull();
     expect(record.consumed_at).not.toBeNull();
 
-    // An approval is used once.
     expect((await token({ person: 'p1', publish_request: id })).status).toBe(400);
-    // The next build of the same app needs its own approval and lands in the same project.
     const next = (await (
       await token({ person: 'p1', publish_request: await publish() })
     ).json()) as {

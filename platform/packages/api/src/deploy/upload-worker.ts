@@ -101,7 +101,7 @@ function uploadFields(
   const timeout = watchdog.fired() ?? null;
   return {
     timeout,
-    // Not `phase`: the logger keeps that key for the deploy step.
+    // Decision: Not `phase`: the logger keeps that key for the deploy step.
     uploadPhase: progress.done ? 'response' : 'sending',
     ...(timeout === 'idle' ? { stalledOn: watchdog.stalledOn() } : {}),
     bytesSent: progress.bytes,
@@ -127,7 +127,7 @@ function savedUploadReplayCode(body: string): number | undefined {
   }
   for (const error of errors) {
     const code = (error as { code?: unknown } | null)?.code;
-    // 100312: the assets completion token was used. 10079: the migration tag moved.
+    // Decision: 100312: the assets completion token was used. 10079: the migration tag moved.
     if (code === 100312 || code === 10079) {
       return code;
     }
@@ -223,8 +223,8 @@ export async function uploadDeploymentWorker(input: {
     emit({ event: 'provisioning', bindings: bindingLabels });
   }
 
-  // Recorded before the upload: this deployment's Worker does not exist until
-  // the upload creates it holding this token, and only a rotation changes it.
+  // Decision: Recorded before the upload: this deployment's Worker doesn't exist until the upload creates it
+  // with this token, and only a rotation changes it.
   const proxyToken = await issueProjectProxyToken(
     context.get('db'),
     context.env.JWT_SECRET,
@@ -304,8 +304,8 @@ export async function uploadDeploymentWorker(input: {
       context.env.CF_API_TOKEN,
       dispatchNamespace,
       workerName,
-      // Strip extras (e.g. v2 `blake3`/`md5`) at the CF API boundary —
-      // CF documents only `{ hash, size }` and may strictly validate.
+      // Decision: Strip extras (such as v2 `blake3` and `md5`) at the CF API boundary: CF documents only
+      // `{ hash, size }` and may validate strictly.
       normalizeForCfAssetSession(assetManifest),
     );
     logger.info('asset_upload', 'session_created', {
@@ -314,9 +314,8 @@ export async function uploadDeploymentWorker(input: {
       blobsAvailable: assetsByHash.size,
     });
 
-    // Every declared asset was verified in scoped R2 before provisioning.
-    // Hydrate only the bytes Cloudflare actually requests; the cachebuster
-    // already has its deploy-local bytes in assetsByHash.
+    // Decision: Each declared asset was verified in scoped R2 before provisioning. Load only the bytes Cloudflare
+    // asks for; the cache buster already has its deploy-local bytes in assetsByHash.
     const hashesNeedingBytes = Array.from(new Set(session.buckets.flat())).filter(
       (hash) => !assetsByHash.has(hash),
     );
@@ -331,8 +330,7 @@ export async function uploadDeploymentWorker(input: {
         contentType: contentTypes.get(hash)!,
       });
     });
-    // Every byte was pre-uploaded direct-to-R2 by the CLI, so none are new
-    // to this request.
+    // Decision: The CLI pre-uploaded each byte straight to R2, so none are new to this request.
     emit({
       event: 'asset_upload',
       total: deployedAssetCount,
@@ -346,9 +344,8 @@ export async function uploadDeploymentWorker(input: {
       session.buckets,
       assetsByHash,
     );
-    // Cloudflare holds the requested asset bytes now. Keep only the
-    // deploy-local cache buster, which a Durable Object snapshot stores, so
-    // asset bytes are not held through the Worker upload.
+    // Decision: Cloudflare holds the requested asset bytes now. Keep only the deploy-local cache buster, which a
+    // Durable Object snapshot stores, so asset bytes aren't held through the Worker upload.
     const deployLocalHashes = new Set(
       Object.entries(assetManifest)
         .filter(([path]) => path.startsWith('/.bwf-deploy/'))
@@ -365,19 +362,18 @@ export async function uploadDeploymentWorker(input: {
     });
     emit({ event: 'asset_upload_done' });
 
-    // Mirror serving manifest. Direct-to-R2 already lands assets
-    // in our R2; we just need to write the per-deploy serving
-    // manifest so dispatch's WfP fallback can read them when CF's
-    // asset store returns the dedupe-poisoning stub.
+    // Decision: Mirror the serving manifest. Direct-to-R2 already put the assets in our R2; write the per-deploy
+    // serving manifest so dispatch's WfP fallback can read them when CF's asset store returns the
+    // dedupe-poisoning stub.
     const servingManifest = Object.fromEntries(
       Object.entries(assetManifest)
         .filter(([path]) => !path.startsWith('/.bwf-deploy/'))
         .map(([path, entry]) => [path, `!${entry.hash}`]),
     );
     const persistedAssetManifest = attachServingStoreMetadata(assetManifest, servingManifest, true);
-    // Persist exact placement before the serving manifest/ready marker.
-    // GC protects every nonterminal row with asset_hashes, and recovery
-    // can reconstruct a lagging KV manifest without probing 5,000 keys.
+    // Decision: Persist exact placement before the serving manifest and ready marker. GC protects each
+    // nonterminal row with asset_hashes, and recovery can rebuild a lagging KV manifest without probing
+    // 5,000 keys.
     await context
       .get('db')
       .update(deployments)
@@ -391,13 +387,13 @@ export async function uploadDeploymentWorker(input: {
   markPhase('worker_upload');
   emit({ event: 'worker_upload', modules: workerFiles.length });
 
-  // Reserved-name set lives in `../reserved-bindings.ts` so the secrets
-  // route can reject before persisting; see the invariant test there.
+  // Decision: The reserved-name set lives in `../reserved-bindings.ts` so the secrets route can reject before
+  // persisting; see the invariant test there.
   const userVarNames = Object.keys(manifest.vars ?? {});
   const userSecretNames = secretBindings.map((s) => s.name);
-  // Vars and secrets share metadata.bindings with platform bindings. Reject
-  // reserved names before Cloudflare rejects the duplicate binding. The secrets
-  // route rejects these at PUT time, but older stored rows can still reach here.
+  // Decision: Vars and secrets share metadata.bindings with platform bindings. Reject reserved names before
+  // Cloudflare rejects the duplicate binding. The secrets route rejects them at PUT time, but older
+  // stored rows can still get here.
   const reserved = [
     ...userVarNames.filter((n) => RESERVED_BINDING_NAMES.has(n)).map((n) => `vars.${n}`),
     ...userSecretNames.filter((n) => RESERVED_BINDING_NAMES.has(n)).map((n) => `secret.${n}`),
@@ -457,10 +453,9 @@ export async function uploadDeploymentWorker(input: {
     sandboxControllerWorkerName(projectId, deployment.id),
   );
   const liveBindings = buildLiveUploadBindings(manifest.live);
-  // No per-project `send_email` binding is uploaded. The framework's
-  // `sendEmail()` POSTs MIME + recipients to `__PLATFORM_PROXY/email/send`;
-  // the proxy holds the account-level send_email binding and enforces
-  // the per-project verified-destination policy through SQL admission. See
+  // Decision: No per-project `send_email` binding is uploaded. The framework's `sendEmail()` POSTs MIME and
+  // recipients to `__PLATFORM_PROXY/email/send`; the proxy holds the account-level send_email binding
+  // and enforces the per-project verified-destination policy through SQL admission. See
   // `meta/design-docs/0078-email-cf-native.md` and `packages/proxy/src/email.ts`.
   const allBindings = [
     ...plainTextBindings,
@@ -528,11 +523,9 @@ export async function uploadDeploymentWorker(input: {
     Authorization: `Bearer ${context.env.CF_API_TOKEN}`,
     'User-Agent': platformAppUploadUserAgent(context.env),
   };
-  // Set once an attempt fails after Cloudflare may already have saved it.
   let maybeSaved = false;
-  // A replay only rewrites this deployment's own script: the name is unique
-  // per deployment. Every attempt sends the same body, so a saved script with
-  // the uploaded migration tag is this upload.
+  // Decision: A replay only rewrites this deployment's own script: the name is unique per deployment. Each
+  // attempt sends the same body, so a saved script with the uploaded migration tag is this upload.
   const savedDespiteFailure = async (fields: Record<string, unknown>) => {
     const saved = await workerScriptSaved(
       input.workerUploadUrl!,
@@ -544,32 +537,30 @@ export async function uploadDeploymentWorker(input: {
     }
     return saved;
   };
-  // Cloudflare sets no subrequest time limit. An attempt is cut when it stops
-  // moving (WORKER_UPLOAD_IDLE_MS, WORKER_UPLOAD_RESPONSE_MS) and retried like
-  // a network error; all attempts together share WORKER_UPLOAD_BUDGET_MS, cut
-  // short by the end of a queued deployment run. Another attempt starts only
-  // when at least WORKER_UPLOAD_MIN_ATTEMPT_MS is left after its backoff.
+  // Decision: Cloudflare sets no subrequest time limit. An attempt is cut when it stops moving
+  // (WORKER_UPLOAD_IDLE_MS, WORKER_UPLOAD_RESPONSE_MS) and retried like a network error. All attempts
+  // share WORKER_UPLOAD_BUDGET_MS, cut short by the end of a queued deployment run. Another attempt
+  // starts only when at least WORKER_UPLOAD_MIN_ATTEMPT_MS is left after its backoff.
   const budgetEndsAt = workerUploadDeadline(input.deadline);
   const runLimited = budgetEndsAt === input.deadline;
   await retryWithBackoff(
     async (attempt) => {
       const attemptStart = Date.now();
-      // A streamed body is sent once, so each attempt reopens the modules.
+      // Decision: A streamed body can be sent once, so each attempt reopens the modules.
       const upload = workerUploadBody(metadata, workerFiles);
       const watchdog = uploadWatchdog(upload.progress, {
         idleMs: WORKER_UPLOAD_IDLE_MS,
         responseMs: WORKER_UPLOAD_RESPONSE_MS,
         deadline: budgetEndsAt,
       });
-      // No retry once the attempts so far leave too little budget for another.
       const isFinal = () =>
         attempt === CF_RETRY.maxRetries ||
         watchdog.fired() === 'deadline' ||
         budgetEndsAt - Date.now() < WORKER_UPLOAD_MIN_ATTEMPT_MS + CF_RETRY.delayMs * 2 ** attempt;
       let cfResponse: Response | undefined;
       let cfBody: string;
-      // The request and its response body are retried together: a connection
-      // that drops while the body is read fails like one that drops earlier.
+      // Decision: The request and its response body are retried together: a connection that drops while the body
+      // is read fails like one that drops earlier.
       try {
         cfResponse = await fetch(input.workerUploadUrl!, {
           method: 'PUT',
@@ -579,9 +570,8 @@ export async function uploadDeploymentWorker(input: {
         });
         cfBody = await cfResponse.text();
       } catch (error) {
-        // A module that fails its size or digest check stops the body before
-        // its closing boundary. Report that, not the transport error it causes,
-        // and never retry it: the same bytes fail every attempt.
+        // Decision: A module that fails its size or digest check stops the body before its closing boundary. Report
+        // that, not the transport error it causes, and don't retry: the same bytes fail each attempt.
         const failure = upload.failure();
         if (failure instanceof WorkerModuleIntegrityError) {
           throw failure;
@@ -599,8 +589,8 @@ export async function uploadDeploymentWorker(input: {
           err: cause instanceof Error ? cause.message : String(cause),
           ...uploadFields(upload, watchdog, attemptStart, budgetEndsAt),
         };
-        // A 4xx stays final even when its body drops, unless it replays an
-        // upload that was saved. Any other failure is retried.
+        // Decision: A 4xx stays final even when its body drops, unless it replays an upload that was saved. Any other
+        // failure is retried.
         if (cfResponse && !cfResponse.ok && cfResponse.status < 500) {
           if (maybeSaved && (await savedDespiteFailure(fields))) {
             return true;
@@ -608,11 +598,10 @@ export async function uploadDeploymentWorker(input: {
           throw new Error(`worker upload failed (HTTP ${cfResponse.status})`, { cause: error });
         }
         if (isFinal()) {
-          // This attempt or an earlier one may have been saved.
           if (await savedDespiteFailure(fields)) {
             return true;
           }
-          // The watchdog also covers the module reads that feed the body.
+          // Decision: The watchdog also covers the module reads that feed the body.
           throw (
             failure ??
             (timedOut
@@ -624,7 +613,6 @@ export async function uploadDeploymentWorker(input: {
         logger.warn('worker_upload', 'attempt_failed', fields);
         return undefined;
       } finally {
-        // Frees the storage reads of a failed attempt before the backoff.
         watchdog.dispose();
         upload.release();
       }
@@ -638,16 +626,15 @@ export async function uploadDeploymentWorker(input: {
           bodyPreview: cfBody.slice(0, 500),
           ...uploadFields(upload, watchdog, attemptStart, budgetEndsAt),
         };
-        // Only 5xx is retried. A 429 stays final: the install shares one API
-        // token, and Cloudflare blocks it for minutes once it hits the limit.
+        // Decision: Only 5xx is retried. A 429 stays final: the install shares one API token, and Cloudflare blocks it
+        // for minutes once it hits the limit.
         if (cfResponse.status >= 500 && !isFinal()) {
           maybeSaved = true;
           logger.warn('worker_upload', 'attempt_failed', fields);
           return undefined;
         }
-        // A replay of a saved upload fails: the assets completion token is
-        // single-use and the migration tag has already moved. A 5xx here ends
-        // the last attempt, which may itself have been saved.
+        // Decision: A replay of a saved upload fails: the assets completion token is single-use and the migration tag
+        // has already moved. A 5xx here ends the last attempt, which may itself have been saved.
         const code = maybeSaved ? savedUploadReplayCode(cfBody) : undefined;
         if (
           (cfResponse.status >= 500 || code !== undefined) &&
@@ -660,7 +647,7 @@ export async function uploadDeploymentWorker(input: {
       }
 
       if (isCfAssetPlainText(cfBody)) {
-        // Cloudflare accepted the request, so it may have saved the script.
+        // Decision: Cloudflare accepted the request, so it may have saved the script.
         maybeSaved = true;
         logger.warn('worker_upload', 'attempt_failed', {
           attempt,

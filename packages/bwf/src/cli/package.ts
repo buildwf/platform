@@ -91,15 +91,15 @@ export function resolveSpaFallbackChain(
   }
 
   if (!userRules) {
-    // No user fallbacks — keep the zero-overhead platform SPA switch.
+    // Decision: No user fallbacks, so keep the zero-overhead platform SPA switch.
     return {
       assetConfig: { not_found_handling: 'single-page-application' },
       fallbackRules: undefined,
     };
   }
 
-  // An unscoped user `/* -> /index.html` already is the catch-all; a duplicate
-  // would trip the duplicate-source lint. A host-scoped one covers one host only.
+  // Decision: An unscoped user `/* -> /index.html` already is the catch-all; a duplicate would trip the
+  // duplicate-source lint. A host-scoped one covers one host only.
   const alreadyHasCatchAll = userRules.some(
     (r) => r.host === undefined && r.source === '/*' && r.destination === '/index.html',
   );
@@ -203,7 +203,7 @@ function createAssetsIgnoreFunction(
     patterns.push(...content.split('\n'));
   }
   const ig = ignore().add(patterns);
-  // ignore library expects relative paths without leading /
+  // Decision: The ignore library expects relative paths without a leading /.
   const isIgnored = (relativePath: string) => {
     const normalized = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
     return ig.test(normalized).ignored;
@@ -261,7 +261,7 @@ export async function collectAndHashAssets(
     for (const filePath of files) {
       processed++;
       await tickProgress(processed, files.length, onProgress, 'Hashing assets');
-      // `collectAssetFiles` already skipped ignored paths.
+      // Decision: `collectAssetFiles` already skipped ignored paths.
       const relativePath = '/' + relative(dir, filePath);
       checkWorkerJsAsset(relativePath, assetsIgnoreFilePresent);
       const content = readFileSync(filePath);
@@ -270,18 +270,17 @@ export async function collectAndHashAssets(
         blake3,
         md5: computeMd5(content),
         size: content.length,
-        // Deprecated v1 alias of `blake3` for consumers still reading `entry.hash`.
+        // Decision: Deprecated v1 alias of `blake3` for consumers still reading `entry.hash`.
         hash: blake3,
       };
       assetFiles.set(relativePath, content);
     }
   } catch (err) {
-    // Only swallow directory-not-found errors; re-throw everything else
-    // (e.g. _worker.js safety guard)
+    // Decision: Only swallow directory-not-found errors; rethrow everything else (such as the _worker.js safety
+    // guard).
     if (!isNotFoundError(err)) {
       throw err;
     }
-    // Directory doesn't exist — no assets
   }
 
   return { assetManifest, assetFiles };
@@ -706,15 +705,12 @@ export function buildStaticManifest(opts: {
  */
 function isWorkerModule(relativePath: string): boolean {
   const norm = relativePath.replace(/\\/g, '/');
-  // Skip build metadata at any depth
   if (norm.includes('/.vite/') || norm.startsWith('.vite/')) {
     return false;
   }
-  // Skip wrangler config
   if (norm === 'wrangler.json' || norm === 'wrangler.jsonc') {
     return false;
   }
-  // Only include CF-compatible module extensions
   return /\.(js|mjs|cjs|wasm|map|txt)$/.test(norm);
 }
 

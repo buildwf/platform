@@ -5,7 +5,6 @@ import { createIsolatedPlayground } from '../../test/integration-helpers.ts';
 
 const workspaceRoot = fileURLToPath(new URL('../..', import.meta.url));
 
-/** Provider-dependent features are opt-in for the disposable hosted acceptance app. */
 export function prepareKitchenSinkPlatformFixture(
   options: { sandbox?: boolean; email?: boolean; runtime?: boolean } = {},
 ) {

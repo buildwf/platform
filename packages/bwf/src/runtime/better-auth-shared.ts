@@ -183,7 +183,7 @@ function resolveSocialProviderCredentials(
     );
   }
 
-  // auth.ts can supply settings that the env leaves out, so
+  // Decision: auth.ts can supply settings that the env leaves out, so
   // assertSocialProviderSettings checks the final options.
   const settings: Record<string, string> = {};
   for (const [option, envName] of Object.entries(getBwfAuthProviderSettingEnvNames(provider))) {
@@ -206,7 +206,7 @@ function assertSocialProviderSettings(
     if (!isBwfSocialAuthProvider(provider)) {
       continue;
     }
-    // A function form resolves later, inside Better Auth; a disabled provider needs nothing.
+    // Decision: A function form resolves later, inside Better Auth; a disabled provider needs nothing.
     const config = socialProviders?.[provider];
     if (typeof config !== 'object' || config === null) {
       continue;
@@ -262,7 +262,7 @@ function appendAuthHeaders(
     return;
   }
 
-  // A static file's policy belongs to the build output. A credentialed request
+  // Decision: A static file's policy belongs to the build output. A credentialed request
   // only makes it private, so a shared cache never keeps a copy served through
   // a Worker that user middleware may gate, while the browser still reuses it.
   if (staticAsset) {
@@ -283,7 +283,7 @@ function appendAuthHeaders(
     return;
   }
 
-  // `no-store`, or `private` with `no-cache`, keeps the response out of shared
+  // Decision: `no-store`, or `private` with `no-cache`, keeps the response out of shared
   // caches and makes the browser ask before reusing it, which allows ETag + 304
   // (the ETag must differ per user). `private` alone lets the browser show the
   // response to the next account that signs in.
@@ -292,7 +292,7 @@ function appendAuthHeaders(
     routeDirectives.has('no-store') ||
     (routeDirectives.has('private') && routeDirectives.has('no-cache'));
   source.forEach((value, key) => {
-    // getSession's response policy belongs to the session endpoint. An anonymous
+    // Decision: getSession's response policy belongs to the session endpoint. An anonymous
     // lookup must not make the application's public page or asset uncacheable.
     if (
       (!includeCachePolicy || keepRoutePolicy) &&
@@ -317,7 +317,7 @@ function appendAuthHeaders(
   }
 }
 
-// A CDN may follow these ahead of Cache-Control, so a private response drops
+// Decision: A CDN may follow these ahead of Cache-Control, so a private response drops
 // them, including values a header rule set.
 function dropSharedCachePolicy(c: Context): void {
   for (const name of SHARED_CACHE_HEADERS) {
@@ -327,7 +327,7 @@ function dropSharedCachePolicy(c: Context): void {
   }
 }
 
-// Lowercased Cache-Control directive names that carry no value. Commas inside a
+// Decision: Lowercased Cache-Control directive names that carry no value. Commas inside a
 // quoted value do not split directives, so `no-cache="a,private"` has no `private`.
 function bareCacheDirectives(policy: string | null): Set<string> {
   const directives = (policy ?? '').match(/(?:[^",]|"(?:[^"\\]|\\.)*"?)+/g) ?? [];
@@ -390,7 +390,7 @@ export function privateCachePolicy(policy: string | null): string {
   return ['private', ...kept].join(', ');
 }
 
-// Cache-Control directives split on commas outside quoted values, trimmed.
+// Decision: Cache-Control directives split on commas outside quoted values, trimmed.
 function splitCacheDirectives(policy: string): Array<string> {
   const directives: Array<string> = [];
   let start = 0;
@@ -486,7 +486,7 @@ function cookieName(cookie: string): string {
   return (equals === -1 ? pair : pair.slice(0, equals)).trim();
 }
 
-// A browser stores one cookie per name, domain and path. Domains ignore case
+// Decision: A browser stores one cookie per name, domain and path. Domains ignore case
 // and a leading dot; paths are case-sensitive. Missing or invalid paths default
 // to the request directory.
 function cookieKey(cookie: string, defaultPath: string): string {
@@ -524,7 +524,7 @@ function mergeAuthCookies(
   const requestPath = new URL(requestUrl).pathname;
   const lastSlash = requestPath.lastIndexOf('/');
   const defaultPath = lastSlash <= 0 ? '/' : requestPath.slice(0, lastSlash);
-  // `at` is the position among the `auth.api.*` calls, and -1 for the lookup.
+  // Decision: `at` is the position among the `auth.api.*` calls, and -1 for the lookup.
   const latest = new Map<string, { cookie: string; at: number }>();
   for (const cookie of lookup?.getSetCookie() ?? []) {
     latest.set(cookieKey(cookie, defaultPath), { cookie, at: -1 });
@@ -545,7 +545,7 @@ function mergeAuthCookies(
 
 const SESSION_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-// An http page never counts for an https request. An https page counts for an
+// Decision: An http page never counts for an https request. An https page counts for an
 // http request on the same host: Vite HTTPS dev and preview hand WebSocket
 // upgrades to the Worker with an http:// URL.
 function isRequestOrigin(origin: string, requestUrl: string): boolean {
@@ -608,7 +608,7 @@ async function isTrustedRequestOrigin(
     return true;
   }
 
-  // Better Auth skips its origin check when CSRF checks are off, and treats
+  // Decision: Better Auth skips its origin check when CSRF checks are off, and treats
   // `disableOriginCheck: true` the same way while `disableCSRFCheck` is unset.
   const advanced = auth.options.advanced;
   if (
@@ -622,7 +622,7 @@ async function isTrustedRequestOrigin(
   if (context.isTrustedOrigin(origin, { allowRelativePaths: false })) {
     return true;
   }
-  // The function form is evaluated per request by Better Auth, while the
+  // Decision: The function form is evaluated per request by Better Auth, while the
   // context list was built once without a request. `isTrustedOrigin` matches
   // against `this.trustedOrigins`, so reuse it to keep wildcard patterns.
   const trustedOrigins = auth.options.trustedOrigins;
@@ -758,7 +758,7 @@ export function createBwfAuthRuntime(
     runtime: BwfAuthRuntimeOptions,
     database: AuthDatabase,
   ): Promise<void> {
-    // Skip auth for internal routes (cron, queue, migration, binding proxy).
+    // Decision: Skip auth for internal routes (cron, queue, migration, binding proxy).
     // Still set user/session to null so downstream middleware that checks
     // these context variables gets the expected sentinel (not undefined).
     if (c.req.path.startsWith('/__')) {
@@ -789,13 +789,13 @@ export function createBwfAuthRuntime(
       authDependentRequests.add(c.req.raw);
     }
 
-    // The session lookup's own cookies are already in `result.headers`.
+    // Decision: The session lookup's own cookies are already in `result.headers`.
     forwarder.start();
     await authContext.run({ user: state?.user ?? null, state }, async () => {
       await next();
     });
 
-    // `auth.api.*` calls skip Better Auth's origin check, so a cross-site form
+    // Decision: `auth.api.*` calls skip Better Auth's origin check, so a cross-site form
     // post must not sign the browser in or out through an app route.
     let forwarded = forwarder.cookies();
     if (forwarded.length > 0 && !(await isTrustedRequestOrigin(c.req.raw, auth))) {

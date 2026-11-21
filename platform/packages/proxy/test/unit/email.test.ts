@@ -2,10 +2,6 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-// `cloudflare:email` is a workerd built-in with no npm shim. The root
-// vite.config.ts aliases `cloudflare:workers` to a stub for the same reason;
-// until it does the same for `cloudflare:email`, this file registers its own
-// mock (vi.mock is hoisted above the import below).
 vi.mock('cloudflare:email', () => ({
   EmailMessage: class MockEmailMessage {
     constructor(
@@ -19,9 +15,8 @@ vi.mock('cloudflare:email', () => ({
 const worker = (await import('../../src/index.ts')).default;
 const { readMimeFromAddrSpec } = await import('../../src/email.ts');
 const { clearProxyTokenStateCache } = await import('../../src/proxy-token.ts');
-// The framework's own MIME builder — the ONLY legitimate producer of the
-// `mimeBase64` a tenant posts — so the proxy's From pin is checked against
-// every `From:` shape it really renders, not against hand-typed lookalikes.
+// Decision: Uses the framework's own MIME builder, the only legitimate producer of `mimeBase64`, so the
+// From pin is tested against each `From:` shape it really renders.
 const { buildMime, normalizeEmail } =
   await import('../../../../../packages/bwf/src/runtime/email/mime.ts');
 
@@ -29,8 +24,6 @@ const JWT_SECRET = 'test-secret-key';
 const EMAIL_SIGNING_SECRET = 'test-email-signing-key-independent';
 const PROD_DOMAIN = 'mail.buildwf.dev';
 const STAGING_DOMAIN = 'mail.staging.buildwf.dev';
-
-// --- HMAC helper (mirrors the worker's project token signing) ---
 
 function base64urlEncode(data: Uint8Array): string {
   let binary = '';
@@ -53,8 +46,6 @@ async function signHmac(data: string, secret: string): Promise<string> {
     new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(data))),
   );
 }
-
-// --- Mock env ---
 
 type MockKv = ReturnType<typeof createMockKv>;
 
@@ -156,12 +147,10 @@ function createMockEnv(
 
 const DEFAULT_FROM = `acme+noreply@${PROD_DOMAIN}`;
 
-/** The smallest message `/email/send` accepts for `from`: a matching `From:` and a body. */
 function mimeFor(from: string, rest = 'Subject: hi\r\n\r\nhello\r\n'): string {
   return `From: ${from}\r\n${rest}`;
 }
 
-/** Minimal base64 of an RFC 5322-ish body — content beyond `From:` is irrelevant here. */
 function mimeBase64(body = mimeFor(DEFAULT_FROM)): string {
   let binary = '';
   for (const b of new TextEncoder().encode(body)) {
@@ -184,11 +173,6 @@ async function postSend(
   );
 }
 
-/**
- * A `/email/send` body that passes every gate for `proj_000000000001` / slug `acme`.
- * The MIME `From:` follows the envelope under test, exactly as the framework
- * renders both from one `from.email`; pass `mimeBase64` to diverge them.
- */
 async function sendBody(overrides: Record<string, unknown> = {}) {
   const from = typeof overrides.from === 'string' ? overrides.from : DEFAULT_FROM;
   return {
@@ -202,7 +186,6 @@ async function sendBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** KV contents that let `proj_000000000001` send to `dev@example.com`. */
 function happyPathKv(extra: Record<string, string> = {}) {
   return createMockKv({
     'email-slug:proj_000000000001': 'acme',
@@ -211,20 +194,13 @@ function happyPathKv(extra: Record<string, string> = {}) {
   });
 }
 
-/** KV keys read outside the project token check. */
 function nonAuthKvReads(kv: MockKv): Array<string> {
   return kv.get.mock.calls.map((c) => c[0]).filter((key) => !key.startsWith('proxy-token:'));
 }
 
-// The floor cache lives for the whole isolate; start every test cold.
+// Decision: The floor cache lives for the whole isolate, so each test starts cold.
 beforeEach(clearProxyTokenStateCache);
 
-// --- wrangler.jsonc ---
-
-/**
- * Strip `//` line comments and trailing commas so JSON.parse can read the
- * JSONC config. String-aware so a `//` inside a value is preserved.
- */
 function parseJsonc(source: string): Record<string, unknown> {
   let out = '';
   let inString = false;
@@ -264,10 +240,9 @@ const wranglerConfig = parseJsonc(
 );
 
 describe('proxy wrangler config', () => {
-  // Wrangler does NOT inherit `send_email` or `vars` into a named env, and
-  // `deploy` runs `--env production`. A binding declared only at the top
-  // level (or only in staging) ships a production proxy where
-  // `env.SEND_EMAIL` is undefined — which staging never reproduces.
+  // Decision: Wrangler doesn't inherit `send_email` or `vars` into a named env, and deploy runs
+  // `--env production`. A binding declared only at the top level ships a production proxy without
+  // env.SEND_EMAIL, which staging doesn't reproduce.
   const scopes: Array<[string, Record<string, unknown>]> = [
     ['top level', wranglerConfig],
     ['env.production', (wranglerConfig.env as Record<string, Record<string, unknown>>).production],
@@ -415,9 +390,7 @@ describe('POST /email/send — platform capability', () => {
   });
 
   it('returns the standard 501 when the platform has no email module', async () => {
-    // The bindings are configured on purpose: the gate must refuse on the
-    // capability alone, not on the missing configuration an installed
-    // platform happens to have.
+    // Decision: The bindings are set on purpose: the gate has to refuse on the capability alone.
     const env = createMockEnv(kv, { PLATFORM_CAPABILITIES: JSON.stringify({ email: false }) });
     const res = await postSend(env, await sendBody());
     expect(res.status).toBe(501);
@@ -488,7 +461,6 @@ interface SenderCall {
   bytes: Uint8Array;
 }
 
-/** Recording `send_email` binding: captures from/to and the delivered bytes. */
 function createSender(
   options: {
     fail?: (to: string) => Error | undefined;
@@ -678,7 +650,6 @@ describe('POST /email/send — request validation', () => {
     expect(res.status).toBe(400);
   });
 
-  // Authenticated tenants still need a work bound before per-recipient processing.
   it('rejects a recipient list one over the cap, before any KV read', async () => {
     const MAX_RECIPIENTS = 50;
     const kv = happyPathKv();
@@ -694,8 +665,6 @@ describe('POST /email/send — request validation', () => {
     expect(res.status).toBe(413);
     const body = await readSend(res);
     expect(body.error?.code).toBe('INVALID_TO');
-    // Refused above the normalization loop, so not one per-recipient
-    // delivery object was built.
     expect(body.deliveries).toBeUndefined();
     expect(nonAuthKvReads(kv)).toEqual([]);
     expect(kv.put).not.toHaveBeenCalled();
@@ -708,8 +677,8 @@ describe('POST /email/send — request validation', () => {
     const kv = createMockKv({
       'email-slug:proj_000000000001': 'acme',
       'email-allowlist:proj_000000000001': JSON.stringify(recipients),
-      // Raised so the burst + monthly gates cannot answer first and hide
-      // whether the cap itself let the list through.
+      // Decision: Raised so the burst and monthly gates can't answer first and hide whether the cap let the list
+      // through.
       'email-burst-limit:proj_000000000001': '1000',
       'email-limit:proj_000000000001': '1000',
     });
@@ -722,7 +691,6 @@ describe('POST /email/send — request validation', () => {
     expect(kv.store.get(monthKeyFor('proj_000000000001'))).toBeUndefined();
   });
 
-  // Bound each address before normalization copies it.
   it('rejects an over-long recipient before normalization allocates', async () => {
     const MAX_RECIPIENT_LENGTH = 320;
     const kv = happyPathKv();
@@ -742,23 +710,16 @@ describe('POST /email/send — request validation', () => {
     expect(sender.calls).toHaveLength(0);
   });
 
-  // The sender is one string, but `from.toLowerCase()` copies it whole and
-  // a valid-shaped sender (`<slug>+<unbounded tag>@<domain>`) is then echoed
-  // verbatim into the MIME `From:` refusal and serialized into the
-  // response — all above the quota gates. The bound has to come first.
   it('rejects an over-long sender before the slug read, the copy, or the echo', async () => {
     const MAX_SENDER_LENGTH = 320;
     const kv = happyPathKv();
     const sender = createSender();
     const env = createMockEnv(kv, { SEND_EMAIL: sender.binding });
-    // Shaped to pass the strict regex AND the slug pin, so the only thing
-    // that can refuse it is the length bound.
+    // Decision: Shaped to pass the strict regex and the slug pin, so only the length bound can refuse it.
     const tag = 'a'.repeat(MAX_SENDER_LENGTH);
     const from = `acme+${tag}@${PROD_DOMAIN}`;
     const res = await postSend(
       env,
-      // A MIME with no `From:` at all: without the bound this request would
-      // reach the addr-spec refusal that interpolates the whole sender.
       await sendBody({ from, mimeBase64: mimeBase64('Subject: hi\r\n\r\nhello\r\n') }),
     );
 
@@ -791,7 +752,6 @@ describe('POST /email/send — request validation', () => {
 });
 
 describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
-  /** A tenant that owns `acme` and wants to look like `victim`. */
   function twoTenantsKv() {
     return happyPathKv({ 'email-slug:proj_2': 'victim' });
   }
@@ -805,14 +765,11 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
   }
 
   it("refuses a MIME From naming another project's sender under an authorized envelope", async () => {
-    // The envelope `acme+noreply@` passes the slug pin; the bytes the
-    // recipient's client renders as the sender say `victim+noreply@`.
     const { res, body, sender, kv } = await sendMime(mimeFor(`victim+noreply@${PROD_DOMAIN}`));
     expect(res.status).toBe(403);
     expect(body.ok).toBe(false);
     expect(body.error?.code).toBe('INVALID_FROM');
     expect(sender.calls).toHaveLength(0);
-    // Refused before the suspension, allowlist and quota reads.
     expect(nonAuthKvReads(kv)).toEqual([]);
     expect(kv.put).not.toHaveBeenCalled();
   });
@@ -844,9 +801,6 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
   );
 
   it('refuses a From that only case-folds INTO the envelope sender', async () => {
-    // U+212A KELVIN SIGN lower-cases to `k`. Without the printable-ASCII
-    // check the compare would pass and CF would receive a From the envelope
-    // check never saw.
     const from = `acme+link@${PROD_DOMAIN}`;
     const { body, sender } = await sendMime(mimeFor(`acme+lin\u212A@${PROD_DOMAIN}`), { from });
     expect(body.ok).toBe(false);
@@ -895,7 +849,6 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
   });
 
   it('does not read a From inside a MIME part as the message From', async () => {
-    // The scan ends at the first empty line; a part's own `From:` is body.
     const { body } = await sendMime(
       `Content-Type: multipart/mixed; boundary=b\r\n\r\n--b\r\nFrom: victim@${PROD_DOMAIN}\r\n\r\nx\r\n--b--\r\n`,
     );
@@ -928,7 +881,6 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
     const { body, sender } = await sendMime(mime);
     expect(body.ok, `${JSON.stringify(value)} should have been accepted`).toBe(true);
     expect(sender.calls).toHaveLength(1);
-    // The pin inspects; it never rewrites. CF receives the tenant's bytes.
     expect(sender.texts()[0]).toBe(mime);
   });
 
@@ -953,8 +905,6 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
   });
 
   describe("every From shape the framework's buildMime renders is accepted", () => {
-    // 200 CJK characters: 600 UTF-8 bytes → 14 encoded-words → folded over
-    // many continuation lines, with `<addr>` alone on the last one.
     const longName = '東京都千代田区'.repeat(29).slice(0, 200);
     it.each([
       ['a bare address', { email: DEFAULT_FROM }],
@@ -978,7 +928,6 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
       const parsed = readMimeFromAddrSpec(raw);
       expect(parsed).toEqual({ ok: true, addrSpec: from.email });
 
-      // And through the route, as the framework would post it.
       const kv = twoTenantsKv();
       const sender = createSender();
       const env = createMockEnv(kv, { SEND_EMAIL: sender.binding });
@@ -1011,7 +960,6 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
   describe('the scan keeps nothing per line', () => {
     const MAX_MIME_BYTES = 5 * 1024 * 1024;
 
-    /** `From: <value>` folded over as many `<fold>` continuations as fit in 5 MiB. */
     function foldedToTheCap(value: string, fold: string): { raw: Uint8Array; lines: number } {
       const head = new TextEncoder().encode(`From: ${value}\r\n`);
       const cont = new TextEncoder().encode(fold);
@@ -1030,16 +978,10 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
     ])(
       'unfolds a From spread over millions of %s continuations in bounded heap',
       (_label, fold, expectedLines) => {
-        // Every continuation is one space: a value that is the address
-        // followed by millions of spaces, which trim away, so the scan
-        // still has to visit every line. `MAX_MIME_BYTES` bounds bytes, not
-        // lines, and one retained view per line was ~125 bytes of heap
-        // each — 437 MB for the CRLF case and 694 MB for bare LF, measured,
-        // against a 128 MB isolate that every tenant shares; the same bytes
-        // with no `From:` cost 1 MB. The offsets-only scan measured 0.2 MB
-        // of heap and 85 ms (CRLF) / 111 ms (LF) on the same input; the
-        // ceilings below leave room for the test runner, not for a
-        // per-line allocation.
+        // Decision: MAX_MIME_BYTES bounds bytes, not lines, so the scan visits millions of one-space continuations.
+        // Retaining one view per line measured about 125 bytes each (437 MB for CRLF, 694 MB for bare LF)
+        // against the shared 128 MB isolate; the offsets-only scan measured 0.2 MB. The ceilings below
+        // leave room for the test runner, not for a per-line allocation.
         const { raw, lines } = foldedToTheCap('a@b', fold);
         expect(lines).toBe(expectedLines);
         expect(raw.byteLength).toBeLessThanOrEqual(MAX_MIME_BYTES);
@@ -1055,12 +997,8 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
     );
 
     it('refuses the same shape through /email/send before any KV read past the slug', async () => {
-      // The pathological fold names a sender that is not the envelope, so
-      // the pin refuses it — after unfolding, not by a size gate: the
-      // scan's bound is the message itself, which `MAX_MIME_BYTES` already
-      // holds in memory. The base64 is built with Buffer: 10 MiB of
-      // per-byte string concatenation is the test's own cost, not the
-      // proxy's.
+      // Decision: The base64 is built with Buffer: 10 MiB of per-byte string concatenation would be the test's
+      // own cost, not the proxy's.
       const { raw } = foldedToTheCap(`victim+noreply@${PROD_DOMAIN}`, ' \r\n');
       const kv = twoTenantsKv();
       const sender = createSender();
@@ -1099,9 +1037,6 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
     });
 
     it('still refuses a bare CR on a line after the one From', () => {
-      // The lazy CR search restarts past each terminator; a bare CR inside
-      // a LATER header must still fail the scan (an LF-splitting parser
-      // would read what follows it as part of that header).
       const mime = `From: ${DEFAULT_FROM}\r\nSubject: a\rFrom: victim@${PROD_DOMAIN}\r\n\r\nx`;
       expect(readMimeFromAddrSpec(new TextEncoder().encode(mime))).toEqual({
         ok: false,
@@ -1110,13 +1045,9 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
     });
 
     it('accepts a From value of any length the framework renders (no value bound)', async () => {
-      // `buildMime` bounds the ADDRESS at 320 (`MAX_ADDRESS_LENGTH`) and
-      // deliberately leaves the display name unbounded — it is encoded and
-      // folded at any length (mime.ts). A 100k-character CJK name renders as
-      // a ~486 KB `From:` over ~6.7k continuation lines, and the proxy must
-      // keep accepting what the framework's own preflight accepts: the fix
-      // for the per-line cost was to stop retaining lines, not to cap the
-      // value, and a cap would be a contract change owned by the framework.
+      // Decision: buildMime bounds the address at 320 and leaves the display name unbounded (mime.ts), so a 100k
+      // CJK name renders as a ~486 KB From over ~6.7k lines. The proxy has to accept what the
+      // framework's preflight accepts; capping the value would be a contract change owned by the framework.
       const name = '東京都千代田区'.repeat(15000).slice(0, 100_000);
       const email = await normalizeEmail({
         from: { email: DEFAULT_FROM, name },
@@ -1136,9 +1067,8 @@ describe('POST /email/send — MIME From pin (what the recipient sees)', () => {
 
 describe('POST /email/send — per-recipient fan-out', () => {
   it('gives every recipient its own message with a FRESH body stream', async () => {
-    // A regression that hoisted `bytesToStream(raw)` out of the loop would
-    // still record three sends — but recipients 2 and 3 would receive an
-    // already-drained (empty) stream. Assert the delivered BYTES.
+    // Decision: Hoisting bytesToStream(raw) out of the loop would still record three sends, but recipients 2
+    // and 3 would get a drained stream, so the delivered bytes are checked.
     const mime = mimeFor(DEFAULT_FROM, 'Subject: fan-out\r\n\r\nbody bytes\r\n');
     const recipients = ['a@example.com', 'b@example.com', 'c@example.com'];
     const kv = happyPathKv({ 'email-allowlist:proj_000000000001': JSON.stringify(recipients) });
@@ -1150,7 +1080,6 @@ describe('POST /email/send — per-recipient fan-out', () => {
     expect(body.ok).toBe(true);
     expect(sender.recipients()).toEqual(recipients);
     expect(sender.texts()).toEqual([mime, mime, mime]);
-    // One envelope sender for the whole batch; one message per recipient.
     expect(new Set(sender.calls.map((c) => c.from)).size).toBe(1);
     expect(body.ids).toEqual([
       { recipient: 'a@example.com', messageId: 'cf-msg-1', state: 'provider_accepted' },
@@ -1188,7 +1117,6 @@ describe('POST /email/send — per-recipient fan-out', () => {
     const bob = body.deliveries?.find((d) => d.recipient === 'bob@example.com');
     expect(bob?.ok).toBe(false);
     expect(bob?.error?.code).toBe('OUTCOME_UNKNOWN');
-    // One failure does not abort the batch.
     expect(sender.calls).toHaveLength(3);
   });
 });
@@ -1210,8 +1138,6 @@ describe('POST /email/send — sender domain is configuration, never a baked-in 
     ['whitespace only', '   '],
     ['a non-string', 123],
   ])('fails closed with 502 when EMAIL_SENDER_DOMAIN is %s', async (_label, value) => {
-    // The old build hard-coded `mail.buildwf.dev`. A fallback here would let a
-    // misconfigured staging proxy accept — and send — production senders.
     const kv = happyPathKv();
     const sender = createSender();
     const env = createMockEnv(kv, { EMAIL_SENDER_DOMAIN: value, SEND_EMAIL: sender.binding });
@@ -1235,20 +1161,9 @@ describe('POST /email/send — sender domain is configuration, never a baked-in 
 });
 
 describe('POST /email/send — the envelope handed to CF', () => {
-  /**
-   * The regex is tested against `from.toLowerCase()` but `EmailMessage`
-   * receives the ORIGINAL string, so the validated value and the transmitted
-   * value are not the same bytes. That divergence is only safe while nothing
-   * can fold INTO the allowed set from outside it — no Unicode code point
-   * lower-cases to CR, LF or NUL, so header injection stays closed. This test
-   * pins the invariant that actually matters, whichever way the divergence is
-   * resolved: nothing with a control character reaches the shared sender.
-   *
-   * (U+212A KELVIN SIGN does fold to `k`, so a slug containing `k` currently
-   * lets a non-ASCII byte through into the envelope — reported separately,
-   * deliberately not asserted here so a tightening fix does not read as a
-   * regression.)
-   */
+  // Decision: The regex runs on from.toLowerCase(), but EmailMessage gets the original string. That is only
+  // safe while nothing folds into the allowed set from outside it: no code point lowercases to CR, LF
+  // or NUL. This pins what matters: nothing with a control character reaches the shared sender.
   it.each([
     ['ASCII upper case', `ACME@${PROD_DOMAIN}`, 'acme'],
     ['a code point that case-folds into the slug', `acmeK@${PROD_DOMAIN}`, 'acmek'],
@@ -1266,23 +1181,13 @@ describe('POST /email/send — the envelope handed to CF', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// `requestId` is a caller-supplied log correlation id. The framework sends 16
-// hex chars, but a hand-built tenant worker holding a valid project HMAC can
-// send any string, and `logSend` used to interpolate it verbatim into one
-// `[email-log]` line per delivery — so a `\n` in it forged a second line under
-// any project id, and a multi-megabyte one was repeated per recipient into
-// the shared proxy log stream. It is bounded and sanitized once at intake.
-// ---------------------------------------------------------------------------
-
 describe('POST /email/send — requestId is bounded and sanitized at intake', () => {
   // oxlint-disable-next-line no-control-regex
   const CONTROL = new RegExp('[\\u0000-\\u001f\\u007f]');
 
   it('a 5 MB control-heavy requestId still sends, and logs a short clean id', async () => {
-    // Alternating LF / letter: one regex match per LF, the shape that made
-    // the old replace-then-slice order materialize one part per match
-    // (measured: +170 MB on this input, past the 128 MB isolate ceiling).
+    // Decision: Alternating LF and letter gives one regex match per LF, the input where replace-then-slice
+    // would build one part per match and pass the 128 MB isolate limit.
     const requestId = `\na`.repeat((5 * 1024 * 1024) / 2);
     const forged = `req_1\n[email-log] proj_victim x@example.com sent forged @0`;
     const sender = createSender();
@@ -1299,17 +1204,13 @@ describe('POST /email/send — requestId is bounded and sanitized at intake', ()
         .map((call) => String(call[0]))
         .filter((line) => line.startsWith('[email-log] '));
       expect(lines).toHaveLength(1);
-      // The id is sliced to 128 code units and each LF becomes one space,
-      // so the whole line is the fixed fields plus at most 128 chars of id.
       const fixed = `[email-log] proj_000000000001  dev@example.com sent cf-msg-1 @${Date.now()}`
         .length;
       expect(lines[0]!.length).toBeLessThanOrEqual(fixed + 128);
       expect(lines[0]).not.toMatch(CONTROL);
       expect(lines[0]!.split(' ')[1]).toBe('proj_000000000001');
-      // Generous: the slice-first path is ~0 ms; the JSON body is ~5 MB.
       expect(elapsed).toBeLessThan(500);
 
-      // And a newline can no longer forge a second `[email-log]` line.
       logSpy.mockClear();
       const res2 = await postSend(env, await sendBody({ requestId: forged }));
       expect(res2.status).toBe(200);

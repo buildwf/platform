@@ -13,8 +13,8 @@ afterEach(() => {
   }
 });
 
-// A stand-in for the operation process: it writes a result envelope unless the
-// operation is interactive, which writes to the terminal instead.
+// Decision: A stand-in for the operation process: it writes a result envelope unless the operation is
+// interactive, which writes to the terminal instead.
 async function runWith(operation: CloudflareOperation) {
   const directory = mkdtempSync(join(tmpdir(), 'platform-runner-interactive-'));
   directories.push(directory);
@@ -44,7 +44,7 @@ it('keeps the default operation process off the terminal', async () => {
     { type: 'versions.upload', configPath: 'wrangler.json', interactive: false },
   ] as const) {
     const { child, result } = await runWith(operation);
-    // stdin 'ignore' has no stream; stdout and stderr are pipes.
+    // Decision: stdin 'ignore' has no stream; stdout and stderr are pipes.
     expect(child.stdin).toBeNull();
     expect(child.stdout).not.toBeNull();
     expect(child.stderr).not.toBeNull();
@@ -60,7 +60,7 @@ it('gives only an interactive upload the terminal and reads only its exit status
       configPath: 'wrangler.json',
       interactive: true,
     });
-    // 'inherit' passes this process's streams through, so the child has none of its own.
+    // Decision: 'inherit' passes this process's streams through, so the child has none of its own.
     expect(child.stdin).toBeNull();
     expect(child.stdout).toBeNull();
     expect(child.stderr).toBeNull();

@@ -41,7 +41,7 @@ function zeroTrustErrorResponse(
     );
   }
   if (error instanceof ZeroTrustConfigurationError) {
-    // Only a platform administrator can repair the saved configuration.
+    // Decision: Only a platform administrator can repair the saved configuration, so a project admin gets 409.
     return context.json(
       { error: 'zero trust configuration invalid', message: zeroTrustNotReadyMessage(error) },
       409,
@@ -79,8 +79,8 @@ const app = new Hono<ApiEnv>()
     }
     const state = await getProjectZeroTrustState(context.get('db'), projectId);
     return context.json({
-      // Whether a project admin can change protection now, not merely whether
-      // the installation has Zero Trust enabled.
+      // Decision: Whether a project admin can change protection now, not only whether the installation has Zero
+      // Trust turned on.
       available: projectZeroTrustAvailable(configuration),
       platformStatus: configuration
         ? zeroTrustConfigurationStatus(configuration)

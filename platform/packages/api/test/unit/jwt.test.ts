@@ -16,14 +16,12 @@ describe('JWT', () => {
   });
 
   it('returns null for expired token', async () => {
-    // Mock Date.now to produce an expired token
     const realDateNow = Date.now;
-    const pastMs = Date.now() - 31 * 24 * 60 * 60 * 1000; // 31 days ago
+    const pastMs = Date.now() - 31 * 24 * 60 * 60 * 1000;
     vi.spyOn(Date, 'now').mockReturnValueOnce(pastMs);
 
     const token = await signJwt({ sub: 'user_abc123', login: 'octocat', aud: 'api' }, SECRET);
 
-    // Restore real Date.now for verification
     Date.now = realDateNow;
     const payload = await verifyJwt(token, SECRET);
 
@@ -34,7 +32,6 @@ describe('JWT', () => {
   it('returns null for tampered token', async () => {
     const token = await signJwt({ sub: 'user_abc123', login: 'octocat', aud: 'api' }, SECRET);
 
-    // Tamper with the payload
     const parts = token.split('.');
     const tampered = `${parts[0]}.${parts[1]}x.${parts[2]}`;
 

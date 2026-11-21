@@ -3,7 +3,7 @@ import { join } from 'pathslash';
 import type { BwfConfig } from '../config.ts';
 import { writeFileIfChanged } from './write-if-changed.ts';
 
-// Standard runtime types, as emitted by Cloudflare's type generator. RPC classes
+// Decision: Standard runtime types, as emitted by Cloudflare's type generator. RPC classes
 // cannot be inferred from another Worker's config; apps can refine CloudBindings.
 const bindingTypes: Array<[path: string, name: string, type: string]> = [
   ['kv_namespaces', 'binding', 'KVNamespace'],

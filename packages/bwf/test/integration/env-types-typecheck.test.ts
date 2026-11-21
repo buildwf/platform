@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe('generated env types in a consumer project', () => {
-  // `wrangler types` declares an assets binding as `ASSETS: Fetcher`, which must merge with bwf's.
+  // Decision: `wrangler types` declares an assets binding as `ASSETS: Fetcher`, which must merge with bwf's.
   it.each([
     ['', ''],
     [
@@ -23,7 +23,7 @@ describe('generated env types in a consumer project', () => {
       'declare global { namespace Cloudflare { interface Env { ASSETS: Fetcher } } }\n',
     ],
   ])('types schema keys and ASSETS on both env and handler c.env%s', (_, wranglerTypes) => {
-    // This nested fixture resolves the workspace's installed void package just
+    // Decision: This nested fixture resolves the workspace's installed void package just
     // as a consumer does, while keeping its source out of the playground routes.
     const root = mkdtempSync(join(workspaceRoot, 'playground/kitchen-sink/.tmp-env-types-'));
     roots.push(root);

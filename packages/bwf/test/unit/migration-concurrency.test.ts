@@ -253,7 +253,6 @@ describe('D1 migration ownership', () => {
     await paused.promise;
     try {
       expect((await owner(reconcile('owner'))).status).toBe(409);
-      // A later deployment no longer contains the abandoned migration.
       expect((await handler([])(apply('successor'))).status).toBe(200);
     } finally {
       resume.resolve();
@@ -304,7 +303,7 @@ describe('D1 migration ownership', () => {
     const pending = owner(apply('owner'));
     await paused.promise;
     try {
-      // The contender gets 409 with or without the owner's attempt row, so check the row too.
+      // Decision: The contender gets 409 with or without the owner's attempt row, so check the row too.
       expect(
         sqlite
           .prepare("SELECT status FROM _void_migration_attempts WHERE attempt_id = 'owner'")

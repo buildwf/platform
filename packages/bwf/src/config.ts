@@ -268,7 +268,7 @@ function assertSingleSplat(source: string, kind: string): void {
 function assertUniqueCaptureNames(source: string, kind: string): void {
   const seen = new Set<string>();
   const dups = new Set<string>();
-  // Same identifier class as `compilePattern`. Trailing `*` is optional —
+  // Decision: Same identifier class as `compilePattern`. Trailing `*` is optional —
   // `:name` and `:name*` both produce a `<name>` capture group.
   const captureNameRe = /:([A-Za-z0-9_]+)\*?/g;
   let captureMatch: RegExpExecArray | null;
@@ -279,7 +279,7 @@ function assertUniqueCaptureNames(source: string, kind: string): void {
     }
     seen.add(name);
   }
-  // Bare `*` (post-`:name*` strip) emits `(?<splat>...)`. If the pattern
+  // Decision: Bare `*` (post-`:name*` strip) emits `(?<splat>...)`. If the pattern
   // also has a `:splat` token, both produce the same group name.
   if (countSplats(source) >= 1 && seen.has('splat')) {
     dups.add('splat');
@@ -314,7 +314,7 @@ function assertNotProtocolRelative(
   );
 }
 
-// Mirrors LITERAL_HOSTNAME_REGEX in @builtbyfriends/deploy-core and the platform domains route.
+// Decision: Mirrors LITERAL_HOSTNAME_REGEX in @builtbyfriends/deploy-core and the platform domains route.
 const LITERAL_HOSTNAME_REGEX = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
 
 type ParsedRuleSource = {
@@ -343,7 +343,6 @@ export function parseHostPrefixedSource(raw: string): ParsedRuleSource | { error
     return { host: undefined, path: raw };
   }
 
-  // Find the first `/` after `https://` — that's where the path starts.
   const afterScheme = raw.slice('https://'.length);
   const slashIdx = afterScheme.indexOf('/');
   const rawHost = slashIdx === -1 ? afterScheme : afterScheme.slice(0, slashIdx);
@@ -425,7 +424,7 @@ export function validateConfig(config: unknown, source: string = CONFIG_FILE): B
     return validateConfigObject(config);
   } catch (error) {
     if (source !== CONFIG_FILE && error instanceof Error) {
-      // No `cause`: Node would print its message too, which names the placeholder.
+      // Decision: No `cause`: Node would print its message too, which names the placeholder.
       throw new Error(error.message.replaceAll(CONFIG_FILE, source));
     }
     throw error;
@@ -437,14 +436,12 @@ function validateConfigObject(obj: unknown): BwfConfig {
     throw new Error(`config: ${CONFIG_FILE} must be a JSON object.`);
   }
 
-  // Check for old flat keys that have moved
   for (const [key, message] of Object.entries(MIGRATION_ERRORS)) {
     if (obj[key] !== undefined) {
       throw new Error(`config: ${message} in ${CONFIG_FILE}.`);
     }
   }
 
-  // Validate sourceDir
   if (obj.sourceDir !== undefined) {
     if (typeof obj.sourceDir !== 'string') {
       throw new Error(`config: "sourceDir" in ${CONFIG_FILE} must be a string.`);
@@ -506,7 +503,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
     }
   }
 
-  // Validate routing
   if (obj.routing !== undefined) {
     if (!isRecord(obj.routing)) {
       throw new Error(`config: "routing" in ${CONFIG_FILE} must be an object.`);
@@ -520,7 +516,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
       throw new Error(`config: "routing.typedRoutes" in ${CONFIG_FILE} must be a boolean.`);
     }
 
-    // Validate routing.notFound
     if (routing.notFound !== undefined) {
       if (typeof routing.notFound !== 'string' || !VALID_NOT_FOUND_HANDLING.has(routing.notFound)) {
         throw new Error(
@@ -529,7 +524,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
       }
     }
 
-    // Validate routing.headers
     if (routing.headers !== undefined) {
       if (!isRecord(routing.headers)) {
         throw new Error(`config: "routing.headers" in ${CONFIG_FILE} must be an object.`);
@@ -549,7 +543,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
       }
     }
 
-    // Validate routing.redirects
     if (routing.redirects !== undefined) {
       if (!isRecord(routing.redirects)) {
         throw new Error(`config: "routing.redirects" in ${CONFIG_FILE} must be an object.`);
@@ -598,7 +591,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
     }
   }
 
-  // Validate inference
   if (obj.inference !== undefined) {
     if (!isRecord(obj.inference)) {
       throw new Error(`config: "inference" in ${CONFIG_FILE} must be an object.`);
@@ -611,7 +603,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
       );
     }
 
-    // Validate inference.bindings
     if (inf.bindings !== undefined) {
       if (!isRecord(inf.bindings)) {
         throw new Error(`config: "inference.bindings" in ${CONFIG_FILE} must be an object.`);
@@ -639,12 +630,10 @@ function validateConfigObject(obj: unknown): BwfConfig {
       }
     }
 
-    // Validate inference.build
     if (inf.build !== undefined && typeof inf.build !== 'string') {
       throw new Error(`config: "inference.build" in ${CONFIG_FILE} must be a string.`);
     }
 
-    // Validate inference.scanDirs
     if (inf.scanDirs !== undefined) {
       if (!Array.isArray(inf.scanDirs) || !inf.scanDirs.every((d) => typeof d === 'string')) {
         throw new Error(
@@ -660,7 +649,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
       }
     }
 
-    // Validate inference.appType
     if (inf.appType !== undefined) {
       if (typeof inf.appType !== 'string' || !VALID_APP_TYPES.has(inf.appType)) {
         throw new Error(
@@ -669,18 +657,15 @@ function validateConfigObject(obj: unknown): BwfConfig {
       }
     }
 
-    // Validate inference.outputDir
     if (inf.outputDir !== undefined && typeof inf.outputDir !== 'string') {
       throw new Error(`config: "inference.outputDir" in ${CONFIG_FILE} must be a string.`);
     }
   }
 
-  // Validate remote
   if (obj.remote !== undefined && typeof obj.remote !== 'boolean') {
     throw new Error(`config: "remote" in ${CONFIG_FILE} must be a boolean.`);
   }
 
-  // Validate sandbox
   if (obj.sandbox !== undefined && typeof obj.sandbox !== 'boolean') {
     if (!isRecord(obj.sandbox)) {
       throw new Error(`config: "sandbox" in ${CONFIG_FILE} must be a boolean or an object.`);
@@ -714,7 +699,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
     }
   }
 
-  // Validate worker
   if (obj.worker !== undefined) {
     if (!isRecord(obj.worker)) {
       throw new Error(`config: "worker" in ${CONFIG_FILE} must be an object.`);
@@ -777,7 +761,7 @@ function validateConfigObject(obj: unknown): BwfConfig {
     }
   }
 
-  // Cloudflare's complete Worker config is passed through to its build tooling.
+  // Decision: Cloudflare's complete Worker config is passed through to its build tooling.
   if (obj.cloudflare !== undefined) {
     if (!isRecord(obj.cloudflare)) {
       throw new Error(`config: "cloudflare" in ${CONFIG_FILE} must be an object.`);
@@ -820,7 +804,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
     }
   }
 
-  // Validate database
   if (obj.database !== undefined) {
     if (isRecord(obj.database)) {
       const databaseCfg = obj.database;
@@ -867,7 +850,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
     }
   }
 
-  // Validate ai
   if (obj.ai !== undefined) {
     if (!isRecord(obj.ai)) {
       throw new Error(`config: "ai" in ${CONFIG_FILE} must be an object.`);
@@ -888,7 +870,6 @@ function validateConfigObject(obj: unknown): BwfConfig {
     }
   }
 
-  // Validate email
   if (obj.email !== undefined) {
     if (!isRecord(obj.email)) {
       throw new Error(`config: "email" in ${CONFIG_FILE} must be an object.`);
@@ -906,7 +887,7 @@ function validateConfigObject(obj: unknown): BwfConfig {
     }
   }
 
-  // Legacy bwf.json files may carry an editor hint. It is not part of the
+  // Decision: Legacy bwf.json files may carry an editor hint. It is not part of the
   // typed config and should never reach consumers of the resolved config.
   if ('$schema' in obj) {
     const resolved = { ...obj };

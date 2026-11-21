@@ -7,7 +7,7 @@ import { readConfig } from '../../../../packages/bwf/src/config.ts';
 import { hasEmailHandlers } from '../../../../packages/bwf/src/router/email.ts';
 import { prepareKitchenSinkPlatformFixture } from '../../../scripts/kitchen-sink-platform-fixture.ts';
 
-// The CLI manifest builder runs in Node; keep its Node types out of the API's Worker context.
+// Decision: The CLI manifest builder runs in Node. Keep its Node types out of the API's Worker context.
 function readDeployManifest(root: string) {
   const result = spawn.sync(
     process.execPath,

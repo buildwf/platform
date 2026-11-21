@@ -63,11 +63,11 @@ describe('devTriggerSecretGuardPlugin', () => {
 
 describe('isVitestServer', () => {
   it.each<[Array<PluginOption>]>([
-    // Vitest 5 names every plugin of its server `vitest:*`.
+    // Decision: Vitest 5 names each plugin of its server `vitest:*`.
     [[{ name: 'vite-plugin-cloudflare' }, { name: 'vitest:config' }]],
-    // Vitest 3 and 4 also name their main plugin `vitest`.
+    // Decision: Vitest 3 and 4 also name their main plugin `vitest`.
     [[{ name: 'vitest' }]],
-    // Vite flattens nested arrays and ignores falsy entries.
+    // Decision: Vite flattens nested arrays and ignores falsy entries.
     [[false, null, [[{ name: 'vitest:test-config' }]]]],
   ])('finds Vitest in %j', (plugins) => {
     expect(isVitestServer({ plugins })).toBe(true);
@@ -77,7 +77,7 @@ describe('isVitestServer', () => {
     [undefined],
     [[]],
     [[false, [{ name: 'vite-plugin-cloudflare' }, { name: 'platform:env' }]]],
-    // A plugin named after Vitest is not Vitest's own.
+    // Decision: A plugin named after Vitest isn't Vitest's own.
     [[{ name: 'vitest-plugin-example' }]],
   ])('does not find Vitest in %j', (plugins) => {
     expect(isVitestServer({ plugins })).toBe(false);

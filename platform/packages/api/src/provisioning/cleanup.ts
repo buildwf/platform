@@ -127,9 +127,8 @@ async function ignoreMissingProviderObject(operation: () => Promise<void>): Prom
   }
 }
 
-// Kinds the scheduled retry runner executes. Rows of any other kind stay in the
-// table untouched, so a job kind added by a newer platform version survives a
-// rollback and never fills the retry batch.
+// Decision: Kinds the scheduled retry runner executes. Rows of other kinds stay untouched, so a job kind added
+// by a newer platform version survives a rollback and doesn't fill the retry batch.
 const RETRYABLE_CLEANUP_JOB_KINDS = [
   'cf-resource',
   'worker',
@@ -262,28 +261,6 @@ async function cleanupCriticalResources(
     );
   }
 
-  // Orphan-recovery fallback: a past `provisionPerDeployContainer` failure
-  // could have left a CF container app behind without a corresponding
-  // `resources` row (e.g. CF POST succeeded, DB UPSERT failed, deploy rolled
-  // back). The primary loop above only catches container apps that have a
-  // row; this fallback enumerates every deployment for the project, parses
-  // its manifest, and locates per-deploy container orphans by deterministic
-  // name (`perDeployContainerApplicationName`).
-  //
-  // Runs unconditionally because the failure mode this catches (resources
-  // row missing) means we can't gate on resources presence without
-  // defeating the recovery's purpose. Per-deployment GETs are cheap enough
-  // to absorb on every teardown — and teardown is rare relative to deploy.
-  //
-  // Race-mitigation (full fix is project-level locking — see design-doc 0067):
-  // an in-flight deploy whose container POST lands AFTER our first scan
-  // would leak as an orphan once the DB cascade nulls its deployment row.
-  // Run the scan TWICE with a short delay; the second pass catches any POST
-  // that completed during the gap. `assertProjectNotDeleting` /
-  // `assertDeploymentNotCanceled` checks in the deploy pipeline mean an
-  // in-flight deploy aborts shortly after `lockAndMarkDeleting` flips the
-  // status, so a 2s delay is comfortably longer than the worst-case
-  // post-status-flip container POST tail.
   const alreadyDeletedCfIds = new Set(
     resources.filter((r) => r.type === 'container').map((r) => r.cf_id),
   );
@@ -374,9 +351,8 @@ async function cleanupBestEffortResources(
     warnings.push(`${msg}: ${err instanceof Error ? err.message : String(err)}`);
     failedJobs.push(job);
   };
-  // cf_ids whose CF object this sweep attempted to delete, so the post-cascade
-  // race-window cleanup can skip them (it only needs the rows created AFTER the
-  // snapshot below).
+  // Decision: cf_ids whose CF object this sweep tried to delete, so the post-cascade race-window cleanup can
+  // skip them (it only needs rows created after the snapshot below).
   const cleanedCfIds = new Set<string>();
 
   const [projectDeployments, resources, projectDomains] = await Promise.all([
@@ -393,8 +369,8 @@ async function cleanupBestEffortResources(
     ),
   ]);
 
-  // Delete user-facing worker scripts before queue resources so CF no longer
-  // sees queue bindings in attached Workers.
+  // Decision: Delete user-facing worker scripts before queue resources so CF no longer sees queue bindings in
+  // attached Workers.
   const workerResult = await runCleanupBatch(
     context.env,
     Array.from(workerNames, (workerName) =>
@@ -406,20 +382,18 @@ async function cleanupBestEffortResources(
   );
   warnings.push(...workerResult.warnings);
   failedJobs.push(...workerResult.failed);
-  // The legacy script name is derived only from the reusable project slug.
-  // Keep that slug reserved until its deletion succeeds; a later project with
-  // the same slug must never be touched by this project's scheduled retry.
+  // Decision: The legacy script name comes only from the reusable project slug. Keep that slug reserved until its
+  // deletion succeeds, so this project's scheduled retry can't touch a later project with the same
+  // slug.
   if (
     workerResult.failed.some((job) => job.payload.name === getLegacyProjectWorkerName(project.slug))
   ) {
     throw new Error('Could not remove the legacy project Worker; retry project deletion.');
   }
 
-  // Delete R2 worker bundle objects under `worker-bundles/{projectId}/{deploymentId}/...`
-  // for every deployment. Without this, project teardown leaves these objects
-  // permanently orphaned in STATIC_ASSETS_R2 (the cascade only drops DB rows).
-  // `deleteWorkerBundle` is idempotent — listing returns no objects for deploys
-  // that never stored a bundle, so we don't need to gate on `bundle_stored`.
+  // Decision: Delete R2 worker bundle objects under `worker-bundles/{projectId}/{deploymentId}/...` for each
+  // deployment; the cascade only drops DB rows, so they'd be orphaned. `deleteWorkerBundle` is
+  // idempotent, so there's no need to gate on `bundle_stored`.
   const bundleResult = await runCleanupBatch(
     context.env,
     projectDeployments.map((deployment) =>
@@ -432,12 +406,9 @@ async function cleanupBestEffortResources(
   warnings.push(...bundleResult.warnings);
   failedJobs.push(...bundleResult.failed);
 
-  // Delete R2 static-asset objects under `assets/{projectId}/...`. The retention
-  // cleanup loop only walks hashes referenced by retained manifests, so any
-  // bytes uploaded via the direct-to-R2 presigned PUTs that never landed in a
-  // finalized deploy (TOCTOU race against teardown, abandoned upload, etc.)
-  // are durable orphans without this sweep. Best-effort: failures here become
-  // warnings — the surrounding teardown still cascades the DB rows.
+  // Decision: Delete R2 static-asset objects under `assets/{projectId}/...`. Retention cleanup only walks hashes
+  // in retained manifests, so presigned uploads that never reached a finalized deploy are durable
+  // orphans without this sweep. Failures become warnings; teardown still cascades the DB rows.
   await deleteProjectAssets(context.env.STATIC_ASSETS_R2, projectId).catch(
     warn(
       `Failed to delete static assets for project ${projectId}`,
@@ -447,8 +418,8 @@ async function cleanupBestEffortResources(
 
   const cleanup: Array<ProjectCleanupJobInput> = [];
 
-  // Best-effort CF resource cleanup (D1, KV, R2, Queue, Hyperdrive — user-
-  // provisioned resources). Container resources were handled as critical above.
+  // Decision: User-provisioned CF resources (D1, KV, R2, Queue, Hyperdrive). Containers were handled as critical
+  // above.
   for (const resource of resources) {
     if (resource.type === 'container') {
       continue;
@@ -459,13 +430,11 @@ async function cleanupBestEffortResources(
     );
   }
 
-  // Clear cron scheduler DO unconditionally — /clear is idempotent
-  // (deleteAll + deleteAlarm). KV `hasCrons` is omitted when false and
-  // missing on older entries; the PG manifest is the authoritative source,
-  // and unconditional clear avoids a stale-KV gate.
+  // Decision: Clear the cron scheduler DO unconditionally; /clear is idempotent (deleteAll + deleteAlarm). KV
+  // `hasCrons` is omitted when false and missing on older entries, and the PG manifest is the
+  // authority, so an unconditional clear avoids a stale-KV gate.
   cleanup.push(cleanupJob(projectId, 'cron', projectId, { projectId }));
 
-  // KV routing entry
   cleanup.push(
     cleanupJob(projectId, 'routing-key', projectRouteKey(project), {
       key: projectRouteKey(project),
@@ -475,12 +444,12 @@ async function cleanupBestEffortResources(
     cleanupJob(projectId, 'routing-key', `ai-block:${projectId}`, { key: `ai-block:${projectId}` }),
   );
 
-  // Retire any account mirror left by the removed tenant-owned Sandbox proxy.
+  // Decision: Retire any account mirror left by the removed tenant-owned Sandbox proxy.
   cleanup.push(
     cleanupJob(projectId, 'routing-key', `project:${projectId}`, { key: `project:${projectId}` }),
   );
-  // Proxy token accept floor: closed, not deleted. A missing floor accepts
-  // the legacy token, so deleting it would revive every token ever issued.
+  // Decision: The proxy token accept floor is closed, not deleted. A missing floor accepts the legacy token, so
+  // deleting it would revive each token ever issued.
   cleanup.push(
     cleanupJob(projectId, 'routing-put', proxyTokenStateKey(projectId), {
       key: proxyTokenStateKey(projectId),
@@ -488,14 +457,12 @@ async function cleanupBestEffortResources(
     }),
   );
 
-  // Queue routing KV entries
   for (const q of resources.filter((r) => r.type === 'queue')) {
     cleanup.push(
       ...cleanupJobsForResource(projectId, q).filter((job) => job.kind === 'routing-key'),
     );
   }
 
-  // Custom hostnames from CF + KV
   for (const domain of projectDomains) {
     cleanup.push(
       cleanupJob(
@@ -516,9 +483,8 @@ async function cleanupBestEffortResources(
   const remaining = await runCleanupBatch(context.env, cleanup);
   warnings.push(...remaining.warnings);
   failedJobs.push(...remaining.failed);
-  // Slug and custom-domain routing names can be claimed by another project
-  // after cascade. A failed delete of either must keep the old project row and
-  // its unique name reserved for a safe retry.
+  // Decision: Slug and custom-domain routing names can be claimed by another project after the cascade. A failed
+  // delete of either must keep the old project row and its unique name reserved for a safe retry.
   if (
     remaining.failed.some(
       (job) =>
@@ -528,8 +494,8 @@ async function cleanupBestEffortResources(
   ) {
     throw new Error('Could not remove project routing; retry project deletion.');
   }
-  // The project and resource rows still exist here. If writing the retry
-  // record fails, abort teardown rather than erase the only recovery handles.
+  // Decision: The project and resource rows still exist here. If writing the retry record fails, abort teardown
+  // instead of erasing the only recovery handles.
   await enqueueProjectCleanupJobs(context.get('db'), failedJobs);
   return { warnings, cleanedCfIds };
 }
@@ -583,13 +549,13 @@ async function lockAndMarkDeleting(
     if (!lockedProject) {
       throw new Error('project disappeared during deletion');
     }
-    // User deletion discovers projects before teardown. Recheck ownership
-    // under the lock shared with transfers before deleting anything.
+    // Decision: User deletion finds projects before teardown. Recheck ownership under the lock shared with
+    // transfers before deleting anything.
     if (expectedOwnerUserId && lockedProject.user_id !== expectedOwnerUserId) {
       return null;
     }
-    // The route precheck can go stale. Authorize again under the same lock as
-    // the irreversible status transition. Operator cleanup has no actor here.
+    // Decision: The route precheck can go stale. Authorize again under the same lock as the irreversible status
+    // transition. Operator cleanup has no actor here.
     if (actorUserId) {
       await requireProjectCapability(tx, projectId, actorUserId, 'delete');
     }
@@ -645,8 +611,8 @@ async function lockAndMarkDeleting(
       lockedProject.status === 'deleting' &&
       latestClosedOwnership?.owner_user_id === lockedProject.user_id
     ) {
-      // A previous teardown attempt may have stopped after detaching usage.
-      // Extend its cutoff so the retry reconciles activity through this attempt.
+      // Decision: A previous teardown attempt may have stopped after detaching usage. Extend its cutoff so the retry
+      // reconciles activity through this attempt.
       [ownership] = await tx
         .update(projectOwnershipPeriods)
         .set({
@@ -672,12 +638,10 @@ async function lockAndMarkDeleting(
         .set({ status: 'deleting' })
         .where(eq(projectsTable.id, projectId));
     }
-    // Mark every non-terminal deployment as 'canceling' so the deploy
-    // pipeline's `assertDeploymentNotCanceled` checks observe the cancellation
-    // and abort before further CF mutations. We do this regardless of whether
-    // the project status was already 'deleting' to cover replays where the
-    // status flip succeeded but the deployment cancellation didn't commit
-    // (e.g. earlier teardown crashed mid-tx).
+    // Decision: Mark each non-terminal deployment 'canceling' so the deploy pipeline's
+    // `assertDeploymentNotCanceled` checks abort before further CF changes. Do it even when the project
+    // was already 'deleting', to cover a replay where the status flip committed but the cancellation
+    // didn't.
     await tx
       .update(deploymentsTable)
       .set({
@@ -691,8 +655,8 @@ async function lockAndMarkDeleting(
           notInArray(deploymentsTable.status, TERMINAL_DEPLOYMENT_STATUSES),
         ),
       );
-    // Revoke in-flight build deploy tokens up front (see doc above). Idempotent
-    // on replay (already-terminal builds are not re-matched by the CAS).
+    // Decision: Revoke in-flight build deploy tokens up front (see the doc above). Idempotent on replay: the CAS
+    // doesn't re-match terminal builds.
     return {
       ownerUserId: lockedProject.user_id,
       ownerBillingCycleStart: owner.billing_cycle_start,
@@ -785,8 +749,8 @@ async function cleanupRaceWindowResourceOrphans(
       .where(inArray(projectCleanupJobs.target, completedTargets))
       .catch((error) => console.error('[project-cleanup] completed job delete failed:', error));
   }
-  // Failed jobs were committed atomically with the project cascade and remain
-  // in the ledger for scheduled retries after the project row is gone.
+  // Decision: Failed jobs were committed with the project cascade and stay in the ledger for scheduled retries
+  // after the project row is gone.
   return result.warnings;
 }
 
@@ -808,8 +772,8 @@ export async function reconcileProjectCleanupJobs(db: Db, env: ApiEnv['Bindings'
     Array.from({ length: Math.min(5, due.length) }, async () => {
       while (next < due.length) {
         const job = due[next++]!;
-        // A later invocation can observe the same due snapshot. Claim without
-        // holding a database transaction open across provider I/O.
+        // Decision: A later invocation can see the same due snapshot. Claim without holding a database transaction
+        // open across provider I/O.
         const claimed = await db
           .update(projectCleanupJobs)
           .set({
@@ -879,10 +843,9 @@ export async function teardownProject(
   project: Pick<Project, 'slug' | 'status'>,
   options: Readonly<{ actorUserId?: string; expectedOwnerUserId?: string }> = {},
 ): Promise<{ warnings: ReadonlyArray<string>; ownerChanged?: true }> {
-  // Always run lock + mark — idempotent for `status='deleting'` (the helper
-  // skips the flip and just (re-)marks any non-terminal deployments + builds).
-  // This covers retried teardown after partial failure where the previous
-  // attempt crashed before the cancellations committed.
+  // Decision: Always run lock and mark: it's idempotent for `status='deleting'` (it skips the flip and re-marks
+  // non-terminal deployments and builds), which covers a retried teardown whose previous attempt
+  // crashed before the cancellations committed.
   const deletion = await lockAndMarkDeleting(
     context.get('db'),
     projectId,
@@ -892,13 +855,12 @@ export async function teardownProject(
   if (deletion === null) {
     return { warnings: [], ownerChanged: true };
   }
-  // Stop the container DOs for the builds revoked above BEFORE any CF cleanup
-  // begins (post-commit, never under the row lock — it's a DO round-trip), so
-  // their tokens are dead and their containers stopped before we touch CF.
+  // Decision: Stop the container DOs for the builds revoked above before any CF cleanup (after commit, not under
+  // the row lock, since it's a DO round-trip), so their tokens are dead and containers stopped first.
   await cancelContainerBuildDos(context.env, deletion.cancelledBuilds, 'project deleted');
 
-  // Detach after the durable status change and before cleanup so a failed DO
-  // call leaves the project row available for retry.
+  // Decision: Detach after the durable status change and before cleanup so a failed DO call leaves the project
+  // row available for retry.
   await detachProjectUsage(context, projectId, deletion);
 
   const emailDrain = await drainProjectEmailAdmissions(context.get('db'), projectId);
@@ -910,48 +872,44 @@ export async function teardownProject(
 
   await cleanupCriticalResources(context, projectId);
   await removeSharedEmailRecipients(context.get('db'), context.env, projectId);
-  // Customer-side cleanup is durable and may continue after project deletion.
+  // Decision: Customer-side cleanup is durable and may continue after project deletion.
   await cleanupProjectEmailAssignments(context, projectId);
   const { warnings: bestEffortWarnings, cleanedCfIds } = await cleanupBestEffortResources(
     context,
     projectId,
     project,
   );
-  // MUST run before `deleteProjectCascade`: the cascade destroys the
-  // `email_destinations` rows the cross-project reference count is computed
-  // from, so afterwards there is no way to tell whether an account-level CF
-  // destination is still in use — the orphan becomes unrecoverable. Lives
-  // here rather than in `routes/delete.ts` so the two admin teardown paths
-  // (admin project delete, admin user delete) get it too.
+  // Decision: Must run before `deleteProjectCascade`: the cascade destroys the `email_destinations` rows the
+  // cross-project reference count comes from, and after that an account-level CF destination's orphan
+  // can't be recovered. It lives here, not in `routes/delete.ts`, so the admin project and user
+  // delete paths get it too.
   await cleanupProjectEmailDestinations(context, projectId);
-  // Access application IDs live only on the project row, so deletion must
-  // succeed before the cascade. It runs after every retryable step above: a
-  // retried teardown must never leave a routed public project without its
-  // bypass or a protected one without its exact application.
+  // Decision: Access application IDs live only on the project row, so deletion must succeed before the cascade.
+  // It runs after the retryable steps above: a retried teardown must not leave a routed public project
+  // without its bypass or a protected one without its exact application.
   await cleanupProjectZeroTrust(context.env, context.get('db'), projectId);
-  // deleteProjectCascade re-terminalizes under the project lock to catch a build
-  // that raced in after step 1 committed (build creation takes the same lock),
-  // and returns both that build and every resource row it deleted.
+  // Decision: deleteProjectCascade re-terminates under the project lock to catch a build that raced in after
+  // step 1 (build creation takes the same lock), and returns that build and each resource row it
+  // deleted.
   const { cancelledBuilds, deletedResources } = await deleteProjectCascade(
     context.get('db'),
     projectId,
     cleanedCfIds,
   );
   await cancelContainerBuildDos(context.env, cancelledBuilds, 'project deleted');
-  // Close the orphan-on-concurrent-create window: delete the CF object behind any
-  // resource whose row was created AFTER the best-effort snapshot above (so its
-  // cf_id isn't in `cleanedCfIds`) and just cascade-deleted. Normally empty.
+  // Decision: Close the orphan-on-concurrent-create window: delete the CF object behind any resource whose row
+  // was created after the best-effort snapshot (so its cf_id isn't in `cleanedCfIds`) and was just
+  // cascade-deleted. Normally empty.
   const orphanWarnings = await cleanupRaceWindowResourceOrphans(
     context,
     projectId,
     deletedResources,
     cleanedCfIds,
   );
-  // The AI logging key goes only once the row is gone. Until then a token can still
-  // pass the live owner check, and a missing key means the gateway setting, so an
-  // earlier removal would log prompts of a project set to `off` while teardown
-  // runs or waits for a retry. A failed delete leaves an orphan key; the hourly
-  // sweep removes it.
+  // Decision: The AI logging key goes only once the row is gone. Until then a token can still pass the live owner
+  // check, and a missing key means the gateway setting, so removing it earlier would log prompts of a
+  // project set to `off` while teardown runs or waits for a retry. A failed delete leaves an orphan key
+  // that the hourly sweep removes.
   const aiLogging = await runCleanupBatch(context.env, [
     cleanupJob(projectId, 'routing-key', aiLoggingKey(projectId), { key: aiLoggingKey(projectId) }),
   ]);
@@ -1016,18 +974,17 @@ async function cleanupProjectEmailAssignments(
   projectId: string,
 ): Promise<void> {
   const db = context.get('db');
-  // New connection-backed assignments are independent of project cascade.
-  // Disable authority first; provider cleanup remains in the operation ledger
-  // even if project teardown later removes its owning row.
+  // Decision: New connection-backed assignments are independent of the project cascade. Disable authority first;
+  // provider cleanup stays in the operation ledger even if teardown later removes its owning row.
   const assignments = await db
     .select()
     .from(emailDomainRoutes)
     .where(eq(emailDomainRoutes.project_id, projectId));
   for (const assignment of assignments) {
     if (assignment.desired_state === 'removed') {
-      // An administrator may remove an owner-managed assignment while leaving
-      // its connection resources for the manager. Project teardown inherits
-      // cleanup authority, but only after the last live sibling is gone.
+      // Decision: An administrator may remove an owner-managed assignment while leaving its connection resources for
+      // the manager. Project teardown inherits cleanup authority, but only after the last live sibling is
+      // gone.
       const [connection] = await db
         .select({ id: emailZoneConnections.id, credentialId: emailZoneConnections.credential_id })
         .from(emailZoneConnections)
@@ -1051,8 +1008,8 @@ async function cleanupProjectEmailAssignments(
         continue;
       }
     }
-    // The durable intent must exist before the project can cascade away.
-    // A provider failure after that point is safe to reconcile later.
+    // Decision: The durable intent must exist before the project can cascade away. A provider failure after that
+    // is safe to reconcile later.
     const opId = await requestEmailDomainRemove(
       db,
       context.env,
@@ -1067,8 +1024,8 @@ async function cleanupProjectEmailAssignments(
     try {
       await runEmailOperation(db, context.env, opId);
     } catch (error) {
-      // The disabled assignment and connection survive project deletion; the
-      // scheduled reconciler or operator can inspect and resume the cleanup.
+      // Decision: The disabled assignment and connection survive project deletion; the scheduled reconciler or an
+      // operator can inspect and resume the cleanup.
       console.error(
         '[email] project teardown left pending connection cleanup',
         assignment.id,

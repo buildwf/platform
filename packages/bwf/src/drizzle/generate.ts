@@ -45,7 +45,7 @@ export function snapshotDrizzleOutputs(migrationsDir: string): () => void {
     try {
       step();
     } catch {
-      // The drizzle-kit failure is the error worth reporting.
+      // Decision: The drizzle-kit failure is the error worth reporting.
     }
   };
   const removeNewFiles = (dir: string, suffix: string, before: Set<string>): void => {
@@ -65,7 +65,7 @@ export function snapshotDrizzleOutputs(migrationsDir: string): () => void {
     } else {
       bestEffort(() => rmSync(metaDir, { recursive: true, force: true }));
     }
-    // Keep a new migrations directory so a retry can reuse it.
+    // Decision: Keep a new migrations directory so a retry can reuse it.
     bestEffort(() => removeNewFiles(migrationsDir, '.sql', sqlFiles));
   };
 }
@@ -75,7 +75,7 @@ export async function generateValidatedSqliteMigrations(
   migrationsDir: string,
   generate: () => void,
 ): Promise<void> {
-  // An existing invalid migration needs repair; generating from its target snapshot cannot fix it.
+  // Decision: An existing invalid migration needs repair; generating from its target snapshot cannot fix it.
   try {
     (await openMigrationValidationDatabase(collectMigrations(migrationsDir))).close();
   } catch (cause) {

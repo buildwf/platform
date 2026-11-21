@@ -253,7 +253,7 @@ export async function executeCloudflareD1Sql(
       ...source,
       configPath: context.operation.configPath,
     });
-  // A file changes only the transport, never the query's result semantics.
+  // Decision: A file changes only the transport, not the query's result semantics.
   const result =
     Buffer.byteLength(JSON.stringify(sql)) > 16 * 1024
       ? await withD1SqlFile(sql, (file) => execute({ file }))
@@ -384,9 +384,8 @@ export function parseCloudflareDeployedVersionIds(value: unknown): Array<string>
       ) {
         throw new Error(`Cloudflare deployment list entry ${deploymentIndex + 1} is malformed.`);
       }
-      // A version staged at 0% for readiness is present in deployment history
-      // even when its probe failed. It has never served production traffic and
-      // must not become a rollback candidate.
+      // Decision: A version staged at 0% for readiness is in deployment history even when its probe failed. It
+      // hasn't served production traffic and mustn't become a rollback candidate.
       if ((version as { percentage: number }).percentage > 0) {
         ids.add((version as { version_id: string }).version_id);
       }
@@ -457,7 +456,7 @@ export async function activateCloudflareExistingVersion(
   target: CloudflareWorkerVersion,
   current?: CloudflareWorkerVersion,
 ): Promise<void> {
-  // Without a complete snapshot, use Cloudflare's code-only rollback semantics.
+  // Decision: Without a complete snapshot, use Cloudflare's code-only rollback semantics.
   // Keeping triggers unchanged also makes the inverse recovery possible.
   if (
     target.metadata?.schema !== 2 ||
@@ -564,8 +563,8 @@ export async function activateCloudflareExistingVersion(
     );
   }
   let recoveryFailure: string | null = null;
-  // Not forced: `current` served traffic until this rollback, so Cloudflare
-  // refuses it (10220) only when someone else has changed a secret since.
+  // Decision: Not forced: `current` served traffic until this rollback, so Cloudflare refuses it (10220) only
+  // when someone else has changed a secret since.
   try {
     await run(
       context,

@@ -32,8 +32,6 @@ export const CANCELLATION_REQUESTED_DEPLOYMENT_STATUSES: Array<DeploymentStatus>
   'canceled',
 ];
 
-// --- Deployments ---
-
 export async function createDeployment(
   db: Db,
   projectId: string,

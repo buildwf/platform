@@ -1,4 +1,4 @@
-// bwf/email — outbound email. MIME is built here, then sent through the
+// Decision: bwf/email — outbound email. MIME is built here, then sent through the
 // first available transport: the `bwf dev` inbox, the worker's own
 // `SEND_EMAIL` binding (`bwf deploy --platform cloudflare`, one
 // `EmailMessage` per recipient), or the bwf platform proxy, which enforces
@@ -71,7 +71,7 @@ export type {
   ReplyEmailOptions,
 } from './email/inbound.ts';
 
-// `createEmail` throws `MimeError`; export it with the functions that throw it.
+// Decision: `createEmail` throws `MimeError`; export it with the functions that throw it.
 export { MimeError } from './email/mime.ts';
 export type { MimeErrorCode } from './email/mime.ts';
 
@@ -85,7 +85,7 @@ interface ProxyEnv {
   __PROJECT_ID?: string;
 }
 
-// The `send_email` binding `bwf deploy --platform cloudflare` provisions
+// Decision: The `send_email` binding `bwf deploy --platform cloudflare` provisions
 // (`cli/email-cloudflare.ts` writes the same name into wrangler.jsonc).
 const SEND_EMAIL_BINDING_NAME = 'SEND_EMAIL';
 const EMAIL_PROVIDER_DEADLINE_MS = 30_000;
@@ -98,7 +98,7 @@ class EmailBindingTimeoutError extends Error {
   }
 }
 
-// The legacy `EmailMessage` overload of `SendEmail.send`. Only `messageId`
+// Decision: The legacy `EmailMessage` overload of `SendEmail.send`. Only `messageId`
 // is read, and defensively: some builds have returned nothing.
 interface SendEmailBinding {
   send(message: EmailMessage): Promise<{ messageId?: unknown } | undefined | void>;
@@ -144,7 +144,7 @@ function classifyBindingError(e: unknown): SendEmailError {
   return makeError('OUTCOME_UNKNOWN', message, e);
 }
 
-// Anchored to Cloudflare's own phrasing ("destination address … not (yet)
+// Decision: Anchored to Cloudflare's own phrasing ("destination address … not (yet)
 // verified"), with bounded runs so a long preamble or a multi-line stack
 // cannot drag an unrelated mention of the address into a false positive.
 const UNVERIFIED_DESTINATION_RE =
@@ -248,7 +248,7 @@ function uniqueRecipients(normalized: NormalizedEmail): Array<string> {
 
 function resolveDefaultFrom(opts: SendEmailOptions): SendEmailOptions {
   const supplied = opts.from;
-  // `null` counts as missing: `parseAddress` would throw a TypeError,
+  // Decision: `null` counts as missing: `parseAddress` would throw a TypeError,
   // reported as MIME_ERROR rather than INVALID_FROM.
   const isEmpty =
     supplied === undefined ||
@@ -258,7 +258,7 @@ function resolveDefaultFrom(opts: SendEmailOptions): SendEmailOptions {
   if (!isEmpty) {
     return opts;
   }
-  // `__PLATFORM_EMAIL_FROM` (`email.from` in bwf.config.ts) wins over the
+  // Decision: `__PLATFORM_EMAIL_FROM` (`email.from` in bwf.config.ts) wins over the
   // platform's `<slug>+noreply@<domain>`: it names a sender on purpose.
   const configured = readEnvString('__PLATFORM_EMAIL_FROM');
   if (configured) {
@@ -267,7 +267,7 @@ function resolveDefaultFrom(opts: SendEmailOptions): SendEmailOptions {
   const slug = readProjectSlug();
   const domain = readEnvString('__PLATFORM_EMAIL_DOMAIN');
   if (!slug || !domain) {
-    // Drop `null` so the caller reports a clean INVALID_FROM.
+    // Decision: Drop `null` so the caller reports a clean INVALID_FROM.
     if (supplied === null) {
       const next = { ...opts };
       delete (next as { from?: unknown }).from;
@@ -330,7 +330,7 @@ function readProxyRefusal(body: unknown): string | null {
   return typeof message === 'string' && message !== '' ? message : error;
 }
 
-// A malformed response leaves the provider outcome unknown.
+// Decision: A malformed response leaves the provider outcome unknown.
 function readProxyResponse(value: unknown): ProxyResponse | null {
   if (!isRecord(value)) {
     return null;
@@ -499,7 +499,7 @@ async function readResponseAsResult(
   }
   const response = readProxyResponse(body);
   if (response === null) {
-    // A `{ error, message? }` refusal from the proxy's middleware is
+    // Decision: A `{ error, message? }` refusal from the proxy's middleware is
     // well-formed: report its text.
     const refusal = readProxyRefusal(body);
     if (!res.ok && refusal !== null) {
@@ -578,7 +578,7 @@ function resolveDevInbox(env: Record<string, unknown> | undefined): DevInbox | u
   };
 }
 
-// A local loopback answers immediately; this only exists so a wedged dev
+// Decision: A local loopback answers immediately; this only exists so a wedged dev
 // server degrades into an error instead of hanging the user's request.
 const DEV_INBOX_TIMEOUT_MS = 5000;
 
@@ -661,7 +661,7 @@ async function postToDevInbox(
         reason: `dev server responded ${res.status}${excerpt ? `: ${excerpt}` : ''}`,
       };
     }
-    // A 200 alone is not proof: if the assets binding ever stops being a
+    // Decision: A 200 alone is not proof: if the assets binding ever stops being a
     // dev-server loopback, a static/SPA response is also a 200.
     if (res.headers.get(DEV_INBOX_ACK_HEADER) !== DEV_INBOX_ACK_VALUE) {
       return { ok: false, reason: 'response did not come from the dev inbox' };
@@ -710,7 +710,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
     );
   }
 
-  // `from` is now guaranteed defined by the check above; the cast keeps
+  // Decision: `from` is now guaranteed defined by the check above; the cast keeps
   // normalizeEmail's stricter signature without widening it.
   const optsWithFrom = resolvedOpts as SendEmailOptions & {
     from: NonNullable<SendEmailOptions['from']>;
@@ -731,7 +731,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 
   const rawEnv = tryGetRawRuntimeEnv();
 
-  // A sink in this isolate (`createEmailTestHarness`) owns the capture; do
+  // Decision: A sink in this isolate (`createEmailTestHarness`) owns the capture; do
   // not also post it to the dev inbox.
   if (!opts.sendInDev && hasActiveSink()) {
     const captured = captureMessage(normalized, raw, messageId);
@@ -739,7 +739,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
     return capturedResult(normalized, captured.id);
   }
 
-  // `bwf dev`: the inbox buffer lives in the Vite dev server's Node process,
+  // Decision: `bwf dev`: the inbox buffer lives in the Vite dev server's Node process,
   // which this isolate has no shared memory with. Hand the message over.
   const devInbox = opts.sendInDev ? undefined : resolveDevInbox(rawEnv);
   if (devInbox) {
@@ -755,7 +755,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 
   const recipients = uniqueRecipients(normalized);
 
-  // Own-account deploy: the worker holds the binding itself, so there is no
+  // Decision: Own-account deploy: the worker holds the binding itself, so there is no
   // proxy hop and no platform quota — Cloudflare's own limits apply.
   const sendBinding = resolveSendEmailBinding(rawEnv);
   if (sendBinding) {

@@ -6,7 +6,7 @@ import {
   type AcceptanceMessage,
 } from '../lib/queue-acceptance.ts';
 
-// A single-message batch makes thrown retries independent of the other cases.
+// Decision: A single-message batch keeps thrown retries independent of the other cases.
 export const maxBatchSize = 1;
 export const maxBatchTimeout = 1;
 export const maxRetries = 1;

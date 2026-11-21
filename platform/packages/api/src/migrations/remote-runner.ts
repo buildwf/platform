@@ -47,15 +47,11 @@ async function upgradeTrackingTable(
   if (!result.results || result.results.length === 0) {
     return;
   }
-  // INSERT must succeed — propagate failures so the applied set is complete.
-  // The one tolerated failure is a concurrent upgrade race: two overlapping
-  // ensureTrackingTable() callers both pass the sqlite_master probe above, the
-  // winner completes the copy and the DROP, and the loser's INSERT then hits
-  // `no such table: _migrations` because the winner already dropped it. That
-  // is a benign interleaving — the rows were copied successfully by the
-  // winner — so swallow exactly that error text and continue. Any other
-  // failure (auth, quota, schema mismatch on `_void_migrations`) still
-  // propagates.
+  // Decision: The INSERT must succeed, so propagate failures and keep the applied set complete. The one tolerated
+  // failure is a concurrent upgrade race: two ensureTrackingTable() callers both pass the sqlite_master
+  // probe, the winner copies and drops the table, and the loser's INSERT hits
+  // `no such table: _migrations`. The winner copied the rows, so swallow exactly that error. Any other
+  // failure (auth, quota, schema mismatch) still propagates.
   try {
     await queryD1(accountId, apiToken, databaseId, {
       sql: `INSERT OR IGNORE INTO _void_migrations (name, applied_at) SELECT name, applied_at FROM _migrations`,
@@ -66,14 +62,12 @@ async function upgradeTrackingTable(
       throw err;
     }
   }
-  // DROP can fail if a concurrent caller already dropped the table — safe to ignore.
+  // Decision: DROP can fail if a concurrent caller already dropped the table; that's safe to ignore.
   try {
     await queryD1(accountId, apiToken, databaseId, {
       sql: `DROP TABLE _migrations`,
     });
-  } catch {
-    // Concurrent upgrade already dropped the table
-  }
+  } catch {}
 }
 
 /**
@@ -123,10 +117,9 @@ export async function runRemoteMigrations(
       result.failed = { name: migration.name, error: 'Unterminated SQL block comment' };
       return result;
     }
-    // Like Wrangler's migration runner, submit SQL and its tracking INSERT
-    // together to D1's transactional query batch. A plain INSERT makes a
-    // stale applied-set retry roll back its SQL on the unique-name conflict.
-    // The newline also terminates any trailing line comment in user SQL.
+    // Decision: Like Wrangler's migration runner, send the SQL and its tracking INSERT together in D1's
+    // transactional query batch. With a plain INSERT, a stale applied-set retry rolls back its SQL on
+    // the unique-name conflict. The newline also ends any trailing line comment in user SQL.
     const name = migration.name.replaceAll("'", "''");
     const sql =
       migration.sql +
@@ -138,8 +131,8 @@ export async function runRemoteMigrations(
     try {
       await queryD1(accountId, apiToken, databaseId, { sql });
     } catch (error) {
-      // A lost response or a concurrent winner is successful only if D1
-      // recorded the migration. Never infer success from an existing object.
+      // Decision: A lost response or a concurrent winner counts as success only if D1 recorded the migration. Don't
+      // infer success from an existing object.
       try {
         const tracked = await queryD1(accountId, apiToken, databaseId, {
           sql: 'SELECT name FROM _void_migrations WHERE name = ?',
@@ -151,10 +144,10 @@ export async function runRemoteMigrations(
           continue;
         }
       } catch {
-        // Preserve the original error if reconciliation is unavailable.
+        // Decision: Keep the original error if reconciliation isn't available.
       }
-      // Return the committed prefix so the caller can persist its metadata
-      // before surfacing failure, rather than rolling back its pg transaction.
+      // Decision: Return the committed prefix so the caller can persist its metadata before reporting failure,
+      // instead of rolling back its pg transaction.
       result.failed = { name: migration.name, error: String((error as Error)?.message ?? error) };
       return result;
     }
@@ -251,7 +244,6 @@ export async function queryD1(
     throw new Error('D1 migration failed: ' + (failed.error ?? 'statement failed'));
   }
 
-  // D1 query API returns an array of results (one per statement).
   const first = json.result[0];
   if (!first) {
     return { results: [] };

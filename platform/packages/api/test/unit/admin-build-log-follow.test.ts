@@ -8,7 +8,7 @@ const { effects, states, fate } = vi.hoisted(() => ({
   fate: { request: vi.fn(), readView: vi.fn() },
 }));
 
-// Drive the component's actual effect and timers without mounting a browser.
+// Decision: Drive the component's real effect and timers without mounting a browser.
 vi.mock('react', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react')>()),
   useEffect: (effect: () => (() => void) | void) => effects.push(effect),

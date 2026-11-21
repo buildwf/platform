@@ -15,7 +15,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 
-// Astryx forwards native validation attributes, but its field prop types omit them.
+// Decision: Astryx forwards native validation attributes, but its field prop types omit them.
 
 export function FormTextInput({
   label,
@@ -50,7 +50,7 @@ export function FormTextInput({
       htmlName={name}
       value={value}
       onChange={setValue}
-      // Astryx forwards the type to the native input but its type union omits url.
+      // Decision: Astryx forwards the type to the native input but its type union omits url.
       type={type as 'text' | 'password' | 'email'}
       isRequired={required}
       {...({ required, maxLength } satisfies InputHTMLAttributes<HTMLInputElement>)}

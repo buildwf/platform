@@ -23,21 +23,18 @@ describe('reserved slugs (real implementation)', () => {
     }
   });
 
-  // A project's outbound `from` is `<slug>[+tag]@<EMAIL_SENDER_DOMAIN>`, so a
-  // slug IS a mailbox on the platform mail domain. `noreply` is the platform's
-  // own verification sender — the proxy's internal allow-list is exactly
-  // `noreply@<domain>` — and the rest are the addresses recipients and mail
-  // providers treat as authoritative for a whole domain.
+  // Decision: A project's outbound `from` is `<slug>[+tag]@<EMAIL_SENDER_DOMAIN>`, so a slug is a mailbox on
+  // the platform mail domain. `noreply` is the platform's own verification sender, and the rest are
+  // addresses that recipients and providers treat as authoritative for a whole domain.
   it('blocks email-identity slugs', () => {
     for (const slug of ['noreply', 'postmaster', 'abuse', 'bounce', 'security']) {
       expect(RESERVED_SLUGS.has(slug)).toBe(true);
     }
   });
 
-  // A certificate authority may prove control of a domain by mailing one of
-  // these local-parts, and a project slug is a mailbox on the shared mail
-  // domain. The three newer names are refused only at create time, so an
-  // existing project that already holds one keeps receiving its mail.
+  // Decision: A certificate authority may prove domain control by mailing one of these local-parts, and a slug
+  // is a mailbox on the shared mail domain. The three newer names are refused only at create time,
+  // so an existing project that holds one keeps getting its mail.
   it('blocks the CA domain-validation mailboxes', () => {
     for (const slug of ['admin', 'administrator', 'hostmaster', 'postmaster', 'webmaster']) {
       expect(RESERVED_SLUGS.has(slug)).toBe(true);
@@ -58,11 +55,9 @@ describe('reserved slugs (real implementation)', () => {
   });
 });
 
-// The five email-identity slugs were reserved only when email shipped, so a
-// project registered before that can still hold one and the create-time
-// check above never sees it. The email path (api backfill, proxy send,
-// inbound router) therefore enforces `EMAIL_RESERVED_SLUGS` on its own; this
-// pins that set to the create-time list so the two cannot drift apart.
+// Decision: The email-identity slugs were reserved only when email shipped, so an older project can hold one
+// and the create-time check never sees it. The email path (api backfill, proxy send, inbound
+// router) enforces EMAIL_RESERVED_SLUGS on its own; this pins that set to the create-time list.
 describe('email-reserved slugs (shared with the proxy)', () => {
   it('is exactly the email-identity subset', () => {
     expect([...EMAIL_RESERVED_SLUGS].sort()).toEqual([
@@ -87,8 +82,8 @@ describe('email-reserved slugs (shared with the proxy)', () => {
   });
 
   it('isReservedEmailSlug leaves hostname-only reservations and ordinary slugs alone', () => {
-    // Reserved since the first commit, so no project can hold one; and a
-    // hostname collision is not a mailbox.
+    // Decision: Reserved since the first commit, so no project can hold one, and a hostname collision isn't a
+    // mailbox.
     for (const slug of ['www', 'api', 'mail', 'smtp', 'imap', 'pop']) {
       expect(RESERVED_SLUGS.has(slug)).toBe(true);
       expect(isReservedEmailSlug(slug)).toBe(false);

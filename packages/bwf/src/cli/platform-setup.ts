@@ -171,7 +171,7 @@ export function platformSetupPages(plan: PlatformInstallPlan): {
           { key: 'cloudchamber', type: 'edit' },
         ]
       : []),
-    // Email domain setup and destination consent use this token.
+    // Decision: Email domain setup and destination consent use this token.
     ...(plan.deployment.capabilities.email
       ? [
           { key: 'zone', type: 'read' },
@@ -195,7 +195,7 @@ export function platformSetupPages(plan: PlatformInstallPlan): {
       url: 'https://dash.cloudflare.com/?' + query,
       instructions: [
         'Create a Cloudflare runtime token that bwf can use to manage the platform. Please review the permissions and then paste the token here.',
-        // A zone that bwf creates later cannot be selected yet; All Domains
+        // Decision: A zone that bwf creates later cannot be selected yet; All Domains
         // lets Cache Purge reach it once it exists.
         ...(zoneName && plansZoneCreation(plan)
           ? [
@@ -277,7 +277,7 @@ export function formatPlatformSetupPlan(
     ...(plan.deployment.appAccess
       ? ['Cloudflare Access check and app-management token when needed (stored encrypted)']
       : []),
-    // Interactive installs generate these keys.
+    // Decision: Interactive installs generate these keys.
     ...(process.stdin.isTTY
       ? []
       : ['JWT signing key and project encryption key for non-interactive installs']),

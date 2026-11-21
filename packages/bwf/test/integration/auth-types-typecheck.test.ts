@@ -13,11 +13,9 @@ afterEach(() => {
   }
 });
 
-/**
- * Typecheck `auth.ts` plus `handler.ts` in a kitchen-sink app that depends on
- * `platform` only, the way pnpm lays it out: the app has no `better-auth` of its own.
- * An `auth.js` config is left out of `files`, as in a TS app without `allowJs`.
- */
+// Decision: Typecheck `auth.ts` plus `handler.ts` in a kitchen-sink app that depends on
+// `platform` only, the way pnpm lays it out: the app has no `better-auth` of its own.
+// An `auth.js` config is left out of `files`, as in a TS app without `allowJs`.
 function typecheck(
   authSource: string,
   handlerSource: string,
@@ -60,7 +58,7 @@ function typecheck(
 
 describe('generated auth types in a consumer project', () => {
   it('types plugin fields and additionalFields on user, session, and context', () => {
-    // Only auth.ts's own plugin import needs a mapping; the generated file
+    // Decision: Only auth.ts's own plugin import needs a mapping; the generated file
     // reaches better-auth through bwf/auth.
     const betterAuthPkg = join(workspaceRoot, 'packages/bwf/node_modules/better-auth');
     const adminTypes = join(betterAuthPkg, 'dist/plugins/admin/index.d.mts');

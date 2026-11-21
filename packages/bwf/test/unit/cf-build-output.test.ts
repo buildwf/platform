@@ -34,7 +34,7 @@ import { type CfBuildOutput, prepareCfStaticBuildOutput } from '../../src/cli/cf
 import { prepareCfBuildOutput } from '../../src/deploy.ts';
 
 const roots: Array<string> = [];
-// These tests start a real cf CLI process (and one also runs a Vite build).
+// Decision: These tests start a real cf CLI process (and one also runs a Vite build).
 // Windows CI can take longer than Vitest's 5-second default under parallel load.
 const CF_BUILD_TIMEOUT_MS = process.platform === 'win32' ? 45_000 : 15_000;
 afterEach(() => {
@@ -57,7 +57,6 @@ function worker(config: Record<string, unknown>): string {
   return output;
 }
 
-/** Run `check` against the prepared output, then dispose it. */
 async function withPrepared(
   pending: Promise<CfBuildOutput | null>,
   check: (prepared: CfBuildOutput) => unknown,
@@ -79,7 +78,7 @@ function expectCfDryRun(directory: string, command = ['workers', 'versions', 'cr
   const dryRun = spawnSync(process.execPath, [cf, ...command, '--prebuilt', '--dry-run'], {
     cwd: directory,
     encoding: 'utf8',
-    // As bwf runs cf. Otherwise each call reports to Cloudflare and waits for the answer.
+    // Decision: As bwf runs cf. Otherwise each call reports to Cloudflare and waits for the answer.
     env: { ...process.env, CF_SEND_TELEMETRY: 'false' },
   });
   expect(dryRun.status, `${dryRun.stdout}\n${dryRun.stderr}`).toBe(0);
@@ -111,7 +110,7 @@ it('requires a rebuild of old native artifacts without changing their files', as
   for (const [path, content] of Object.entries(files)) {
     writeFileSync(path, content);
   }
-  // Dispose even if a regression unexpectedly accepts the old artifact.
+  // Decision: Dispose even if a regression unexpectedly accepts the old artifact.
   await expect(
     prepareCfBuildOutput(root).then(async (prepared) => {
       await prepared?.dispose();
@@ -445,7 +444,6 @@ it.skipIf(process.platform === 'win32')('rejects symlinked native assets', async
   const secret = join(root, 'secret.txt');
   writeFileSync(secret, 'private');
   symlinkSync(secret, join(getWorkerAssetsDir(root), 'leak.txt'));
-  // The native reader refuses every symlink, so no link reaches the copied assets.
   await expect(prepareCfBuildOutput(root)).rejects.toThrow('Symlinks are not permitted');
 });
 
@@ -516,7 +514,7 @@ it('rejects a mismatching explicit target account', async () => {
 it(
   'preserves additional module types from a real Cloudflare Vite build',
   async () => {
-    // Vite canonicalizes root; use the same path for Cloudflare's output directory.
+    // Decision: Vite canonicalizes root; use the same path for Cloudflare's output directory.
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'platform-cf-additional-modules-')));
     roots.push(root);
     writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
@@ -777,7 +775,7 @@ it.each([
   { flags: { keep_vars: true }, keep: ['plain_text', 'json', 'secret_text', 'secret_key'] },
   { flags: { keep_secrets: true }, keep: ['secret_text', 'secret_key'] },
 ])('keeps existing Worker secrets with $flags', async ({ flags, keep }) => {
-  // A written keep_bindings replaces cf's default, so keep_vars alone must still list secrets.
+  // Decision: A written keep_bindings replaces cf's default, so keep_vars alone must still list secrets.
   const output = worker({
     name: 'platform-test',
     compatibility_date: '2026-09-29',
@@ -961,7 +959,6 @@ it('bundles a generated static Worker and staged assets into prebuilt cf output'
   );
 });
 
-/** The comment line `bwf domain add` writes, in the format of writeWranglerPublishedTrafficSnapshot. */
 it.skipIf(process.platform === 'win32')(
   'builds a named Sandbox image into cf prebuilt output and cleans up its local tag',
   async () => {

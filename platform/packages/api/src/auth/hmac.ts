@@ -13,7 +13,8 @@ export function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-// Cache CryptoKeys per secret — importKey is expensive and the secret never changes per isolate
+// Decision: Cache CryptoKeys per secret: importKey is expensive and the secret doesn't change per
+// isolate.
 const signKeyCache = new Map<string, CryptoKey>();
 const verifyKeyCache = new Map<string, CryptoKey>();
 
@@ -66,9 +67,9 @@ export async function hmacVerifyState(
     const binary = atob(padded);
     sigBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
   } catch {
-    // Malformed base64url signature → invalid signature, NOT a server error.
-    // Without this, an unauthenticated caller can force a 500 by sending a
-    // non-decodable signature (e.g. `state=abc.*`) to any HMAC-verified route.
+    // Decision: A malformed base64url signature is an invalid signature, not a server error. Without this,
+    // an unauthenticated caller can force a 500 by sending a non-decodable signature (for example
+    // `state=abc.*`) to any HMAC-verified route.
     return false;
   }
   return crypto.subtle.verify('HMAC', key, sigBytes, encoder.encode(data));

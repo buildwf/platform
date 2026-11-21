@@ -8,7 +8,7 @@ export function staticModuleReferences(
   code: string,
 ): Array<ModuleReference> {
   const { staticImports, staticExports } = parsed.module;
-  // Module metadata omits empty re-exports and the type-only flag on empty imports.
+  // Decision: Module metadata omits empty re-exports and the type-only flag on empty imports.
   // These candidates need the AST; false positives in comments/strings only cost a parse read.
   const needsAst =
     /\bexport\s*(?:\/|\{\s*(?:\}|\/))/.test(code) ||

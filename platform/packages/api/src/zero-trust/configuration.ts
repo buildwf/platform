@@ -324,7 +324,7 @@ function parseZeroTrustConfiguration(value: unknown): ZeroTrustConfiguration | n
     }
   }
   const wildcardApplication = parseApplication(input.wildcardApplication);
-  // Configurations saved before the health exception existed have neither field.
+  // Decision: Configurations saved before the health exception existed have neither field.
   const healthApplication = parseApplication(input.healthApplication ?? null);
   const operation = parseOperation(input.operation);
   if (

@@ -123,21 +123,16 @@ const WORKER_UPLOAD_CLAIMED_MESSAGE =
  * direct-to-R2 flow.
  */
 export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promise<Response> {
-  // Hono's `context.req.param('id')` types as `string | undefined` when called
-  // from a non-route-typed context (we receive `Context<ApiEnv>` rather
-  // than the route-typed callback Hono synthesises for `app.post`). The
-  // route literal is `/:id/deploy`, so this is always a string at
-  // runtime — narrow by hand. The ApiEnv route registry guarantees the
-  // path matched.
+  // Decision: Hono types `context.req.param('id')` as `string | undefined` outside a route-typed callback. The
+  // route is `/:id/deploy`, so it's a string at runtime; narrow by hand.
   const projectId = context.req.param('id') as string;
   const access = await requireProjectRouteCapability(context, projectId, 'deploy');
   if (access instanceof Response) {
     return access;
   }
   let project = access.project;
-  // Scoped deploy tokens (aud:'deploy') are pinned to a single project. Reject
-  // any attempt to use one against a different project. Full api tokens leave
-  // deployScope unset and skip this guard.
+  // Decision: Scoped deploy tokens (aud:'deploy') are pinned to one project; reject use against another project.
+  // Full API tokens leave deployScope unset and skip this guard.
   const deployScope = context.get('deployScope');
   if (deployScope && deployScope !== projectId) {
     return context.json(
@@ -149,10 +144,9 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       403,
     );
   }
-  // A scoped deploy token may carry the build it was minted for. Reject it once
-  // that build is no longer active (e.g. superseded/cancelled by a newer push or
-  // run), so a stale runner can't deploy an older commit after being superseded.
-  // Tokens without a build claim (full-API tokens, CI credential tokens) skip this.
+  // Decision: A scoped deploy token may carry the build it was minted for. Reject it once that build is no
+  // longer active (superseded or cancelled), so a stale runner can't deploy an older commit. Tokens
+  // without a build claim skip this.
   const deployBuild = context.get('deployBuild');
   if (deployBuild) {
     const build = await getBuild(context.get('db'), deployBuild);
@@ -170,11 +164,9 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
   if (project.status === 'deleting') {
     return context.json({ error: 'project is being deleted' }, 410);
   }
-  // CLI version gate runs AFTER project authz so a stale CLI hitting a
-  // missing/foreign/deleting project still gets the more specific
-  // 404/403/410 first. The multipart sniff inside the helper is
-  // header-only — it does not read the request body, so calling it
-  // here does not interfere with the streaming JSON parse below.
+  // Decision: The CLI version gate runs after project authz so a stale CLI hitting a missing, foreign or
+  // deleting project still gets the more specific 404/403/410. The multipart sniff in the helper reads
+  // only headers, so it doesn't disturb the streaming JSON parse below.
   const versionReject = checkCliVersionOrRespond(context);
   if (versionReject) {
     return versionReject;
@@ -199,15 +191,10 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     branch: null,
   });
 
-  // Parse + validate the JSON body BEFORE the precheck-and-claim transaction.
-  // A malformed body should not consume the project's active-deploy slot —
-  // the JSON body can be validated up-front and rejected without ever
-  // inserting a placeholder row.
-  //
-  // Stream the body through a counting TransformStream and let
-  // `Response.json()` parse it incrementally. Buffering, decoding, and
-  // JSON.parse-ing a body that can reach 64 MiB would hold several copies of
-  // it at once; native parsing retains only the parsed object.
+  // Decision: Parse and validate the JSON body before the precheck-and-claim transaction, so a malformed body
+  // doesn't take the project's active-deploy slot or insert a placeholder row.
+  // Stream the body through a counting TransformStream and let `Response.json()` parse it. Buffering,
+  // decoding and JSON.parse on a body up to 64 MiB would hold several copies at once.
   if (!context.req.raw.body) {
     return context.json({ error: 'request body is required' }, 400);
   }
@@ -250,10 +237,9 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
   }
   const body = parsedBody as Record<string, unknown>;
 
-  // Manifest validation. `validateManifestShape` is the canonical source of
-  // truth for what's accepted; the `assetManifestVersion === 2` check below
-  // requires the v2 wire shape (blake3 + md5 + size per asset) that
-  // direct-to-R2 deploys depend on.
+  // Decision: `validateManifestShape` is the source of truth for what's accepted. The
+  // `assetManifestVersion === 2` check below requires the v2 wire shape (blake3, md5 and size per
+  // asset) that direct-to-R2 deploys depend on.
   if (body.manifest == null || typeof body.manifest !== 'object' || Array.isArray(body.manifest)) {
     return context.json(
       { event: 'error', message: 'manifest is required and must be an object' },
@@ -279,8 +265,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     );
   }
   if (context.get('oauthApproval') && !context.get('deploymentExecution')) {
-    // The approved artifact digest commits to inline `workerFiles` bytes, so
-    // an uploaded `workerInput` could not be checked against it.
+    // Decision: The approved artifact digest commits to inline `workerFiles` bytes, so an uploaded `workerInput`
+    // couldn't be checked against it.
     if (body.workerInput !== undefined) {
       return context.json(
         {
@@ -309,8 +295,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       );
     }
   }
-  // Stored deployment manifests remain readable without this contract. Only
-  // new SQLite builds that run migrations must include their verified plan.
+  // Decision: Stored deployment manifests stay readable without this contract. Only new SQLite builds that run
+  // migrations must include their verified plan.
   const migrations = incomingManifest.migrations;
   if (
     migrations &&
@@ -341,8 +327,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       projectId,
       incomingManifest,
     );
-    // Only the slug gates a deploy: an alias rule that fails must not block
-    // a deploy that would pass without the alias, which cannot be removed.
+    // Decision: Only the slug gates a deploy: a failing alias rule must not block a deploy that would pass without
+    // the alias, which can't be removed.
     const readiness = await getSharedEmailRecipientReadiness(
       context.get('db'),
       context.env,
@@ -412,9 +398,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       501,
     );
   }
-  // Reject before any paid or slow work (Sandbox controllers, uploads,
-  // migrations) when routing could not carry this project's protection yet.
-  // The cutover fence repeats this check with the authoritative lock.
+  // Decision: Reject before any paid or slow work (Sandbox controllers, uploads, migrations) when routing can't
+  // carry this project's protection yet. The cutover fence repeats the check under the lock.
   try {
     await resolveProjectZeroTrustRouting(context.get('db'), projectId);
   } catch (error) {
@@ -459,14 +444,10 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     );
   }
 
-  // Validate the v2 asset manifest. Each entry MUST carry a 32-hex blake3
-  // (storage key), 32-hex md5 (R2 PUT integrity check), and a non-negative
-  // integer size. We translate the v2 entries into the v1 shape
-  // (`{ hash: blake3, size }`) the rest of the pipeline expects — this
-  // keeps the existing dedupe / retention / serving-manifest code paths
-  // unchanged. The md5 isn't carried into the persisted manifest because
-  // BLAKE3 is the storage-key identifier and md5 is purely a write-time
-  // R2 integrity primitive.
+  // Decision: Each v2 entry needs a 32-hex blake3 (storage key), a 32-hex md5 (R2 PUT integrity check) and a
+  // non-negative integer size. The entries are mapped to the v1 shape (`{ hash: blake3, size }`) the
+  // rest of the pipeline expects, so dedupe, retention and serving-manifest code stays the same. md5
+  // isn't persisted: BLAKE3 is the storage key and md5 is only a write-time R2 integrity check.
   if (
     body.assetManifest == null ||
     typeof body.assetManifest !== 'object' ||
@@ -527,21 +508,18 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     incomingAssetManifest[path] = { hash: entry.blake3, size: entry.size };
   }
 
-  // Optional metadata fields.
   const source = typeof body.source === 'string' ? body.source : null;
   const commit = typeof body.commit === 'string' ? body.commit : null;
   const repositoryUrl = typeof body.repositoryUrl === 'string' ? body.repositoryUrl : null;
   const commitUrl = typeof body.commitUrl === 'string' ? body.commitUrl : null;
   const gitRef = typeof body.gitRef === 'string' ? body.gitRef : null;
 
-  // Worker modules arrive one of two ways. Current CLIs upload them to R2
-  // first and send `workerInput` (names, sizes, and digests). Older CLIs and
-  // connected apps send base64 `workerFiles` keyed by relative path, each
-  // capped at MAX_WORKER_FILE_BYTES (32 MiB). Neither means a static-only
-  // deploy. The Queue executor passes the modules of the admitted input.
+  // Decision: Worker modules arrive one of two ways. Current CLIs upload them to R2 first and send `workerInput`
+  // (names, sizes, digests). Older CLIs and connected apps send base64 `workerFiles` keyed by path,
+  // each capped at MAX_WORKER_FILE_BYTES (32 MiB). Neither means a static-only deploy. The Queue
+  // executor passes the modules of the admitted input.
   const execution = context.get('deploymentExecution');
   const workerFiles: Array<WorkerModule> = execution?.workerFiles ?? [];
-  // Decoded inline modules, which durable admission stages in R2.
   const inlineFiles: Array<{ name: string; content: Blob }> = [];
   let workerInput: WorkerInput | null = null;
   if (!execution && body.workerFiles !== undefined && body.workerInput !== undefined) {
@@ -564,8 +542,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     }
     workerInput = body.workerInput as WorkerInput;
   }
-  // Keys derive from the authenticated project and the validated upload id,
-  // so a request can only name objects under its own project's prefix.
+  // Decision: Keys derive from the authenticated project and the validated upload id, so a request can only
+  // name objects under its own project's prefix.
   const uploadPrefix = workerInput ? deploymentInputPrefix(projectId, workerInput.id) : null;
   const uploadedModules: DeploymentInput['modules'] = (workerInput?.modules ?? []).map(
     (module, index) => ({
@@ -590,12 +568,10 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
         400,
       );
     }
-    // Decode each base64 module and `delete` its source string from the
-    // parsed body before the next entry so V8 can reclaim it. A near-cap
-    // module's base64 string is ~86 MiB as UTF-16; holding every source string
-    // for the whole loop can push the isolate past 128 MiB on a single 32 MiB
-    // module. `decodeBase64ToBytes` avoids a second intermediate string where
-    // the runtime supports it.
+    // Decision: Decode each base64 module and `delete` its source string from the parsed body before the next one
+    // so V8 can reclaim it. A near-cap module's base64 string is about 86 MiB as UTF-16; holding all of
+    // them for the whole loop can push the isolate past 128 MiB on a single 32 MiB module.
+    // `decodeBase64ToBytes` avoids a second intermediate string where the runtime supports it.
     const workerFilesMap = body.workerFiles as Record<string, unknown>;
     for (const filePath of Object.keys(workerFilesMap)) {
       const raw = workerFilesMap[filePath];
@@ -620,8 +596,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
           400,
         );
       }
-      // Release the source string back to GC now that the bytes are
-      // materialized — see the block comment above.
+      // Decision: Release the source string to GC now that the bytes exist (see above).
       delete workerFilesMap[filePath];
       if (decoded.byteLength > MAX_WORKER_FILE_BYTES) {
         return context.json(
@@ -632,9 +607,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
           413,
         );
       }
-      // Hand the bytes directly to a `Blob` so we never name the
-      // `Uint8Array` past this scope — keeps per-iteration memory residency
-      // bounded by one decoded module at a time.
+      // Decision: Hand the bytes straight to a `Blob` so the `Uint8Array` isn't kept past this scope; memory stays
+      // at one decoded module at a time.
       const content = new Blob([decoded as unknown as BlobPart], {
         type: moduleContentType(filePath),
       });
@@ -644,11 +618,9 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
   }
   const hasWorkerFiles = workerFiles.length > 0;
 
-  // Reject worker files for static manifest types. Without this check a
-  // malformed CLI could send `workerFiles` for a `'spa'` / `'static'`
-  // manifest and end up deploying a WfP worker, breaking the project type
-  // invariants. Done BEFORE placeholder insert so a rejected request
-  // doesn't leave a phantom row to reap.
+  // Decision: Reject worker files for static manifest types, or a malformed CLI could send `workerFiles` with a
+  // 'spa' or 'static' manifest and deploy a WfP worker. Do it before the placeholder insert so a
+  // rejected request doesn't leave a phantom row.
   if (hasWorkerFiles && (incomingManifest.type === 'spa' || incomingManifest.type === 'static')) {
     return context.json(
       {
@@ -659,8 +631,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     );
   }
 
-  // Module names become multipart part names in the Cloudflare upload. This
-  // also covers modules restored from a staged deployment input.
+  // Decision: Module names become multipart part names in the Cloudflare upload. This also covers modules
+  // restored from a staged deployment input.
   if (incomingManifest.durableObjects?.bindings.length && workerFiles.length === 0) {
     return context.json(
       { event: 'error', message: 'Custom Durable Objects require a Worker deployment.' },
@@ -690,9 +662,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
       ? await uploadedDeploymentInput(uploadPrefix!, body, uploadedModules, inputOptions)
       : null;
   if (uploadedInput) {
-    // A retry of an admitted deploy gets its receipt even after the
-    // operation's input cleanup deleted the upload. The precheck below
-    // rejects the same key with different input.
+    // Decision: A retry of an admitted deploy gets its receipt even after the operation's input cleanup deleted
+    // the upload. The precheck below rejects the same key with different input.
     const existing = await findDeploymentOperation(
       context.get('db'),
       projectId,
@@ -718,11 +689,9 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     }
   }
 
-  // Pre-validation done — now run the atomic precheck-and-claim
-  // transaction. FOR UPDATE on the project row, 10-minute stale-deploy
-  // reaper, placeholder insert. Once the placeholder row exists, every
-  // later failure must route through the catch / finally below to avoid
-  // leaving it stranded in `pending`.
+  // Decision: Validation is done; now run the atomic precheck-and-claim transaction (FOR UPDATE on the project,
+  // 10-minute stale-deploy reaper, placeholder insert). Once the placeholder exists, each later failure
+  // must go through the catch/finally below so it isn't stranded in `pending`.
   const stagedInput = !durable
     ? null
     : uploadedInput
@@ -805,8 +774,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
           return { receipt: existing.id } as const;
         }
         if (workerInput) {
-          // One operation owns an uploaded prefix, and its input cleanup
-          // deletes it. A retry of the same deploy matched the key above.
+          // Decision: One operation owns an uploaded prefix, and its input cleanup deletes it. A retry of the same
+          // deploy matched the key above.
           const [claimed] = await tx
             .select({ id: deploymentOperations.id })
             .from(deploymentOperations)
@@ -955,9 +924,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
             throw new ConcurrentDeployError(protectedDeployment.id);
           }
 
-          // Take ownership from a request that has exceeded the platform's
-          // maximum build lifetime. The old owner validates this marker before
-          // every later external/final/compensation step and must stand down.
+          // Decision: Take ownership from a request that ran past the platform's maximum build lifetime. The old owner
+          // checks this marker before each later external, final or compensation step and must stand down.
           const recoveryMarker: CutoverMarker = {
             projectId,
             ownerId: cutoverOwnerId,
@@ -988,10 +956,9 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
               } else {
                 await clearProjectExternalState(context.env, tx, lockedProject);
               }
-              // Write the durable marker before the PostgreSQL transition. If
-              // COMMIT acknowledgement is lost, the next recovery knows the
-              // authoritative deployment was already restored and must never
-              // replay the abandoned target again.
+              // Decision: Write the durable marker before the PostgreSQL transition. If the COMMIT acknowledgement is lost,
+              // the next recovery knows the authoritative deployment was already restored and must not replay the
+              // abandoned target.
               await context.env.ROUTING.put(
                 cutoverCompensatedKey(protectedDeployment.id),
                 projectId,
@@ -1096,9 +1063,9 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
         (committedActiveDeploymentId ? await getDeployment(tx, committedActiveDeploymentId) : null);
       const deployment = await createDeployment(tx, projectId, null, null, null, {
         cliVersion,
-        // Protect reused objects before the first inventory read. Unlike new
-        // PUTs, old objects have no recent-upload grace period. GC acquires this
-        // same project lock and includes nonterminal rows in its protected set.
+        // Decision: Protect reused objects before the first inventory read. Unlike new PUTs, old objects have no
+        // recent-upload grace period. GC takes the same project lock and includes nonterminal rows in its
+        // protected set.
         ...(hasWorkerFiles ? { assetHashes: JSON.stringify(incomingAssetManifest) } : {}),
         billingUserId: lockedAccess.owner.id,
         initiatedByUserId: actor.id,
@@ -1148,9 +1115,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     }
     throw err;
   }
-  // Delete only input this request staged itself. A CLI upload's prefix can
-  // belong to the operation a retried request matched; its operation or the
-  // stale-input sweep removes it.
+  // Decision: Delete only input this request staged itself. A CLI upload's prefix can belong to the operation a
+  // retried request matched; that operation or the stale-input sweep removes it.
   if (stagedInput && !workerInput && !('deployment' in precheckResult)) {
     await paginatedR2Delete(context.env.STATIC_ASSETS_R2, stagedInput.prefix).catch(() => {});
   }
@@ -1183,8 +1149,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
   }
   for (const markerKey of precheckResult.reconciledMarkerKeys ?? []) {
     await context.env.ROUTING.delete(markerKey).catch(() => {
-      // Once the PostgreSQL recovery transaction is acknowledged, stale
-      // marker bytes are harmless and can be removed by a later attempt.
+      // Decision: Once the PostgreSQL recovery transaction is acknowledged, stale marker bytes are harmless and a
+      // later attempt can remove them.
     });
   }
   const preDeployment = precheckResult.deployment;
@@ -1196,7 +1162,7 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
   if (durable) {
     await dispatchDeploymentOperation(context.env, context.get('db'), preDeployment.id).catch(
       (error) => {
-        // The committed outbox will retry a missing/lost Queue acknowledgement.
+        // Decision: The committed outbox retries a missing or lost Queue acknowledgement.
         logger.warn('queue', 'dispatch_pending', { err: String(error) });
       },
     );
@@ -1225,8 +1191,8 @@ export async function handleManifestOnlyDeploy(context: Context<ApiEnv>): Promis
     gitRef,
     deployBuild,
     workerFiles,
-    // Without the Queue the deploy runs in this request. Delete the CLI's
-    // upload once it reaches a terminal state, as the Queue consumer does.
+    // Decision: Without the Queue the deploy runs in this request. Delete the CLI's upload once it's terminal, as
+    // the Queue consumer does.
     releaseWorkerInput: uploadPrefix
       ? () => paginatedR2Delete(context.env.STATIC_ASSETS_R2, uploadPrefix).then(() => {})
       : undefined,

@@ -32,10 +32,6 @@ export async function runGenCommand(root: string, args: GenArgs): Promise<void> 
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function writeIfNotExists(filePath: string, content: string): boolean {
   if (existsSync(filePath)) {
     log.warn(`Skipped (already exists): ${filePath}`);
@@ -62,7 +58,6 @@ export function formatTimestamp(date: Date): string {
 function getMigrationTimestamp(migrationsDir: string): string {
   const now = new Date();
   let ts = formatTimestamp(now);
-  // If a file with this timestamp already exists, increment seconds until unique
   while (readdirSync(migrationsDir).some((f) => f.startsWith(ts + '_'))) {
     now.setSeconds(now.getSeconds() + 1);
     ts = formatTimestamp(now);
@@ -85,10 +80,6 @@ function getNextMiddlewareNumber(middlewareDir: string): string {
   return String(max + 1).padStart(2, '0');
 }
 
-// ---------------------------------------------------------------------------
-// Column type mapping
-// ---------------------------------------------------------------------------
-
 type ColumnSpec = {
   name: string;
   type: string;
@@ -99,7 +90,7 @@ type ColumnBuilder = { fn: string; options?: string };
 
 const TEXT_COLUMN: ColumnBuilder = { fn: 'text' };
 
-// Types without a builder (`datetime`, `blob`) fall back to a plain `text()` column.
+// Decision: Types without a builder (`datetime`, `blob`) fall back to a plain `text()` column.
 const COLUMN_BUILDERS: Record<DatabaseDialect, Partial<Record<string, ColumnBuilder>>> = {
   sqlite: {
     string: TEXT_COLUMN,
@@ -152,10 +143,6 @@ function drizzleImportsForColumns(
   }
   return [...imports].sort();
 }
-
-// ---------------------------------------------------------------------------
-// Validator detection + templates
-// ---------------------------------------------------------------------------
 
 type Validator = 'valibot' | 'zod' | 'arktype' | 'none';
 
@@ -243,7 +230,7 @@ const VALIDATOR_TYPES: Record<SchemaValidator, ValidatorTypes> = {
   },
 };
 
-// Column types not listed here (`string`, `text`, `datetime`) validate as strings.
+// Decision: Column types not listed here (`string`, `text`, `datetime`) validate as strings.
 const VALUE_KINDS: Partial<Record<string, 'number' | 'boolean' | 'blob'>> = {
   integer: 'number',
   real: 'number',
@@ -294,10 +281,6 @@ function getParamsSchema(validator: Validator): string {
       return '';
   }
 }
-
-// ---------------------------------------------------------------------------
-// Route templates
-// ---------------------------------------------------------------------------
 
 function generateIndexRoute(
   name: string,
@@ -389,10 +372,6 @@ export const GET = defineHandler.withValidator({
 `;
 }
 
-// ---------------------------------------------------------------------------
-// Subcommands
-// ---------------------------------------------------------------------------
-
 async function runModel(root: string, name: string, columns: Array<ColumnSpec>): Promise<void> {
   const validator = await resolveValidator(root);
 
@@ -403,7 +382,6 @@ async function runModel(root: string, name: string, columns: Array<ColumnSpec>):
   const barrelPath = paths.schemaFile;
   const modelPath = join(schemaDir, `${name}.ts`);
 
-  // 1. Generate Drizzle table definition
   const colDefs = columns.map((col) => drizzleColumnDef(dialect, col));
   const columnImports = drizzleImportsForColumns(dialect, columns).join(', ');
   let content: string;
@@ -446,11 +424,9 @@ async function runModel(root: string, name: string, columns: Array<ColumnSpec>):
     ].join('\n');
   }
 
-  // Write the model file
   mkdirSync(schemaDir, { recursive: true });
   writeIfNotExists(modelPath, content);
 
-  // 2. Update or create barrel export
   const exportLine = `export * from "./schema/${name}";`;
   if (existsSync(barrelPath)) {
     const existing = readFileSync(barrelPath, 'utf-8');
@@ -461,18 +437,16 @@ async function runModel(root: string, name: string, columns: Array<ColumnSpec>):
     writeFileSync(barrelPath, exportLine + '\n');
   }
 
-  // 3. Regenerate .bwf, including every file that .bwf/tsconfig.json lists
+  // Decision: Regenerate .bwf, including all files that .bwf/tsconfig.json lists.
   const { prepareProject } = await import('../codegen/prepare.ts');
   await prepareProject(root);
 
   log.step(`Created ${relative(root, modelPath)}`);
   log.step(`Updated ${relative(root, barrelPath)}`);
 
-  // 4. Routes: routes/api/<name>/index.ts
   const routeIndexPath = join(paths.routesDir, 'api', name, 'index.ts');
   writeIfNotExists(routeIndexPath, generateIndexRoute(name, columns, validator));
 
-  // 5. Route: routes/api/<name>/[id].ts
   const routeIdPath = join(paths.routesDir, 'api', name, '[id].ts');
   writeIfNotExists(routeIdPath, generateIdRoute(name, validator));
 
@@ -485,9 +459,8 @@ function runMigration(root: string, name: string): void {
   const dir = paths.sourceRelative('db/migrations');
   mkdirSync(migrationsDir, { recursive: true });
 
-  // The same preflight as the other db commands, before any write. It runs
-  // before the bundle check so a leftover migrations.js without a journal
-  // gets the partial-state recovery advice.
+  // Decision: The same preflight as the other db commands, before any write. It runs before the bundle check so
+  // a leftover migrations.js without a journal gets the partial-state recovery advice.
   const currentMigrations = collectMigrations(migrationsDir);
   try {
     assertJournalCoherence(migrationsDir, currentMigrations, paths.sourceRelative);
@@ -496,8 +469,8 @@ function runMigration(root: string, name: string): void {
     process.exit(1);
   }
 
-  // Bundled mode needs a matching `m000N` import in migrations.js for every
-  // journal entry, and only drizzle-kit can regenerate that file.
+  // Decision: Bundled mode needs a matching `m000N` import in migrations.js for each journal entry, and only
+  // drizzle-kit can regenerate that file.
   const bundlePath = join(migrationsDir, 'migrations.js');
   if (existsSync(bundlePath)) {
     log.error(
@@ -510,15 +483,14 @@ function runMigration(root: string, name: string): void {
     process.exit(1);
   }
 
-  // With journal entries, delegate to `drizzle-kit generate --custom`: it also
-  // snapshots the current schema, so the next `bwf db generate` does not
-  // re-emit DDL that the custom migration already applies.
+  // Decision: With journal entries, delegate to `drizzle-kit generate --custom`: it also snapshots the current
+  // schema, so the next `bwf db generate` doesn't emit again DDL that the custom migration applies.
   const existingJournal = readJournal(migrationsDir, paths.sourceRelative);
   if (existingJournal !== undefined && existingJournal.entries.length > 0) {
     const lastEntry = existingJournal.entries[existingJournal.entries.length - 1];
     const metaDir = join(migrationsDir, 'meta');
-    // Use the snapshot named by the last journal tag, not the newest file in
-    // meta/, which may be a stale leftover.
+    // Decision: Use the snapshot named by the last journal tag, not the newest file in meta/, which may be a
+    // stale leftover.
     const lastSnapshotPrefix = lastEntry.tag.split('_')[0];
     const prevSnapshotPath = join(metaDir, `${lastSnapshotPrefix}_snapshot.json`);
     if (!existsSync(prevSnapshotPath)) {
@@ -534,8 +506,8 @@ function runMigration(root: string, name: string): void {
     const rollBack = snapshotDrizzleOutputs(migrationsDir);
     const sqlFilesBefore = new Set(readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')));
 
-    // The existing snapshot chain was built for the journal's dialect. Refuse
-    // rather than append a snapshot in a different dialect.
+    // Decision: The existing snapshot chain was built for the journal's dialect. Refuse instead of appending a
+    // snapshot in a different dialect.
     let journalDialect: 'sqlite' | 'postgresql' | 'mysql';
     if (existingJournal.dialect === 'sqlite') {
       journalDialect = 'sqlite';
@@ -578,7 +550,7 @@ function runMigration(root: string, name: string): void {
         cwd: root,
         stdio: 'pipe',
         encoding: 'utf-8',
-        // Yarn PnP projects need the PnP loader to resolve `@builtbyfriends/bwf/schema-*`.
+        // Decision: Yarn PnP projects need the PnP loader to resolve `@builtbyfriends/bwf/schema-*`.
         env: buildDrizzleKitSpawnEnv(root),
       },
     );

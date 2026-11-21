@@ -30,11 +30,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/**
- * Extract the JS-redirect target URL from the HTML body returned by `/auth/dev-login`.
- * The endpoint returns a 200 HTML page with `location.replace("<target>")` because
- * `wrangler dev` mangles `Location: http://localhost:*` headers (see route comment).
- */
+// Decision: The endpoint returns a 200 HTML page with `location.replace("<target>")` because `wrangler dev`
+// mangles `Location: http://localhost:*` headers.
 function extractRedirectTarget(body: string): string {
   const match = /location\.replace\("([^"]+)"\)/.exec(body);
   if (!match) {

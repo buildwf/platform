@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vite-plus/test';
 
-// Mock cloudflare:workers since DurableObject base class isn't available in unit tests
 vi.mock('cloudflare:workers', () => ({
   DurableObject: class {
     ctx: unknown;
@@ -86,20 +85,21 @@ describe('cronMatchesMinute', () => {
   });
 
   it('matches day-of-week using CF convention (2=Mon)', () => {
-    // 2026-03-02 is a Monday
+    // Decision: 2026-03-02 is a Monday.
     const monday = new Date('2026-03-02T12:00:00Z').getTime();
-    expect(cronMatchesMinute('0 12 * * 2', monday)).toBe(true); // CF 2=Mon
+    expect(cronMatchesMinute('0 12 * * 2', monday)).toBe(
+      true,
+    ); /* Decision: Cloudflare cron numbers weekdays from 1=Sun, so 2 is Monday. */
 
-    // Should not match on Tuesday
     const tuesday = new Date('2026-03-03T12:00:00Z').getTime();
     expect(cronMatchesMinute('0 12 * * 2', tuesday)).toBe(false);
   });
 
   it('matches Sunday as CF 1', () => {
-    // 2026-03-01 is a Sunday
+    // Decision: 2026-03-01 is a Sunday.
     const sunday = new Date('2026-03-01T12:00:00Z').getTime();
-    expect(cronMatchesMinute('0 12 * * 1', sunday)).toBe(true); // CF 1=Sun
-    expect(cronMatchesMinute('0 12 * * 2', sunday)).toBe(false); // CF 2=Mon
+    expect(cronMatchesMinute('0 12 * * 1', sunday)).toBe(true);
+    expect(cronMatchesMinute('0 12 * * 2', sunday)).toBe(false);
   });
 
   it('matches with abbreviations (unambiguous)', () => {
@@ -171,7 +171,6 @@ describe('chunkMessages', () => {
     expect(chunks[0]).toHaveLength(100);
     expect(chunks[1]).toHaveLength(100);
     expect(chunks[2]).toHaveLength(50);
-    // Order is preserved across chunks.
     expect(chunks[0][0]).toBe(0);
     expect(chunks[1][0]).toBe(100);
     expect(chunks[2][0]).toBe(200);
@@ -243,7 +242,6 @@ describe('CronScheduler.alarm', () => {
       ROUTING?: { get: (key: string, options?: unknown) => Promise<string | null> };
     },
   ) {
-    // Bypass the real DurableObject constructor wiring in the mock above
     return new CronScheduler(
       ctx as unknown as DurableObjectState,
       env as unknown as ApiEnv['Bindings'],
@@ -251,9 +249,8 @@ describe('CronScheduler.alarm', () => {
   }
 
   it('throws when ALL sendBatch chunks fail (DO alarm framework will retry)', async () => {
-    // At-most-once contract: when no fires were enqueued, throwing surfaces
-    // the failure to the DO runtime so it retries with backoff. Safe because
-    // nothing succeeded — there is no double-fire risk.
+    // Decision: At-most-once: when no fires were enqueued, throwing hands the failure to the DO runtime, which
+    // retries with backoff. Nothing succeeded, so there's no double-fire risk.
     const ctx = makeStubCtx({
       state: {
         workerName: 'user-foo',
@@ -268,14 +265,12 @@ describe('CronScheduler.alarm', () => {
 
     const s = makeScheduler(ctx, env);
     await expect(s.alarm()).rejects.toThrow(/all sendBatch chunks failed/);
-    // setAlarm must NOT have been called — we want the runtime to retry the
-    // current alarm rather than advance past it.
     expect(ctx.storage.setAlarm).not.toHaveBeenCalled();
   });
 
   it('does not throw on partial sendBatch failure (avoid double-fire on success chunks)', async () => {
-    // 200 messages → 2 chunks. One succeeds, one fails. Re-running would
-    // double-fire the successful chunk, so we accept the loss and proceed.
+    // Decision: With one chunk sent and one failed, running again would fire the sent chunk twice, so the loss
+    // is accepted and the scheduler moves on.
     const schedules = Array.from({ length: 200 }, (_, i) => ({
       name: `job${i}`,
       cron: `0,${i % 60} 0,${Math.floor(i / 60)} * * *`,
@@ -287,9 +282,9 @@ describe('CronScheduler.alarm', () => {
     const sendBatch = vi.fn(async () => {
       n += 1;
       if (n === 1) {
-        return; // first chunk succeeds
+        return;
       }
-      throw new Error('partial failure'); // second chunk fails
+      throw new Error('partial failure');
     });
     const env = { CRON_FIRES_QUEUE: { sendBatch } };
 
@@ -298,7 +293,6 @@ describe('CronScheduler.alarm', () => {
       s.alarm({ scheduledTime: Date.UTC(2026, 0, 1), isRetry: false, retryCount: 0 }),
     ).resolves.toBeUndefined();
     expect(sendBatch).toHaveBeenCalledTimes(2);
-    // scheduleNextAlarm must run on partial success
     expect(ctx.storage.setAlarm).toHaveBeenCalledOnce();
   });
 
@@ -319,16 +313,9 @@ describe('CronScheduler.alarm', () => {
   });
 
   it('uses alarmInfo.scheduledTime for matching and queue body when provided', async () => {
-    // Workerd retries `alarm()` after a throw — `Date.now()` would read the
-    // retry instant, which (for sparse crons that cross a minute boundary on
-    // retry) yields no matches and silently drops the original firing. So
-    // pin both `cronMatchesMinute` and the queue-message `scheduledTime`
-    // to `alarmInfo.scheduledTime` so the same cron minute is preserved.
-    //
-    // Setup: hourly cron (`0 * * * *`). The "real" scheduled minute is
-    // 10:00:00 UTC (matches). Mock `Date.now()` to 10:30:00 UTC (does NOT
-    // match). Matching still succeeds and the queued message carries
-    // scheduledTime=10:00:00.
+    // Decision: workerd retries alarm() after a throw, so Date.now() reads the retry time. For sparse crons that
+    // cross a minute on retry, that matches nothing and drops the firing. Matching and the message's
+    // scheduledTime are pinned to alarmInfo.scheduledTime instead.
     const scheduledTime = new Date('2026-03-02T10:00:00Z').getTime();
     const wallClock = new Date('2026-03-02T10:30:00Z').getTime();
     const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(wallClock);
@@ -351,9 +338,6 @@ describe('CronScheduler.alarm', () => {
         s.alarm({ isRetry: true, retryCount: 1, scheduledTime }),
       ).resolves.toBeUndefined();
 
-      // The hourly cron matched only because we used scheduledTime — confirm
-      // a fire was enqueued AND that its scheduledTime pins to the original
-      // cron minute, not Date.now().
       expect(sendBatch).toHaveBeenCalledOnce();
       expect(sentBatches[0]).toHaveLength(1);
       expect(sentBatches[0][0].body.scheduledTime).toBe(scheduledTime);
@@ -363,7 +347,7 @@ describe('CronScheduler.alarm', () => {
   });
 
   it('falls back to Date.now() when alarmInfo is omitted', async () => {
-    // Backwards-compat with older runtimes that don't pass AlarmInvocationInfo.
+    // Decision: Older runtimes don't pass AlarmInvocationInfo.
     const wallClock = new Date('2026-03-02T10:00:00Z').getTime();
     const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(wallClock);
     try {
@@ -390,12 +374,9 @@ describe('CronScheduler.alarm', () => {
   });
 
   it('all-fail with retryCount >= ALARM_RETRY_BUDGET schedules next alarm and does not throw', async () => {
-    // Workerd alarm retries are capped at ~6. If we keep throwing past the
-    // cap, the alarm is permanently dropped and the DO is left with active
-    // schedules but no alarm — only a deploy or manual `/sync` recovers it.
-    // Once the workerd budget is about to exhaust, abandon this firing,
-    // schedule the next cron minute, and return cleanly so the DO stays
-    // armed for the next window.
+    // Decision: workerd caps alarm retries at about 6. Throwing past the cap drops the alarm for good, leaving
+    // active schedules with no alarm until a deploy or /sync. Near the cap, the firing is abandoned and
+    // the next cron minute is scheduled.
     const ctx = makeStubCtx({
       state: {
         workerName: 'user-foo',
@@ -409,18 +390,13 @@ describe('CronScheduler.alarm', () => {
     const env = { CRON_FIRES_QUEUE: { sendBatch } };
 
     const s = makeScheduler(ctx, env);
-    // retryCount=5 hits the budget — accept the loss and schedule the next.
     await expect(
       s.alarm({ isRetry: true, retryCount: 5, scheduledTime: Date.now() }),
     ).resolves.toBeUndefined();
-    // setAlarm must have been called so the DO stays armed.
     expect(ctx.storage.setAlarm).toHaveBeenCalledOnce();
   });
 
   it('all-fail with retryCount < ALARM_RETRY_BUDGET still throws (workerd retries)', async () => {
-    // Within the workerd retry budget, throwing is correct: the runtime
-    // retries the alarm with backoff, and `alarmInfo.scheduledTime` keeps
-    // the retry pointed at the original cron minute.
     const ctx = makeStubCtx({
       state: {
         workerName: 'user-foo',
@@ -437,8 +413,6 @@ describe('CronScheduler.alarm', () => {
     await expect(
       s.alarm({ isRetry: true, retryCount: 2, scheduledTime: Date.now() }),
     ).rejects.toThrow(/all sendBatch chunks failed/);
-    // setAlarm must NOT have been called — runtime retains current alarm
-    // for retry.
     expect(ctx.storage.setAlarm).not.toHaveBeenCalled();
   });
 
@@ -466,7 +440,6 @@ describe('CronScheduler.alarm', () => {
 
     expect(sendBatch).not.toHaveBeenCalled();
     expect(get).toHaveBeenCalledWith('project-suspended:proj_1', { cacheTtl: 60 });
-    // The alarm stays armed so firing resumes after a restore.
     expect(ctx.storage.setAlarm).toHaveBeenCalledOnce();
   });
 

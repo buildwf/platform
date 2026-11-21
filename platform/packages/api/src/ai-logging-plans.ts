@@ -216,8 +216,8 @@ async function freshProjectIds(db: DbOrTx, where: SQL, limit?: number): Promise<
     .set({ id: sql`${projects.id}` })
     .where(inArray(projects.id, selected))
     .returning({ id: projects.id });
-  // RETURNING has no order. IDs use one prefix and [0-9a-z], so code-unit order
-  // matches the database order the cursor relies on.
+  // Decision: RETURNING has no order. IDs use one prefix and [0-9a-z], so code-unit order matches the
+  // database order the cursor relies on.
   return rows.map((row) => row.id).sort();
 }
 
@@ -352,11 +352,11 @@ export async function runPlanAiLoggingPublishPage(
     await lockPlanCatalog(tx);
     const { settings } = await freshPlanAiLoggingInputs(tx, initialPlanDefault);
     const current = settings.publish;
-    // A newer plan change started its own run; it owns the cursor now.
+    // Decision: A newer plan change started its own run; it owns the cursor now.
     if (!current || current.complete || current.revision !== publish.revision) {
       return current;
     }
-    // A concurrent call already went further; never move the cursor back.
+    // Decision: A concurrent call already went further; don't move the cursor back.
     const cursor =
       lastId !== null && (current.cursor === null || current.cursor < lastId)
         ? lastId
@@ -533,12 +533,11 @@ export async function runUserAiLoggingPublishPage(
   const finished = failure === undefined && ids.length <= PLAN_AI_LOGGING_PAGE_SIZE;
   const saved = await db.transaction(async (tx) => {
     const current = await freshUserPublish(tx, userId);
-    // A newer plan change for this account started its own run, maybe for this
-    // same plan again.
+    // Decision: A newer plan change for this account started its own run, maybe for this same plan again.
     if (!current || current.plan !== plan || current.run !== start.run) {
       return null;
     }
-    // A concurrent call already went further; never move the cursor back.
+    // Decision: A concurrent call already went further; don't move the cursor back.
     const cursor =
       lastId !== null && (current.cursor === null || current.cursor < lastId)
         ? lastId

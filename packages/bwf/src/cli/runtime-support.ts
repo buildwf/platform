@@ -1,11 +1,11 @@
-// Checks the runtime before the CLI loads. On an older Node, a static import of a
+// Decision: Checks the runtime before the CLI loads. On an older Node, a static import of a
 // newer API (such as `setGlobalProxyFromEnv` from `node:http`) fails at link time
 // with a SyntaxError before any code can run, and child processes reuse
 // `process.execPath`, so a deploy would stop halfway. This file must therefore
 // load on any Node or Bun release: it has no imports and uses no new APIs.
 //
 // packages/bwf/src/cli/runtime-support.ts and packages/create-bwf/src/runtime-support.ts
-// are byte-identical copies, because create-bwf runs before `platform` is installed.
+// are byte-identical copies, because create-bwf runs before `bwf` is installed.
 // A unit test keeps the two files and both `engines.node` fields equal.
 
 /** Must equal `engines.node` in packages/bwf and packages/create-bwf. */

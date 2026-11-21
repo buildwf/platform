@@ -95,12 +95,10 @@ const MANIFEST = {
   queues: [{ name: 'emails', bindingName: 'QUEUE_EMAILS' }],
 };
 
-/** Ordered log of Cloudflare calls (`GET <script>` / `PATCH <script>`) and KV puts. */
 let events: Array<string>;
 let routing: MemoryKVNamespace;
 let cron: ReturnType<typeof createCronSchedulerMock>;
 let testEnv: TestEnv & ProxyTokenRotationEnv;
-/** Per-test interception points. */
 let hooks: {
   fetch?: (method: string, script: string) => Response | Promise<Response | undefined> | undefined;
   kvPut?: (key: string) => void | Promise<void>;
@@ -135,11 +133,6 @@ afterEach(() => {
 const scriptNameOf = (url: string): string =>
   decodeURIComponent(/\/scripts\/([^/?#]+)/.exec(url)?.[1] ?? '');
 
-/**
- * Stateful Cloudflare mock: script bindings come from the seeded scripts (a
- * missing script is a 404) and settings PATCHes apply `inherit`. Every call to
- * a dispatch script is logged in `events`.
- */
 function cfApi(overrides: Partial<CfApiMocks> = {}): MockCfApiHandle {
   const handle: MockCfApiHandle = mockCfApi({
     listWorkerBindings: (url) => {
@@ -210,8 +203,8 @@ async function addDeployment(
     projectId,
     JSON.stringify(options.manifest === undefined ? MANIFEST : (options.manifest ?? {})),
   );
-  // Rows created in the same clock tick would be walked in id order; keep
-  // creation order instead so tests can name the Nth Worker.
+  // Decision: Rows created in the same clock tick would be walked in id order. Keep creation order instead,
+  // so tests can name the Nth Worker.
   await env.db.execute(sql`UPDATE deployments SET created_at = (
       SELECT max(created_at) + interval '1 millisecond' FROM deployments
       WHERE project_id = ${projectId}
@@ -232,11 +225,6 @@ async function addDeployment(
   return deployment.id;
 }
 
-/**
- * A project with `retained` retained Workers, optionally a retained static
- * row with no script, and an active Worker (created last) with a queue and a
- * cron schedule. Every script holds the legacy token.
- */
 async function setupProject(
   cf: MockCfApiHandle,
   options: Readonly<{
@@ -334,7 +322,6 @@ async function issued(projectId: string): Promise<number> {
   return row!.gen;
 }
 
-/** Generation recorded on the deployment row for the token its Worker holds. */
 async function held(deploymentId: string): Promise<number> {
   const [row] = await env.db
     .select({ gen: deployments.proxy_token_gen })
@@ -343,7 +330,6 @@ async function held(deploymentId: string): Promise<number> {
   return row!.gen;
 }
 
-/** The generation the proxy would send: what resolve-worker reports. */
 async function resolvedGen(projectId: string): Promise<unknown> {
   const response = await app.fetch(
     new Request(`http://localhost/internal/resolve-worker/${projectId}`, {
@@ -362,14 +348,12 @@ async function resolvedGen(projectId: string): Promise<unknown> {
   return ((await response.json()) as { proxyTokenGen?: unknown }).proxyTokenGen;
 }
 
-/** Stops a run right after START, before the first Cloudflare call. */
 const noCfCalls = () => ({ cfCallsRemaining: 0, deadline: Date.now() + 60_000 });
 
 async function floor(projectId: string): Promise<unknown> {
   return routing.get(proxyTokenStateKey(projectId), 'json');
 }
 
-/** Moves the stored waits back by `seconds` and makes the job due. */
 async function shiftBack(projectId: string, seconds = 3600): Promise<void> {
   const shifted = (field: string) => sql`CASE WHEN payload->>${field} IS NOT NULL
     THEN jsonb_build_object(${field}::text, to_char(((payload->>${field})::timestamptz
@@ -398,7 +382,6 @@ async function kick(projectId: string): Promise<void> {
     .where(eq(projectCleanupJobs.target, proxyTokenRotationTarget(projectId)));
 }
 
-/** One more step past the current wait, with real waits. */
 async function step(projectId: string): Promise<ProjectRotationOutcome> {
   await shiftBack(projectId);
   return advance(projectId, { waitMs: 60_000 });
@@ -414,7 +397,6 @@ const patchedScripts = () =>
 
 let deployCount = 0;
 
-/** A Worker deploy through the API; returns the deployment id from the `done` event. */
 async function deploy(projectId: string, jwt: string): Promise<string> {
   const code = `export default { fetch() { return new Response('${++deployCount}'); } }`;
   const response = await app.fetch(
@@ -534,7 +516,6 @@ describe('proxy token rotation', () => {
 
     const workers = [...fx.retained.slice(0, 2), fx.active].map(fx.worker);
     expect(patchedScripts()).toEqual(workers);
-    // The static row has no script: one GET, no PATCH.
     expect(events).toContain(`GET ${fx.worker(fx.retained[2]!)}`);
     for (const patch of patches) {
       expect(patch.bindings).toEqual([
@@ -583,7 +564,6 @@ describe('proxy token rotation', () => {
       ['resolve-worker', {}],
       ['resolve-resource', { type: 'd1', binding: 'DB' }],
     ];
-    // One expected status per route above.
     const each = (status: number) => routes.map(() => status);
     const statuses = async (
       headers: (route: ProxyInternalRoute) => Promise<Record<string, string>>,
@@ -615,7 +595,6 @@ describe('proxy token rotation', () => {
 
     await request(fx.projectId);
     await advance(fx.projectId, { waitMs: 60_000 });
-    // A member loses access after START: one more generation follows.
     await request(fx.projectId, 'member');
     expect((await job(fx.projectId))!.payload.again).toBe('1');
     await step(fx.projectId);
@@ -722,7 +701,6 @@ describe('proxy token rotation', () => {
     });
     expect(await issued(fx.projectId)).toBe(1);
     expect(scriptToken(cf, fx.worker(fx.active))).toBe(token);
-    // The row stays behind the Worker, never ahead of it.
     expect(await held(fx.active)).toBe(0);
     expect(await resolvedGen(fx.projectId)).toBe(0);
     for (const id of fx.retained) {
@@ -730,8 +708,8 @@ describe('proxy token rotation', () => {
     }
     expect(await routing.get(fx.queueKey, 'json')).toMatchObject({ proxyToken: fx.legacy });
 
-    // Senders still name tok(0), which the Worker now rejects, so the retry is
-    // due on the next run instead of after the usual failure delay.
+    // Decision: Senders still name tok(0), which the Worker now rejects, so the retry is due on the next run
+    // instead of after the usual failure delay.
     hooks.kvPut = undefined;
     events.length = 0;
     expect(await advance(fx.projectId, { waitMs: 60_000 })).toMatchObject({
@@ -739,7 +717,6 @@ describe('proxy token rotation', () => {
       phase: 'revoke',
       reason: 'waiting',
     });
-    // No second PATCH: the Worker already holds the token.
     expect(patchedScripts()).toEqual([]);
     expect(await held(fx.active)).toBe(1);
     expect(await resolvedGen(fx.projectId)).toBe(1);
@@ -750,7 +727,6 @@ describe('proxy token rotation', () => {
       proxyToken: token,
     });
     expect(cron.states.get(fx.projectId)).toMatchObject({ proxyToken: token });
-    // The PATCH from the failed attempt still drains before the floor rises.
     expect((await job(fx.projectId))!.payload.lastPatchAt).toBeDefined();
 
     await step(fx.projectId);
@@ -767,7 +743,6 @@ describe('proxy token rotation', () => {
       }
     };
     await request(fx.projectId);
-    // Each scheduled run tries the job once, even though it is due again at once.
     const run = () =>
       reconcileProxyTokenRotations(env.db, testEnv, { maxCfCalls: 100, maxMs: 25_000, waitMs: 0 });
     expect(await run()).toMatchObject({ done: 0, pending: 0, failed: 1 });
@@ -784,7 +759,6 @@ describe('proxy token rotation', () => {
     const token = await tok(fx.projectId, 1);
     const retained = fx.worker(fx.retained[0]!);
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    // A rollback to this deployment before the retry would make it active.
     hooks.fetch = (method, script) => {
       if (method !== 'PATCH' || script !== retained) {
         return undefined;
@@ -890,14 +864,12 @@ describe('proxy token rotation', () => {
     await advance(fx.projectId, { waitMs: 60_000 });
     expect((await job(fx.projectId))!.payload.phase).toBe('revoke');
 
-    // A deploy admitted after START bakes tok(1) and becomes active.
     const deployed = await addDeployment(fx.projectId, { active: true, proxyTokenGen: 1 });
     cf.seedHostScript({
       scriptName: fx.worker(deployed),
       bindings: workerBindings(await tok(fx.projectId, 1)),
     });
     events.length = 0;
-    // The original wait has passed; the walk must not start a new one.
     await shiftBack(fx.projectId, 61);
     expect(await advance(fx.projectId, { waitMs: 60_000 })).toMatchObject({
       status: 'pending',
@@ -913,7 +885,7 @@ describe('proxy token rotation', () => {
     const fx = await setupProject(cf, { retained: 0 });
     const token = await tok(fx.projectId, 1);
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    // Cloudflare applies the PATCH, but the response is lost.
+    // Decision: Cloudflare applies the PATCH, but the response is lost.
     hooks.fetch = (method, script) => {
       if (method !== 'PATCH') {
         return undefined;
@@ -951,7 +923,6 @@ describe('proxy token rotation', () => {
     await advance(fx.projectId, { waitMs: 60_000 });
     expect((await job(fx.projectId))!.payload.phase).toBe('revoke');
 
-    // The active Worker already holds the new token; only the later row does not.
     const later = await addDeployment(fx.projectId);
     cf.seedHostScript({ scriptName: fx.worker(later), bindings: workerBindings(fx.legacy) });
     events.length = 0;
@@ -987,7 +958,6 @@ describe('proxy token rotation', () => {
     expect(failed.last_error).toContain('internal error');
     expect(await floor(fx.projectId)).toBeNull();
     const token = await tok(fx.projectId, 1);
-    // The active Worker is not patched yet: its copies keep the token it holds.
     expect(await routing.get(fx.queueKey, 'json')).toEqual({
       workerName: fx.worker(fx.active),
       projectId: fx.projectId,
@@ -1055,7 +1025,6 @@ describe('proxy token rotation', () => {
       testEnv,
     );
     expect(response.status).toBe(200);
-    // Generation 1 is issued, but the target still holds the legacy token.
     expect(await resolvedGen(fx.projectId)).toBe(0);
     expect(await routing.get(fx.queueKey, 'json')).toEqual({
       workerName: fx.worker(target),
@@ -1094,7 +1063,6 @@ describe('proxy token rotation', () => {
     };
     await request(fx.projectId);
     expect(await advance(fx.projectId)).toEqual({ status: 'done', gen: 1 });
-    // PATCH, REVOKE (old token reported), re-walk GET, REVOKE again.
     expect(activeGets).toBe(4);
     expect(events.filter((event) => event === `GET ${fx.worker(fx.retained[0]!)}`)).toHaveLength(2);
   });
@@ -1183,7 +1151,6 @@ describe('proxy token rotation', () => {
       expect(log).toHaveBeenCalledWith(
         `[proxy-token-rotation] skipped ${fx.projectId} worker=${fx.worker(fx.retained[0]!)} has no __PLATFORM_PROXY_TOKEN binding; redeploy the project to give it one`,
       );
-      // Its row still names the token it holds; the floor rises past it.
       expect(await held(fx.retained[0]!)).toBe(0);
       expect(await held(fx.retained[1]!)).toBe(1);
       expect(await held(fx.active)).toBe(1);
@@ -1201,7 +1168,6 @@ describe('proxy token rotation', () => {
       expect(await advance(fx.projectId)).toEqual({ status: 'done', gen: 1 });
 
       expect(patchedScripts()).toEqual(fx.retained.map(fx.worker));
-      // One GET in the walk and one at REVOKE: no re-walk for its row.
       expect(events.filter((event) => event === `GET ${fx.worker(fx.active)}`)).toHaveLength(2);
       expect(await held(fx.active)).toBe(0);
       expect(await resolvedGen(fx.projectId)).toBe(0);
@@ -1333,7 +1299,6 @@ describe('proxy token rotation', () => {
       )
       .then((result) => result.rows);
     expect(due!.inWindow).toBe(true);
-    // The step's transaction rolled back: the project row is free.
     await env.db.transaction(async (tx) => {
       await tx.execute(sql`SELECT id FROM projects WHERE id = ${fx.projectId} FOR UPDATE NOWAIT`);
     });
@@ -1463,7 +1428,6 @@ describe('proxy token rotation', () => {
     expect(result).toEqual({ status: 'done', gen: 1 });
     const projectLock = (query: string) => /from "projects".* for update/i.test(query);
     expect(queries.slice(0, queriesBeforeFirstCall).some(projectLock)).toBe(true);
-    // START, one per Worker, walk end, REVOKE.
     expect(queries.filter(projectLock).length).toBeGreaterThanOrEqual(2 + 4);
   });
 
@@ -1486,8 +1450,8 @@ describe('proxy token rotation', () => {
       await advance(fx.projectId, { waitMs: 60_000 });
       await shiftBack(fx.projectId);
       let secretWrite: Promise<Response> | undefined;
-      // Give the secret write time to land inside the step; the project lock
-      // must hold it until the step finishes.
+      // Decision: Give the secret write time to land inside the step. The project lock has to hold it until the
+      // step finishes.
       hooks.fetch = async (method, script) => {
         if (method === 'GET' && script === fx.worker(fx.active) && !secretWrite) {
           secretWrite = Promise.resolve(
@@ -1593,7 +1557,6 @@ describe('rotation after code from a user who lost deploy access is replaced', (
   async function setupTeam(): Promise<Team> {
     const owner = await createTestUser(env.db);
     const collaborator = await createTestUser(env.db);
-    // Keep earlier Workers for rollback and for the walk.
     await env.db.update(users).set({ plan: 'pro' }).where(eq(users.id, owner.id));
     const { id: projectId, slug } = await createTestProject(env.db, owner.id);
     await env.db.insert(projectMembers).values({
@@ -1633,7 +1596,6 @@ describe('rotation after code from a user who lost deploy access is replaced', (
     expect(response.status).toBe(200);
   }
 
-  /** Runs the job past every wait until it is gone. */
   async function finish(projectId: string): Promise<ProjectRotationOutcome> {
     await shiftBack(projectId);
     const outcome = await advance(projectId);
@@ -1669,12 +1631,9 @@ describe('rotation after code from a user who lost deploy access is replaced', (
     expect(await finish(team.projectId)).toEqual({ status: 'done', gen: 3 });
     expect(await issued(team.projectId)).toBe(3);
     await expectWorkersOn(cf, team, [trusted], 3);
-    // The retained copy of the removed collaborator's code keeps the token the
-    // floor now rejects.
     await expectWorkersOn(cf, team, [untrusted], 2);
     expect(await floor(team.projectId)).toEqual({ gen: 3 });
 
-    // The code being replaced now is the owner's: nothing more to rotate.
     await deploy(team.projectId, team.owner.jwt);
     expect(await job(team.projectId)).toBeUndefined();
   });
@@ -1689,7 +1648,6 @@ describe('rotation after code from a user who lost deploy access is replaced', (
     await expectWorkersOn(cf, team, [trusted], 2);
     await expectWorkersOn(cf, team, [untrusted], 1);
 
-    // Rolling back to it does not bring its token back.
     await rollback(team.projectId, team.owner.jwt, untrusted);
     expect(await job(team.projectId)).toBeUndefined();
     await expectWorkersOn(cf, team, [untrusted], 1);
@@ -1697,7 +1655,6 @@ describe('rotation after code from a user who lost deploy access is replaced', (
     await request(team.projectId);
     expect(await finish(team.projectId)).toEqual({ status: 'done', gen: 3 });
     await expectWorkersOn(cf, team, [untrusted], 3);
-    // Active again, it gets the token; replacing it rotates once more.
     await rollback(team.projectId, team.owner.jwt, trusted);
     expect((await job(team.projectId))!.payload.reason).toBe('untrusted-deploy-replaced');
     expect(await finish(team.projectId)).toEqual({ status: 'done', gen: 4 });
@@ -1729,7 +1686,6 @@ describe('rotation after code from a user who lost deploy access is replaced', (
     expect((await job(team.projectId))!.payload.again).toBe('1');
     expect(await finish(team.projectId)).toEqual({ status: 'done', gen: 3 });
     await expectWorkersOn(cf, team, [trusted], 3);
-    // Already retained when the walk reached it, so it never got generation 2.
     await expectWorkersOn(cf, team, [untrusted], 1);
   });
 
@@ -1756,7 +1712,6 @@ describe('rotation after code from a user who lost deploy access is replaced', (
     await removeCollaborator(team);
     expect(await finish(team.projectId)).toEqual({ status: 'done', gen: 2 });
 
-    // The owner's deploy stopped after the cutover became ready.
     const interrupted = await createTestDeployment(env.db, team.projectId, 'pending');
     await env.db
       .update(deployments)
@@ -1835,8 +1790,8 @@ describe('rotation after code from a user who lost deploy access is replaced', (
     expect((await job(team.projectId))!.payload.reason).toBe('untrusted-deploy-replaced');
   });
 
-  // Deployments made before project teams have no recorded author. Only the
-  // owner could deploy then, and the billing user is that owner.
+  // Decision: Deployments from before project teams have no recorded author. Only the owner could deploy then,
+  // and the billing user is that owner.
   async function unattributed(deploymentId: string, ownerThen: string): Promise<void> {
     await env.db
       .update(deployments)
@@ -1859,7 +1814,6 @@ describe('rotation after code from a user who lost deploy access is replaced', (
   it('treats code without an author as deployed by the owner of that time', async () => {
     const cf = cfApi();
     const team = await setupTeam();
-    // The collaborator owned the project before transferring it.
     const retained = await deploy(team.projectId, team.collaborator.jwt);
     const old = await deploy(team.projectId, team.collaborator.jwt);
     await unattributed(retained, team.collaborator.id);

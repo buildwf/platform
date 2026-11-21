@@ -19,12 +19,10 @@ import {
   throwOnProcessExit,
 } from '../helpers/github-cli.ts';
 
-// Keep openBrowser from launching a real browser.
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
 
-// Partial mock of @voidzero-dev/vite-plus-prompts: only `text` is replaced (for the repo
-// prompt); everything else — including `log`, which the spies below target —
-// passes through from the actual module.
+// Decision: Partial mock: only `text` is replaced (for the repo prompt); everything else, including
+// `log`, which the spies below target, passes through from the actual module.
 const mockText = vi.fn();
 vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@voidzero-dev/vite-plus-prompts')>();
@@ -65,11 +63,6 @@ const baseArgs: Extract<GithubArgs, { subcommand: 'connect' }> = {
   branch: 'main',
 };
 
-/**
- * Runs runConnect against a fake client. `callbackQuery` and `joinCallbackQuery`
- * build the browser redirects for the connect-authorize and join round-trips;
- * when one is omitted, that round-trip sends no redirect.
- */
 function driveConnect(opts: {
   connectGithub: ReturnType<typeof vi.fn>;
   callbackQuery?: (callbackUrl: URL) => URL;
@@ -124,9 +117,8 @@ const originalIsTTY = process.stdin.isTTY;
 
 beforeEach(() => {
   mockText.mockReset();
-  // A CI checkout must not supply a default repository for these prompt fixtures.
+  // Decision: A CI checkout must not supply a default repository for these prompt fixtures.
   vi.stubEnv('GITHUB_REPOSITORY', undefined);
-  // Force the non-interactive (non-TTY) path so tests never hit clack prompts.
   (process.stdin as { isTTY?: boolean }).isTTY = false;
   exitSpy = throwOnProcessExit();
   successSpy = vi.spyOn(output, 'printSuccess').mockImplementation(() => {});
@@ -158,7 +150,7 @@ describe('runConnect — non-owner member connect-authorization round-trip', () 
       connectGithub,
       args: { executor: 'container' },
       callbackQuery: (cb) => {
-        const hit = new URL(cb); // already carries the command's state
+        const hit = new URL(cb);
         hit.searchParams.set('connect_grant', 'grant-xyz');
         return hit;
       },
@@ -166,7 +158,6 @@ describe('runConnect — non-owner member connect-authorization round-trip', () 
 
     await promise;
 
-    // Round-trip was started for the specific installation + repo.
     expect(getGithubConnectAuthorizeUrl).toHaveBeenCalledTimes(1);
     const authorizeArgs = getGithubConnectAuthorizeUrl.mock.calls[0] as [
       string,
@@ -177,7 +168,6 @@ describe('runConnect — non-owner member connect-authorization round-trip', () 
     expect(authorizeArgs[2]).toBe(installationId);
     expect(authorizeArgs[3]).toBe(repoFullName);
 
-    // Two connect attempts: bare first, grant-carrying retry.
     expect(connectGithub).toHaveBeenCalledTimes(2);
 
     const firstBody = connectGithub.mock.calls[0]![1] as Record<string, unknown>;
@@ -195,8 +185,8 @@ describe('runConnect — non-owner member connect-authorization round-trip', () 
     expect(typeof retryBody.codeVerifier).toBe('string');
     expect((retryBody.codeVerifier as string).length).toBeGreaterThan(0);
 
-    // The verifier echoed to the retry is the one whose S256 challenge was sent
-    // to the authorize URL builder (PKCE binding is intact).
+    // Decision: The verifier echoed to the retry is the one whose S256 challenge was sent to the authorize
+    // URL builder, so the PKCE binding is intact.
     expect(authorizeArgs[1]).toBe(createCodeChallenge(retryBody.codeVerifier as string));
 
     expect(successSpy).toHaveBeenCalledWith(
@@ -288,7 +278,6 @@ describe('runConnect — non-owner member connect-authorization round-trip', () 
     expect(errorSpy).toHaveBeenCalledWith(
       'connect: GitHub authorization failed or expired. Run `bwf github connect` again.',
     );
-    // Must NOT surface the generic 403 mapping.
     expect(errorSpy).not.toHaveBeenCalledWith("connect: You don't have access to this project.");
     expect(successSpy).not.toHaveBeenCalled();
   });
@@ -312,7 +301,6 @@ describe('runConnect — non-owner member connect-authorization round-trip', () 
     );
 
     expect(getGithubConnectAuthorizeUrl).toHaveBeenCalledTimes(1);
-    // Only the initial attempt ran — no retry after the round-trip failed.
     expect(connectGithub).toHaveBeenCalledTimes(1);
     expect(successSpy).not.toHaveBeenCalled();
   });
@@ -359,7 +347,7 @@ describe('runConnect — non-owner member connect-authorization round-trip', () 
 });
 
 const joinCallback = (cb: URL) => {
-  const hit = new URL(cb); // already carries the command's state
+  const hit = new URL(cb);
   hit.searchParams.set('join_code', 'jc-1');
   return hit;
 };
@@ -369,8 +357,8 @@ describe('runConnect — auto-join fallback', () => {
     (process.stdin as { isTTY?: boolean }).isTTY = true;
     const listGithubInstallations = vi
       .fn()
-      .mockResolvedValueOnce([]) // before join
-      .mockResolvedValueOnce([makeInstallation()]); // after join
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeInstallation()]);
     const completeGithubJoin = vi.fn(async () => ({ status: 'joined', count: 1 }));
     const connectGithub = vi.fn().mockResolvedValueOnce(makeConnection());
 
@@ -407,7 +395,7 @@ describe('runConnect — auto-join fallback', () => {
     expect(errorSpy).toHaveBeenCalledWith(
       'No GitHub App installation found for your account or your organizations. Run `bwf github install` first.',
     );
-    expect(listGithubInstallations).toHaveBeenCalledTimes(1); // zero joined → no re-list
+    expect(listGithubInstallations).toHaveBeenCalledTimes(1);
     expect(connectGithub).not.toHaveBeenCalled();
   });
 
@@ -436,14 +424,12 @@ describe('runConnect — auto-join fallback', () => {
     expect(errorSpy).toHaveBeenCalledWith(
       'No GitHub App installation found for your account or your organizations. Run `bwf github install` first.',
     );
-    // The join-command-only copy must not leak into connect:
     expect(errorSpy).not.toHaveBeenCalledWith(
       'Organization installation sharing is not enabled on this bwf instance.',
     );
   });
 
   it('never starts the join round-trip without a TTY', async () => {
-    // beforeEach already forces isTTY = false
     const listGithubInstallations = vi.fn(async () => []);
     const getGithubJoinUrl = vi.fn();
     const connectGithub = vi.fn();
@@ -471,8 +457,8 @@ describe('runConnect — auto-join fallback', () => {
     };
     const listGithubInstallations = vi
       .fn()
-      .mockResolvedValueOnce([other]) // target missing
-      .mockResolvedValueOnce([other, makeInstallation()]); // joined
+      .mockResolvedValueOnce([other])
+      .mockResolvedValueOnce([other, makeInstallation()]);
     const completeGithubJoin = vi.fn(async () => ({ status: 'joined', count: 1 }));
     const connectGithub = vi.fn().mockResolvedValueOnce(makeConnection());
 
@@ -481,7 +467,7 @@ describe('runConnect — auto-join fallback', () => {
       listGithubInstallations,
       completeGithubJoin,
       joinCallbackQuery: joinCallback,
-      args: { executor: 'container' }, // baseArgs pins installationId = '123456'
+      args: { executor: 'container' },
     });
     await promise;
 
@@ -494,26 +480,25 @@ describe('runConnect — auto-join fallback', () => {
 describe('runConnect — member repo prompt (redacted repository list)', () => {
   const memberInstallation = (): GithubInstallation => ({
     ...makeInstallation(),
-    repositories: [], // server redacts the list for non-owner (member) rows
+    repositories: [] /* Decision: The server redacts the list for non-owner (member) rows. */,
     repository_selection: 'selected',
   });
 
   it('prompts for owner/repo on a TTY instead of dead-ending', async () => {
     (process.stdin as { isTTY?: boolean }).isTTY = true;
-    mockText.mockResolvedValueOnce(repoFullName); // user types octocat/hello-world
+    mockText.mockResolvedValueOnce(repoFullName);
     const connectGithub = vi.fn().mockResolvedValueOnce(makeConnection());
 
     const { promise } = driveConnect({
       connectGithub,
       listGithubInstallations: vi.fn(async () => [memberInstallation()]),
-      args: { executor: 'container', repo: undefined }, // no --repo
+      args: { executor: 'container', repo: undefined },
     });
     await promise;
 
     expect(mockText).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Repository (owner/repo):' }),
     );
-    // The prompt's validate callback rejects anything that isn't owner/repo.
     const textOptions = mockText.mock.calls[0]![0] as {
       validate: (value?: string) => string | undefined;
     };
@@ -522,7 +507,6 @@ describe('runConnect — member repo prompt (redacted repository list)', () => {
     expect(textOptions.validate('octocat/hello-world')).toBeUndefined();
     expect(textOptions.validate(' octocat/hello-world ')).toBeUndefined();
     expect(connectGithub).toHaveBeenCalledTimes(1);
-    // client.connectGithub(projectId, body) — body.repoFullName carries the typed repo
     const body = connectGithub.mock.calls[0]![1] as { repoFullName: string };
     expect(body.repoFullName).toBe(repoFullName);
   });

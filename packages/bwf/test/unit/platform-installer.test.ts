@@ -136,8 +136,8 @@ function unexpectedCloudflareCall(name: string) {
   };
 }
 
-// These lifecycle fixtures model an already uncached dedicated database. Cache
-// drift, adoption, and verification failures are exercised by platform-auth-database.test.ts.
+// Decision: These lifecycle fixtures model a dedicated database that's already uncached. Cache drift,
+// adoption and verification failures are covered by platform-auth-database.test.ts.
 function installPlatform(
   plan: InstallArguments[0],
   secrets: InstallArguments[1],
@@ -281,7 +281,6 @@ function useRegistryDirectory(): string {
   return directory;
 }
 
-/** A client for runs that stop before any resource is created. */
 function unusedClient(): TestInstallerDependencies['client'] {
   const unused = async () => ({ id: 'unused', name: 'unused' });
   return {
@@ -304,7 +303,6 @@ function unusedClient(): TestInstallerDependencies['client'] {
   };
 }
 
-/** A client that creates every planned resource in the existing example.com zone. */
 function creatingClient(): TestInstallerDependencies['client'] {
   let index = 0;
   const create = async (_account: string, name: string) => ({ id: `id-${index++}`, name });
@@ -605,7 +603,7 @@ describe('platform installer', () => {
         },
       });
       expect(initialized).toBe(1);
-      // The setup page answers only once traffic opens, after this progress line.
+      // Decision: The setup page answers only once traffic opens, after this progress line.
       expect(progress).toContain(
         'Administrator setup prepared; its link and code are shown when this finishes',
       );
@@ -922,8 +920,8 @@ describe('platform installer', () => {
     const upload = ['api', 'proxy', 'email-gateway', 'tail', 'dispatch'].map(
       (name) => `deploy platform-logging-${name}`,
     );
-    // A fresh install uploads the Workers with traffic paused, then deploys them
-    // again to open traffic; the second pass runs between the two.
+    // Decision: A fresh install uploads the Workers with traffic paused, then deploys them again to open
+    // traffic; the second pass runs between the two.
     expect(events).toEqual([
       'migrate',
       'publish AI logging',
@@ -1032,7 +1030,7 @@ describe('platform installer', () => {
     useRegistryDirectory();
     const plan = await examplePlan(null, { runtimeLogs: 'minimal' });
     const current = resolvePlatformRuntime(getPlatformRuntimeDirectory());
-    // The built runtime declares support; only the copy below drops it.
+    // Decision: The built runtime declares support; only the copy below drops it.
     expect(current.manifest.runtimeLogs).toBe(1);
     const { runtimeLogs: _runtimeLogs, ...olderManifest } = current.manifest;
     await expect(
@@ -1606,7 +1604,7 @@ describe('platform installer', () => {
           'account',
           'platform-api',
           async (apiBaseUrl) => {
-            // The order the bundled uploader uses for a new Worker with static assets.
+            // Decision: The order the bundled uploader uses for a new Worker with static assets.
             const sequence: Array<[string, string, string]> = [
               ['GET', '/accounts/account/workers/services/platform-api', 'secret-token'],
               ['GET', '/accounts/account/workers/scripts/platform-api/deployments', 'secret-token'],
@@ -2744,13 +2742,9 @@ describe('platform installer', () => {
       expect(await failure({ currentStep: 'routing_enable' })).toContain('runtime API token');
 
       for (const fields of [
-        // An uncertain outcome is not a refusal.
         { currentStep: 'routing_enable', failureCode: 'outcome_unknown' },
-        // The step does not call Cloudflare.
         { currentStep: 'publish' },
-        // An inherited object key is not a step.
         { currentStep: 'constructor' },
-        // A known routing prerequisite already explains the failure.
         {
           currentStep: 'inbound_probe',
           failureDetail: 'zone catch-all does not point to this ingress',
@@ -3664,7 +3658,7 @@ describe('platform installer', () => {
     ]);
     expect(queries.some(({ sql }) => sql.includes('FROM "project_zero_trust"'))).toBe(true);
 
-    // The same key the API's Zero Trust writers lock, held on this session.
+    // Decision: The same key the API's Zero Trust writers lock, held on this session.
     const unlock = await lock.lockProjectZeroTrust!();
     await unlock();
     await unlock();
@@ -3675,7 +3669,6 @@ describe('platform installer', () => {
       { sql: "SELECT pg_advisory_unlock(hashtext('zero-trust:configuration'))", values: undefined },
     ]);
 
-    // Uninstall records itself where the API lock holders read it, and removes it.
     await lock.fenceProjectZeroTrust!();
     await lock.liftProjectZeroTrustFence!();
     const fence = queries.find(({ sql }) => sql.startsWith('INSERT INTO "platform_settings"'));
@@ -3684,7 +3677,7 @@ describe('platform installer', () => {
       queries.find(({ sql }) => sql.startsWith('DELETE FROM "platform_settings"'))?.values,
     ).toEqual(['platform.uninstall']);
 
-    // AI logging projection runs on this same session; this fake has no table.
+    // Decision: AI logging projection runs on this same session; this fake has no table.
     await expect(
       lock.publishAiLogging!({
         list: async () => [],
@@ -3876,7 +3869,6 @@ describe('platform installer', () => {
     expect(
       platformWorkerSecretPayload('proxy', routineUpgrade, 'account', 'zone', true),
     ).toBeNull();
-    // Recovery still supplies the known credentials when a Worker is missing.
     expect(
       platformWorkerSecretPayload('api', routineUpgrade, 'account', 'zone', false),
     ).toMatchObject({
@@ -3884,8 +3876,8 @@ describe('platform installer', () => {
       JWT_SECRET: stale.jwtSecret,
       PROJECT_SECRET_KEYS_JSON: JSON.stringify({ v1: stale.projectSecretKey }),
     });
-    // Resuming install may pass values already read from its checkpoint; these
-    // are not a request to replace secrets on Workers that already exist.
+    // Decision: Resuming install may pass values already read from its checkpoint; these aren't a request to
+    // replace secrets on Workers that already exist.
     const resumed = createPlatformInstallationSecrets({
       ...input,
       ...stale,
@@ -4652,7 +4644,6 @@ describe('platform installer', () => {
     expect(manifest).toMatchObject({ resources: [], status: 'planned' });
     const checkpoint = readPendingInstallationSecrets(manifest);
     expect(checkpoint?.databaseClaimState).toBeUndefined();
-    // The database is still unbound, so the operator can resume with a corrected URL.
     const corrected = 'postgres://user:password@db.example.com/void?sslmode=require';
     process.env.PLATFORM_DATABASE_URL = corrected;
     try {
@@ -4719,7 +4710,6 @@ describe('platform installer', () => {
       const checkpoint = readPendingInstallationSecrets(manifest);
       expect(checkpoint?.databaseClaimState).toBeUndefined();
 
-      // The database is still unbound, so the same installation resumes with a corrected URL.
       const corrected =
         'postgres://user:password@db.example.com/void?sslmode=verify-full&sslrootcert=system';
       process.env.PLATFORM_DATABASE_URL = corrected;
@@ -4868,8 +4858,8 @@ describe('platform installer', () => {
     });
     manifest = transitionInstallation(manifest, 'planned', '2026-09-14T00:00:01.000Z');
     manifest = transitionInstallation(manifest, 'provisioning', '2026-09-14T00:00:02.000Z');
-    // The earlier attempt claimed the database and recorded its Hyperdrive intent,
-    // but Cloudflare rejected the create, so no Hyperdrive resource exists.
+    // Decision: The earlier attempt claimed the database and recorded its Hyperdrive intent, but Cloudflare
+    // rejected the create, so no Hyperdrive resource exists.
     manifest = recordInstallationStep(
       manifest,
       {
@@ -5076,9 +5066,7 @@ describe('platform installer', () => {
         createHyperdrive: async () => {
           throw new Error('must wait for DNS');
         },
-        putKvValue: async () => {
-          // The remote recovery checkpoint is established before waiting.
-        },
+        putKvValue: async () => {},
         putR2Object: async () => {
           throw new Error('must wait for DNS');
         },
@@ -5395,7 +5383,6 @@ describe('platform installer', () => {
     ) {
       const { deployment, directory, secrets, sourceManifest, upgradeClient, upgradedPlan } =
         await installedPlatform();
-      // An older installation has no ISR cache yet, so this run creates it.
       const source = {
         ...sourceManifest,
         resources: sourceManifest.resources.filter((resource) => resource.key !== 'isr-cache-kv'),
@@ -5466,7 +5453,6 @@ describe('platform installer', () => {
       expect(upload).toBeLessThan(at(events.indexOf(`put:${PLATFORM_DISABLED_KEY}`)));
       expect(upload).toBeLessThan(at(events.findIndex((event) => event.startsWith('deploy:'))));
       expect(events.filter((event) => event === 'outside-change-upload')).toHaveLength(1);
-      // The upload uses the config that the run deploys, with the ISR cache it created.
       expect(uploaded.map((config) => config.name)).toEqual([deployment.resources.apiWorker]);
       expect(created).toHaveLength(1);
       expect(source.resources.map((resource) => resource.id)).not.toContain(created[0]);

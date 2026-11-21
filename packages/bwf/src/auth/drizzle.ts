@@ -318,7 +318,7 @@ function hasBuiltInUpdateHook(options: BetterAuthOptions, model: string, field: 
   ) {
     return false;
   }
-  // Only Better Auth's built-in hooks are known to mean the current time.
+  // Decision: Only Better Auth's built-in hooks are known to mean the current time.
   // A configured field replaces that definition, including its callback.
   return (
     options[model]?.additionalFields?.updatedAt === undefined &&
@@ -353,7 +353,7 @@ function createColumnDefinition(
     if (dialect === 'mysql' && idStrategy === 'serial') {
       parts.push('.autoincrement()');
     }
-    // Better Auth leaves these ids out of inserts on PostgreSQL, so the database makes them.
+    // Decision: Better Auth leaves these ids out of inserts on PostgreSQL, so the database makes them.
     if (dialect === 'postgresql' && idStrategy === 'serial') {
       parts.push('.generatedByDefaultAsIdentity()');
     }
@@ -386,7 +386,7 @@ function createColumnDefinition(
   if (field.unique && actualFieldName !== 'id') {
     parts.push('.unique()');
   }
-  // Better Auth applies these on its own writes. Direct Drizzle writes need them on the column,
+  // Decision: Better Auth applies these on its own writes. Direct Drizzle writes need them on the column,
   // and these runtime-only modifiers leave the DDL, and so existing migrations, unchanged.
   const literalDefault = resolveLiteralDefault(field);
   if (literalDefault !== undefined) {

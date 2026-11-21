@@ -69,8 +69,6 @@ export function createBindingHandler(env: Record<string, unknown>): Hono {
     await next();
   });
 
-  // --- D1 ---
-
   app.post('/d1/query', async (c) => {
     const request = await readBindingRequest<
       D1Database,
@@ -132,8 +130,6 @@ export function createBindingHandler(env: Record<string, unknown>): Hono {
       })),
     );
   });
-
-  // --- KV ---
 
   app.post('/kv/get', async (c) => {
     const request = await readBindingRequest<
@@ -246,8 +242,6 @@ export function createBindingHandler(env: Record<string, unknown>): Hono {
     });
   });
 
-  // --- R2 ---
-
   app.post('/r2/get', async (c) => {
     const request = await readBindingRequest<R2Bucket, { binding: string; key: string }>(
       c,
@@ -268,7 +262,7 @@ export function createBindingHandler(env: Record<string, unknown>): Hono {
     if (obj.httpEtag) {
       headers.set('etag', obj.httpEtag);
     }
-    // Header values must be ASCII, and custom metadata can hold any text.
+    // Decision: Header values must be ASCII, and custom metadata can hold any text.
     headers.set(R2_OBJECT_HEADER, encodeURIComponent(JSON.stringify(r2ObjectJson(obj))));
 
     return new Response(obj.body, { headers });
@@ -299,7 +293,7 @@ export function createBindingHandler(env: Record<string, unknown>): Hono {
     let httpMetadata: R2HTTPMetadata | Headers;
     let onlyIf: R2Conditional | Headers | undefined;
     try {
-      // Older clients send only `contentType`.
+      // Decision: Older clients send only `contentType`.
       httpMetadata =
         body.httpMetadata === undefined
           ? { contentType: body.contentType ?? 'application/octet-stream' }

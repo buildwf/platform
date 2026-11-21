@@ -1,7 +1,7 @@
 const encoder = new TextEncoder();
 
-// Cache the verify CryptoKey per webhook secret — importKey is expensive and
-// the secret never changes per isolate.
+// Decision: Cache the verify CryptoKey per webhook secret: importKey is expensive and the secret doesn't change
+// within an isolate.
 const verifyKeyCache = new Map<string, CryptoKey>();
 
 async function getVerifyKey(secret: string): Promise<CryptoKey> {

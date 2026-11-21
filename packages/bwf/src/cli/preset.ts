@@ -18,7 +18,6 @@ type SsgPreset = {
   outputDir: string;
   /** App type for the deploy manifest. */
   appType: 'static' | 'spa';
-  /** Optional project-aware overrides. */
   resolve?: (root: string) => Partial<Pick<StaticPreset, 'buildCommand' | 'outputDir'>> | undefined;
 };
 
@@ -78,13 +77,11 @@ export function resolveProjectCommand(root: string, command: string): string {
  */
 function shellQuoteExecutable(value: string): string {
   if (process.platform === 'win32') {
-    // cmd.exe: wrap in double quotes when the path contains a space or a shell
+    // Decision: cmd.exe: wrap in double quotes when the path contains a space or a shell
     // metacharacter. Windows filenames cannot contain `"`, so there is no
     // embedded quote to escape.
     return /[\s&|<>^()"]/.test(value) ? `"${value}"` : value;
   }
-  // POSIX sh: characters in the safe set need no quoting; otherwise single-quote
-  // the path and escape any embedded single quote as '\''.
   if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) {
     return value;
   }
@@ -134,7 +131,6 @@ export function detectPreset(
   root: string,
   options?: { dir?: string; spa?: boolean; strictBackend?: boolean },
 ): StaticPreset | null {
-  // 1. Explicit --dir flag: skip build, use provided directory
   if (options?.dir) {
     return {
       buildCommand: null,
@@ -143,7 +139,6 @@ export function detectPreset(
     };
   }
 
-  // 2. Known SSG detected
   const pkg = readPackageJson(root);
   if (pkg) {
     const allDeps = getPackageDependencies(pkg);
@@ -167,12 +162,10 @@ export function detectPreset(
     }
   }
 
-  // 3. Has backend files → full deploy
   if (hasBackendFiles(root)) {
     return null;
   }
 
-  // 4. Vite/Vite+ in deps → static SPA
   if (pkg && hasViteLike(pkg)) {
     const buildCommand = resolveProjectScriptCommand(root, 'build');
     return {
@@ -182,7 +175,6 @@ export function detectPreset(
     };
   }
 
-  // 5. No build tool — look for pre-built output
   if (existsSync(join(root, 'dist/index.html'))) {
     return {
       buildCommand: null,
@@ -303,9 +295,6 @@ export function findBackendSources(root: string): Array<string> {
   return found;
 }
 
-/**
- * Check whether the project has backend files that require a full worker deploy.
- */
 export function hasBackendFiles(root: string): boolean {
   const paths = readProjectPaths(root);
   return backendDirs(paths).some((dir) => existsSync(dir));

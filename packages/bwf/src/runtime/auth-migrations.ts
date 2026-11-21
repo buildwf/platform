@@ -105,7 +105,7 @@ function resolveColumnType(
         return 'integer';
       }
       if (idStrategy === 'uuid') {
-        // Better Auth leaves the id out of PostgreSQL inserts when it uses uuids.
+        // Decision: Better Auth leaves the id out of PostgreSQL inserts when it uses uuids.
         return fieldName === 'id' ? 'uuid DEFAULT gen_random_uuid()' : 'uuid';
       }
       return 'text';
@@ -145,14 +145,15 @@ function renderDefaultLiteral(
     return String(value);
   }
   if (dialect === 'mysql' && value.includes('\\')) {
-    // NO_BACKSLASH_ESCAPES changes what a backslash means in a MySQL string. A hex string does not change.
+    // Decision: NO_BACKSLASH_ESCAPES changes what a backslash means in a MySQL string.
+    // A hex string does not change.
     const hex = Array.from(new TextEncoder().encode(value), (byte) =>
       byte.toString(16).padStart(2, '0'),
     ).join('');
     return `_utf8mb4 X'${hex}'`;
   }
   if (dialect === 'postgresql' && value.includes('\\')) {
-    // standard_conforming_strings changes what a backslash means in '...'. E'...' does not change.
+    // Decision: standard_conforming_strings changes what a backslash means in '...'. E'...' does not change.
     return `E'${value.replaceAll('\\', '\\\\').replaceAll("'", "''")}'`;
   }
   return `'${value.replaceAll("'", "''")}'`;
@@ -220,9 +221,9 @@ function buildAddColumnSql(
   fieldName: string,
   field: BwfAuthMigrationField,
 ): string {
-  // Only PostgreSQL accepts ADD COLUMN IF NOT EXISTS; callers check the column exists first.
+  // Decision: Only PostgreSQL accepts ADD COLUMN IF NOT EXISTS; callers check the column exists first.
   const ifNotExists = schema.dialect === 'postgresql' ? ' IF NOT EXISTS' : '';
-  // The default fills rows that exist. New tables keep no database default.
+  // Decision: The default fills rows that exist. New tables keep no database default.
   return `ALTER TABLE ${quoteIdentifier(tableName, schema.dialect)} ADD COLUMN${ifNotExists} ${buildColumnDefinition(
     schema.dialect,
     schema,
@@ -330,7 +331,7 @@ async function assertRequiredColumnsCanBeAdded(
   if (unique.length === 0 && noDefault.length === 0) {
     return;
   }
-  // One row blocks a field with no default. Two rows block a unique field.
+  // Decision: One row blocks a field with no default. Two rows block a unique field.
   const rows = await runner.all(
     `SELECT 1 AS present FROM ${quoteIdentifier(table.name, dialect)} LIMIT 2`,
   );
@@ -448,7 +449,7 @@ export async function applyMySqlAuthMigrations(
     'SELECT DATABASE() AS database_name',
   );
   const databaseName = String(databaseRows[0]?.database_name ?? '');
-  // MySQL 8 labels unaliased information_schema columns in uppercase, so alias each one.
+  // Decision: MySQL 8 labels unaliased information_schema columns in uppercase, so alias each one.
   const tableRows = await runner.all<{ table_name?: string }>(
     "SELECT TABLE_NAME AS table_name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE'",
     [databaseName],

@@ -2,8 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { runRemoteMigrations } from '../../src/migrations/remote-runner.ts';
 
-// The REST query endpoint executes one submitted SQL body as a batch. Model
-// that boundary with SQLite transactions so splitting requests loses atomicity.
+// Decision: The REST query endpoint runs one submitted SQL body as a batch. SQLite transactions model that
+// boundary, so splitting the work across requests loses atomicity.
 describe('managed D1 migration commits', () => {
   let db: DatabaseSync;
   let failTracking: boolean;

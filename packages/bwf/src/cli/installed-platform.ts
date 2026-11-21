@@ -47,7 +47,7 @@ export function assertInstalledBwfMatchesCli(root: string): void {
       directory = dirname(directory);
     }
   } catch {
-    // The error below also covers a declared package that has not been installed.
+    // Decision: The error below also covers a declared package that hasn't been installed.
   }
   if (installedVersion !== cli.version) {
     throw new Error(

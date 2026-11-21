@@ -177,7 +177,7 @@ describe('platform credential setup links', () => {
     );
   });
   it('cannot preselect a zone in the account token link, so it names the dashboard change', () => {
-    // Account token template links accept only permissionGroupKeys and name.
+    // Decision: Account token template links accept only permissionGroupKeys and name.
     const url = new URL(platformManagementSetupPage(plan('example.com'), { access: false }).url);
     expect([...url.searchParams.keys()]).toEqual(['to', 'name', 'permissionGroupKeys']);
     const runtime = new URL(platformSetupPages(plan('example.com')).runtime.url);
@@ -488,7 +488,7 @@ describe('platform credential setup links', () => {
     );
   });
   it('keeps the runtime token on All Domains when bwf creates the zone', () => {
-    // The zone does not exist yet, so Specified Domains cannot select it.
+    // Decision: The zone doesn't exist yet, so Specified Domains can't select it.
     const page = platformSetupPages({
       ...plan('example.com'),
       actions: [

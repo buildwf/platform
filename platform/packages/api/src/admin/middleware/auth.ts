@@ -8,12 +8,11 @@ import { isAdminSuspended } from '../../suspension.ts';
 import { adminAccessRejected, adminRequestRejected } from './request-rejection.ts';
 
 export const adminAuthMiddleware: MiddlewareHandler<ApiEnv> = async (context, next) => {
-  // CSRF defense: every admin write is state-changing and authenticated by a
-  // cookie alone, so a same-origin check guards against cross-site form posts.
-  // `Origin` is preferred (modern browsers always send it on a POST) and
-  // `Referer` is the fallback for old clients. Neither present on a write is a
-  // strong "not a real browser navigation" signal — reject. This runs before
-  // the auth check so a cross-site request never reaches a handler at all.
+  // Decision: CSRF defense: each admin write is state-changing and authenticated by a cookie alone, so a
+  // same-origin check guards against cross-site form posts. `Origin` is preferred (modern
+  // browsers send it on a POST) and `Referer` is the fallback for old clients. Neither present
+  // on a write is a strong "not a real browser navigation" signal, so reject. This runs before
+  // the auth check so a cross-site request doesn't reach a handler at all.
   const method = context.req.method.toUpperCase();
   if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
     const origin = context.req.header('origin');

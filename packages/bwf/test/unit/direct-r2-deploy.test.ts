@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { DeployManifest } from '../../src/cli/types.ts';
 import { withPlatformDiscovery } from '../helpers/platform-discovery.ts';
 
-// Spy on `readFileSync` to count asset reads. Mocked before any importer of
-// `node:fs` so `package.ts` binds to the spy.
+// Decision: Spy on `readFileSync` to count asset reads. It's mocked before any importer of `node:fs` so
+// `package.ts` binds to the spy.
 vi.mock('node:fs', async () => {
   const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
   return {
@@ -19,7 +19,7 @@ vi.mock('node:fs', async () => {
   };
 });
 
-// `@voidzero-dev/vite-plus-prompts` opens TTY-bound spinners we don't want to render in tests.
+// Decision: `@voidzero-dev/vite-plus-prompts` opens TTY-bound spinners that tests shouldn't render.
 const noopSpinner = {
   start: vi.fn(),
   stop: vi.fn(),
@@ -46,8 +46,6 @@ vi.mock('@voidzero-dev/vite-plus-prompts', async () => {
   };
 });
 
-// `output.ts` wraps clack's spinner — re-export the same noop. Used by
-// runStaticDeploy through `createSpinner()`.
 vi.mock('../../src/cli/output.ts', async () => {
   const actual =
     await vi.importActual<typeof import('../../src/cli/output.ts')>('../../src/cli/output.ts');
@@ -75,7 +73,6 @@ const fixtureFiles: Record<string, string | Buffer> = {
   '/index.html': '<!doctype html><html><body>hi</body></html>\n',
   '/style.css': 'body { color: red; }\n',
   '/script.js': 'console.log("hello");\n',
-  // Larger asset (>100KB) to stress buffer threading.
   '/large.bin': Buffer.alloc(120_000, 0xa5),
 };
 
@@ -110,7 +107,6 @@ type MockState = {
   finalizeCalls: Array<{ url: string; init: RequestInit }>;
 };
 
-/** Headers the mock platform signs into each Worker module's PUT. */
 function workerPutHeaders(module: WorkerModule): Record<string, string> {
   return {
     'Content-Type': 'application/javascript+module',
@@ -139,7 +135,6 @@ function installPlatformMocks(opts?: {
     const url = typeof input === 'string' ? input : (input as Request).url;
     const reqInit = init ?? {};
     const method = reqInit.method ?? 'GET';
-    // The client calls these as procedures (`POST /rpc/<name>`, answered as `{ data }`).
     const procedure = /\/rpc\/(deploy\.(?:preflight|uploadUrls|workerUploadUrls))$/.exec(url)?.[1];
     if (procedure && method === 'POST') {
       const legacyPath = {
@@ -373,7 +368,6 @@ describe('direct-to-R2 deploy flow', () => {
 
     await deploy();
 
-    // Other files, such as config, are read through the same mock.
     const reads = readFileSyncMock.mock.calls.filter(([p]: Array<unknown>) => {
       const path = String(p);
       return (
@@ -465,7 +459,7 @@ describe('direct-to-R2 deploy flow', () => {
     },
   );
 
-  // A plain Vite MPA is detected as `spa`, so its notFound must reach the static manifest.
+  // Decision: A plain Vite MPA is detected as `spa`, so its notFound has to reach the static manifest.
   it('threads routing.notFound into the finalize manifest (static path)', async () => {
     const state = installPlatformMocks();
 
@@ -474,8 +468,8 @@ describe('direct-to-R2 deploy flow', () => {
     const body = JSON.parse(state.finalizeCalls[0].init.body as string);
     expect(body.manifest.type).toBe('spa');
     expect(body.manifest.assetConfig).toEqual({ not_found_handling: '404-page' });
-    // Overriding away from SPA must NOT leave the synthetic `/* -> /index.html`
-    // fallback behind, or the shell would still be served via a rule.
+    // Decision: Overriding away from SPA must not leave the synthetic `/* -> /index.html` fallback behind,
+    // or the shell would still be served through a rule.
     expect(body.manifest.fallbackRules).toBeUndefined();
   });
 
@@ -565,7 +559,7 @@ describe('direct-to-R2 deploy flow', () => {
 });
 
 describe('Worker module uploads', () => {
-  // Discovery is cached per origin, so each origin is only probed with one answer.
+  // Decision: Discovery is cached per origin, so each origin is probed with one answer only.
   const directOrigin = 'https://api-direct.test';
   const workerManifest: DeployManifest = {
     version: 3,
@@ -635,7 +629,6 @@ describe('Worker module uploads', () => {
       expect(Buffer.from(init.body as Uint8Array)).toEqual(bytes[index]);
     }
 
-    // A Worker the platform refuses must fail before any asset upload.
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
     const assetPresign = urls.indexOf(`${directOrigin}/rpc/deploy.uploadUrls`);
     expect(urls.indexOf(`${directOrigin}/rpc/deploy.workerUploadUrls`)).toBe(0);
@@ -646,7 +639,6 @@ describe('Worker module uploads', () => {
     const body = JSON.parse(state.finalizeCalls[0].init.body as string);
     expect(body.workerInput).toEqual({ id: 'wup_test', modules });
     expect(body).not.toHaveProperty('workerFiles');
-    // Each buffer is released once R2 has it.
     expect(files.size).toBe(0);
   });
 
@@ -716,7 +708,7 @@ describe('D1 read replication', () => {
   it.each([true, false])(
     'stops before any upload when the platform cannot apply readReplication: %s',
     async (readReplication) => {
-      // What a 1.10.0 platform advertises: it ignores the setting.
+      // Decision: This is what a 1.10.0 platform advertises: it ignores the setting.
       const state = installPlatformMocks({ capabilities: { skipMigrations: true } });
 
       await expect(

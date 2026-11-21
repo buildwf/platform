@@ -941,9 +941,8 @@ const HELP_TREE: HelpTree = {
         'Show monthly outbound/inbound counts and quota.',
         'bwf email usage [options]',
       ),
-      // Not `withProjectOption`: `logs` is the one email subcommand with a
-      // flag of its own that actually does something, so the shared helper
-      // would hide it. Same shape as `domain status` above.
+      // Decision: Not `withProjectOption`: `logs` is the one email subcommand with a flag of its own that does
+      // something, so the shared helper would hide it. Same shape as `domain status` above.
       logs: {
         summary: 'Show recent email delivery activity.',
         usage: ['bwf email logs [options]'],
@@ -976,8 +975,9 @@ const HELP_TREE: HelpTree = {
           { command: '--yes', description: 'Set the alias without asking (it cannot be changed)' },
         ],
       },
-      // The one nested group: verbs parse in email-args.ts (`domain <add|status|list|sync|rotate-secret|remove>`).
-      // Platform-platform-only; custom inbound requires a zone apex.
+      // Decision: The one nested group: verbs parse in email-args.ts
+      // (`domain <add|status|list|sync|rotate-secret|remove>`). bwf platform only; custom inbound needs a
+      // zone apex.
       domain: {
         summary: 'Send and receive at your own domain on a Cloudflare zone.',
         usage: ['bwf email domain <verb> [<domain>] [options]'],
@@ -1033,8 +1033,8 @@ const HELP_TREE: HelpTree = {
           ),
         },
       },
-      // Native Cloudflare email: both read the local project + your wrangler session,
-      // never a bwf project, so neither takes `--project`.
+      // Decision: Native Cloudflare email: both read the local project and your wrangler session, not a bwf
+      // project, so neither takes `--project`.
       status: {
         summary: 'Show the email setup state and address map. Exit 1 when not ready.',
         usage: ['bwf email status --platform cloudflare'],

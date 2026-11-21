@@ -16,13 +16,13 @@
 
 export const RELAY_VERSION = 7;
 
-// Baked into the upload metadata; bump with RELAY_VERSION if the source
-// ever depends on newer runtime behavior.
+// Decision: Baked into the upload metadata; bump it with RELAY_VERSION if the source comes to depend on newer
+// runtime behavior.
 export const RELAY_COMPATIBILITY_DATE = '2026-09-01';
 
-// The binding names the upload declares (plain-text vars + one secret) and
-// the source reads. Pinned to RELAY_SOURCE by the unit tests — the two
-// must move together or the deployed relay reads undefined bindings.
+// Decision: The binding names the upload declares (plain-text vars and one secret) and the source reads. Unit
+// tests pin them to RELAY_SOURCE: they must change together, or the deployed relay reads undefined
+// bindings.
 export const RELAY_SECRET_BINDING = 'PLATFORM_RELAY_SECRET';
 export const RELAY_GATEWAY_ORIGIN_BINDING = 'PLATFORM_EMAIL_GATEWAY_ORIGIN';
 export const RELAY_ACCOUNT_BINDING = 'PLATFORM_EMAIL_ACCOUNT';

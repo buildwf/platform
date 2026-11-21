@@ -97,7 +97,7 @@ import { platformManagedWorkerTraffic } from './platform-traffic.ts';
 
 export { PLATFORM_REMOTE_INSTALLATION_MANIFEST_KEY as REMOTE_INSTALLATION_MANIFEST_KEY } from '@builtbyfriends/platform';
 
-// Preserve the routing gate first; rollback and manifest failure checkpoints
+// Decision: Preserve the routing gate first; rollback and manifest failure checkpoints
 // follow while the database lifecycle lock is still held by the caller.
 async function recoverFailedPlatformInstallation(
   error: unknown,
@@ -153,7 +153,7 @@ async function recoverFailedPlatformInstallation(
       );
     }
   }
-  // Rotated credentials cannot safely be rolled back to immutable versions
+  // Decision: Rotated credentials cannot safely be rolled back to immutable versions
   // containing the old secrets. Keep traffic closed and roll forward on retry.
   // Authentication transitions likewise retain the compatible Worker set.
   if (
@@ -206,7 +206,7 @@ async function recoverFailedPlatformInstallation(
       writeInstallationManifest(manifest);
       await writeRemoteInstallationCheckpoint(dependencies.client, plan, manifest);
     } catch {
-      // Preserve the original failure when a terminal state cannot transition.
+      // Decision: Preserve the original failure when a terminal state cannot transition.
     }
   }
   return failure;
@@ -369,7 +369,7 @@ export async function installPlatform(
   const workerSecretUpdateIntent: PlatformWorkerSecretUpdateIntent | null =
     hasExplicitWorkerSecretUpdates
       ? {
-          // Keep the recovery authority until the next generation is durably
+          // Decision: Keep the recovery authority until the next generation is durably
           // staged, including a crash after resolving the previous cutover.
           baselineGeneration:
             resumedWorkerSecretUpdateIntent?.baselineGeneration ??
@@ -385,14 +385,14 @@ export async function installPlatform(
       : resumedWorkerSecretUpdateIntent;
   assertRequiredPlatformSecrets(plan, manifest, secrets, !!dependencies.prepareAuthentication);
   if (hyperdriveAction?.action === 'create') {
-    // Reject a URL Hyperdrive can never accept before the claim binds it to this installation.
+    // Decision: Reject a URL Hyperdrive can never accept before the claim binds it to this installation.
     parsePostgresConnectionString(secrets.databaseUrl);
     assertBwfCreatedHyperdriveTrustsDatabase(secrets.databaseUrl);
   }
   if (plan.externalHyperdrive) {
     secrets = { ...secrets, externalHyperdriveJson: JSON.stringify(plan.externalHyperdrive) };
   }
-  // The phases update this state in place, and failure recovery reads its latest values.
+  // Decision: The phases update this state in place, and failure recovery reads its latest values.
   const state: PlatformInstallRunState = {
     manifest,
     plan,
@@ -464,7 +464,7 @@ export async function installPlatform(
     await releaseDatabaseLock();
     throw error;
   }
-  // Progress is checkpointed under the same lifecycle lock as mutations. Do not
+  // Decision: Progress is checkpointed under the same lifecycle lock as mutations. Do not
   // update it from parallel Worker upload callbacks.
   const checkpointOperation = async (phase: PlatformLifecycleOperation['phase']) => {
     if (!state.manifest.operation) {
@@ -525,7 +525,7 @@ export async function installPlatform(
       dependencies,
     });
 
-    // Establish the durable installation checkpoint before creating any
+    // Decision: Establish the durable installation checkpoint before creating any
     // resource that may need to be reconciled or removed after interruption.
     const provisioned = await provisionInstallationServices({
       state,
@@ -640,7 +640,7 @@ export async function installPlatform(
       publicEndpoints: !preserveDisabled,
       trafficState: preserveDisabled ? 'staging' : 'enabled',
     });
-    // The Cloudflare CLI asks the operator before it replaces changes made
+    // Decision: The Cloudflare CLI asks the operator before it replaces changes made
     // outside bwf. Let it ask now: the resources that these configs use
     // exist, and this run has not paused traffic or deployed a Worker.
     const outsideChangeConfigs = workerKeys
@@ -673,7 +673,7 @@ export async function installPlatform(
       writeInstallationManifest(state.manifest);
       await writeRemoteInstallationCheckpoint(dependencies.client, state.plan, state.manifest);
     }
-    // Preparation can generate new setup credentials. Snapshot only after all
+    // Decision: Preparation can generate new setup credentials. Snapshot only after all
     // preparation has completed so the deployed API can verify the handoff.
     const workerDeploymentSecrets: PlatformInstallationSecrets = {
       ...state.secrets,
@@ -722,7 +722,7 @@ export async function installPlatform(
     }));
     state.workerCutoverGeneration = nextWorkerCutoverGeneration(state.manifest);
     if (state.workerSecretUpdateIntent) {
-      // Keep this authorized intent resumable on either side of the next
+      // Decision: Keep this authorized intent resumable on either side of the next
       // manifest checkpoint before binding it to the new generation.
       state.workerSecretUpdateIntent = { ...state.workerSecretUpdateIntent, generation: null };
       writePendingInstallationSecrets(
@@ -768,7 +768,7 @@ export async function installPlatform(
       runParallelPinnedPlatformWrangler,
       runPinnedPlatformWrangler,
     });
-    // Second pass: the old API may have saved settings to the database only while
+    // Decision: Second pass: the old API may have saved settings to the database only while
     // the Workers were uploading.
     await publishInstallationAiLogging({
       client: dependencies.client,
@@ -849,7 +849,7 @@ export async function installPlatform(
       );
       writeInstallationManifest(state.manifest);
       await writeRemoteInstallationCheckpoint(dependencies.client, state.plan, state.manifest);
-      // From this point onward the database may enforce revocable sessions. Retain the
+      // Decision: From this point onward the database may enforce revocable sessions. Retain the
       // compatible maintenance runtime on failure instead of restoring incapable Workers.
       state.workerRollbacks = [];
       authenticationCutoverCommitted = true;

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { CF_CUSTOMER_API_BASE, createCfCustomerClient } from '../../src/email/cf-customer.ts';
 import { CloudflareApiError } from '../../src/provisioning/cloudflare-api.ts';
 
-// Dummy stand-ins — never real token material, per the no-secrets rule.
 const CREDENTIAL = 'cf-credential-dummy';
 const ACCOUNT = 'acct_1';
 const ZONE = 'zone_1';
@@ -165,9 +164,9 @@ describe('cf-customer client', () => {
       fetchMock.mockResolvedValueOnce(
         cfSuccess([
           { name: 'mail.acme.com', enabled: true, tag: 'sub_1' },
-          { name: 'alerts.acme.com' }, // enabled missing → false
+          { name: 'alerts.acme.com' },
           'not-an-object',
-          { enabled: true }, // no name → dropped
+          { enabled: true },
         ]),
       );
       const client = createCfCustomerClient(CREDENTIAL);
@@ -179,7 +178,6 @@ describe('cf-customer client', () => {
         `${CF_CUSTOMER_API_BASE}/zones/${ZONE}/email/sending/subdomains?page=1&per_page=50`,
       );
       expect(init.method).toBeUndefined();
-      // A short page (<50 rows) is the last page — exactly one request.
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(result).toEqual([
         { name: 'mail.acme.com', enabled: true },
@@ -235,8 +233,7 @@ describe('cf-customer client', () => {
       const { url, init } = lastCall(fetchMock);
       expect(url).toBe(`${CF_CUSTOMER_API_BASE}/accounts/${ACCOUNT}/workers/scripts/${RELAY}`);
       expect(init.method).toBe('PUT');
-      // The multipart boundary belongs to fetch — the client must not pin a
-      // Content-Type on a FormData body.
+      // Decision: fetch sets the multipart boundary, so the client mustn't set a Content-Type on a FormData body.
       expect(init.headers).toEqual({ Authorization: `Bearer ${CREDENTIAL}` });
 
       const formData = init.body as FormData;

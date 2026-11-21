@@ -33,13 +33,13 @@ export function formatErrorNodeInline(
   node: ErrChainNode | string | null | undefined,
   depth = 0,
 ): string {
-  // `typeof null` is `'object'`, so the null check has to come first.
+  // Decision: `typeof null` is `'object'`, so the null check has to come first.
   if (node == null || typeof node !== 'object') {
     return String(node);
   }
-  // A JSONL record is data, not a typed value. Coerce every part instead of
-  // trusting the declared shape: a hand-edited log, or an `Error` subclass that
-  // assigned a non-string `message`, must not make a postmortem aid throw.
+  // Decision: A JSONL record is data, not a typed value. Coerce each part instead of trusting the declared
+  // shape: a hand-edited log, or an `Error` subclass that assigned a non-string `message`, mustn't
+  // make a postmortem aid throw.
   const message = node.message == null ? '' : String(node.message);
   if (depth > 5) {
     return message;
@@ -137,22 +137,20 @@ export function openDeployLog(opts?: { mirrorToStderr?: boolean }): CliLogger {
   let fd: number | null = null;
   let broken = false;
   let closed = false;
-  // The CLI exits through process.exit() on many failure paths, and more than one of them may
-  // try to record the end of the deploy. Only the first deploy_end counts.
+  // Decision: The CLI exits through process.exit() on many failure paths, and more than one of them may try to
+  // record the end of the deploy. Only the first deploy_end counts.
   let ended = false;
 
   try {
     const dir = join(homedir(), '.bwf', 'logs');
     mkdirSync(dir, { recursive: true });
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    // Deploys started in the same millisecond (parallel deploys from one
-    // machine) must not share a file, so add the pid and a random suffix and
-    // refuse to open a file that already exists.
+    // Decision: Deploys started in the same millisecond (parallel deploys from one machine) mustn't share a file,
+    // so add the pid and a random suffix and refuse to open a file that already exists.
     const suffix = randomBytes(3).toString('hex');
     const filePath = join(dir, `deploy-${ts}-${process.pid}-${suffix}.jsonl`);
-    // Synchronous writes, so a record survives a process.exit() that follows it: a stream
-    // would still hold it in memory. The log can carry account and project details, so only
-    // the owner may read it.
+    // Decision: Synchronous writes, so a record survives a process.exit() that follows it: a stream would still
+    // hold it in memory. The log can carry account and project details, so only the owner may read it.
     fd = openSync(filePath, 'wx', 0o600);
     path = filePath;
   } catch {
@@ -177,7 +175,7 @@ export function openDeployLog(opts?: { mirrorToStderr?: boolean }): CliLogger {
       try {
         process.stderr.write(`${formatStderrLine(level, msg, err, fields)}\n`);
       } catch {
-        // Stderr write failures are not actionable.
+        // Decision: Stderr write failures aren't actionable.
       }
     }
     if (broken || fd === null || closed) {
@@ -211,8 +209,7 @@ export function openDeployLog(opts?: { mirrorToStderr?: boolean }): CliLogger {
     try {
       line = `${JSON.stringify(record)}\n`;
     } catch {
-      // Non-serializable fields shouldn't crash the logger; fall back to a
-      // minimal record.
+      // Decision: Non-serializable fields shouldn't crash the logger; fall back to a minimal record.
       line = `${JSON.stringify({ ts: now, elapsedMs: now - startedAt, lvl: level, msg, err: 'unserializable fields' })}\n`;
     }
     try {
@@ -222,7 +219,7 @@ export function openDeployLog(opts?: { mirrorToStderr?: boolean }): CliLogger {
         offset += writeSync(fd, bytes, offset);
       }
     } catch {
-      // A full disk or a closed descriptor must never break the deploy; stop logging instead.
+      // Decision: A full disk or a closed descriptor mustn't break the deploy; stop logging instead.
       broken = true;
     }
   }
@@ -252,7 +249,7 @@ export function openDeployLog(opts?: { mirrorToStderr?: boolean }): CliLogger {
         try {
           closeSync(fd);
         } catch {
-          // Nothing is buffered, so a failed close loses no record.
+          // Decision: Nothing is buffered, so a failed close loses no record.
         }
         fd = null;
       }

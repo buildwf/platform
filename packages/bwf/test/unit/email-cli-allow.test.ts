@@ -4,14 +4,10 @@ import type { PlatformClient } from '../../src/cli/client.ts';
 import { emailAllow } from '../../src/cli/email.ts';
 import * as output from '../../src/cli/output.ts';
 
-/**
- * What `bwf email allow <address>` prints for each shape the api answers
- * with. The one contract under test: "Verification email sent" is printed
- * ONLY when a link actually went out. Cloudflare mails its link on create
- * only, and a 201 does not prove a create — the api adopts an address
- * Cloudflare already held pending (the owner's own, from another project or
- * a hand add), and answers that with `verificationSent: false`.
- */
+// Decision: "Verification email sent" is printed only when a link actually went out. Cloudflare mails
+// its link on create only, and a 201 doesn't prove a create: the api adopts an address
+// Cloudflare already held pending (the owner's own, from another project or a hand add), and
+// answers that with `verificationSent: false`.
 
 type AllowResponse = Awaited<ReturnType<PlatformClient['addEmailDestination']>> & {
   verificationSent?: boolean;
@@ -81,8 +77,8 @@ describe('bwf email allow', () => {
   });
 
   it('does NOT claim a send when Cloudflare already held the address pending', async () => {
-    // The api created the project's row (201) but Cloudflare refused the
-    // create: the only link the owner has is the one from the first add.
+    // Decision: The api created the project's row (201) but Cloudflare refused the create: the only link the
+    // owner has is the one from the first add.
     await emailAllow(
       client(response({ created: true, verificationSent: false })),
       'prj_1',
@@ -97,8 +93,8 @@ describe('bwf email allow', () => {
   });
 
   it('does NOT claim a send on a repeat add of a Cloudflare-pending address', async () => {
-    // With and without the marker: an api that predates `verificationSent`
-    // answers the repeat with a bare 200, and that already means "nothing sent".
+    // Decision: With and without the marker: an api that predates `verificationSent` answers the repeat with
+    // a bare 200, and that already means "nothing sent".
     await emailAllow(client(response({ created: false })), 'prj_1', ADDRESS);
     await emailAllow(
       client(response({ created: false, verificationSent: false })),

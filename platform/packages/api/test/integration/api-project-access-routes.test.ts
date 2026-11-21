@@ -58,12 +58,10 @@ function authed(path: string, jwt: string, method = 'GET', body?: unknown): Requ
   });
 }
 
-/** Calls a procedure as `jwt`. */
 function rpc(name: string, jwt: string, body: unknown): Request {
   return authed(`/rpc/${name}`, jwt, 'POST', body);
 }
 
-/** Deploy routes that are procedures now, by their old path suffix. */
 const RPC_ROUTES: Record<string, string> = {
   'POST /deploy': 'deploy.finalize',
   '/deploy/preflight': 'deploy.preflight',
@@ -229,7 +227,6 @@ describe('project route membership capabilities', () => {
     };
     const body = raw;
     if (procedure) {
-      // Procedures answer with one generic FORBIDDEN, not per-capability guidance.
       expect(raw).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
     } else {
       expect(raw).toEqual({ error: 'forbidden', message: expect.stringContaining(guidance) });
@@ -291,7 +288,6 @@ describe('project route membership capabilities', () => {
     expect(denied.status).toBe(403);
     const deniedBody = await denied.json();
     expect(deniedBody).toEqual({ error: { code: 'FORBIDDEN', message: expect.any(String) } });
-    // A missing project is indistinguishable from a private one.
     const missing = await app.fetch(
       rpc('projects.get', stranger.jwt, { projectId: 'missing' }),
       env,
@@ -461,8 +457,8 @@ describe('project route membership capabilities', () => {
       const fetch = vi.fn(async () => Response.json({ success: false }, { status: 500 }));
       vi.stubGlobal('fetch', fetch);
 
-      // Return the route's access snapshot, then commit the demotion. The
-      // service must re-resolve the admin under the project lock.
+      // Decision: Return the route's access snapshot, then commit the demotion. The service has to re-resolve the
+      // admin under the project lock.
       const requireCapability = projectAccess.requireProjectCapability;
       let demoted = false;
       vi.spyOn(projectAccess, 'requireProjectCapability').mockImplementation(async (...args) => {

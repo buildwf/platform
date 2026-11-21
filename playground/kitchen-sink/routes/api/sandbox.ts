@@ -48,7 +48,7 @@ export const POST = defineHandler(async (c) => {
 
   let sandbox: SandboxClient | undefined;
   try {
-    // Programs from concurrent callers must never share files or processes.
+    // Decision: Programs from concurrent callers mustn't share files or processes.
     sandbox = await getSandbox(`kitchen-sink-${crypto.randomUUID()}`, {
       inactivityTimeoutMs: 30_000,
     });
@@ -99,8 +99,8 @@ export const POST = defineHandler(async (c) => {
       try {
         await sandbox.destroy();
       } catch (error) {
-        // Preserve the execution result. The bounded idle timeout still stops
-        // the container if a transient provider error prevents explicit cleanup.
+        // Decision: The execution result is kept. The bounded idle timeout still stops the container if a transient
+        // provider error blocks explicit cleanup.
         console.error('[sandbox] cleanup failed', error);
       }
     }

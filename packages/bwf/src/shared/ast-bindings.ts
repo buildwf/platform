@@ -57,7 +57,7 @@ export function bindingResolver(
       const node = raw as AstNode;
       const parent = rawParent as AstNode | null;
       const outerScope = scope;
-      // The discriminant and all its descendants precede the case block's scope.
+      // Decision: The discriminant and all its descendants precede the case block's scope.
       if (parent?.type === 'SwitchStatement' && key === 'discriminant') {
         scope = scope.parent!;
       }

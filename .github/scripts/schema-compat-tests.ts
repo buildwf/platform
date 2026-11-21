@@ -2,7 +2,8 @@ import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-// Copied to RUNNER_TEMP: native filesystem paths must work without workspace dependencies.
+// Decision: This file is copied to RUNNER_TEMP, so native filesystem paths have to work without workspace
+// dependencies.
 // eslint-disable-next-line no-restricted-imports
 import { join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -62,7 +63,7 @@ function correctKnownFixture(
   return source.includes('\r\n') ? corrected.replaceAll('\n', '\r\n') : corrected;
 }
 
-/** Correct only the known deployed test fixture; runtime code and every assertion stay intact. */
+// Decision: Correct only the known deployed test fixture. Runtime code and all assertions stay intact.
 function correctLegacyEmailFixture(source: string): string {
   return correctKnownFixture(
     source,
@@ -82,7 +83,7 @@ function correctLegacyDeployFixture(source: string): string {
   );
 }
 
-/** Only the disposable CI database may be used as a template. */
+// Decision: Only the disposable CI database may be used as a template.
 function compatibilityTemplate(value: string): URL {
   let url: URL;
   try {
@@ -121,7 +122,6 @@ export function compatibilityTestFiles(root: string): Array<string> {
   return files.sort();
 }
 
-/** Keep the deployed runtime/tests intact, with one upgraded database snapshot per file. */
 async function runIsolatedCompatibilityTests(options: {
   templateUrl: string;
   files: ReadonlyArray<string>;
@@ -151,7 +151,8 @@ async function runIsolatedCompatibilityTests(options: {
       } catch {
         failures.push(file);
       } finally {
-        // The name was generated and created by this invocation, never supplied by a caller.
+        // Decision: This invocation generated and created the name; a caller doesn't supply it, so it's safe to
+        // interpolate.
         await options.query(`DROP DATABASE "${name}" WITH (FORCE)`);
       }
     }
@@ -241,7 +242,7 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
   }
   const maintenance = new URL(template);
   maintenance.pathname = '/postgres';
-  // Resolve from the immutable checkout being exercised, including when this runner is in RUNNER_TEMP.
+  // Decision: Resolve from the immutable checkout under test, including when this runner sits in RUNNER_TEMP.
   const { Pool } = createRequire(pathToFileURL(join(root, 'platform/packages/api/package.json')))(
     'pg',
   );

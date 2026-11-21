@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vite-plus/test';
-// The tail worker owns the `platform_logs` row shape and the script-name split.
-// Import its real implementation so the two cannot drift apart silently — a
-// "keep these in sync" comment does not hold, an assertion does.
+// Decision: Imports the tail worker's real parseScriptName, which owns the `platform_logs` row shape, so
+// the two can't drift apart without this test failing.
 import { parseScriptName } from '../../../tail/src/index.ts';
 import type { Env } from '../../src/env.ts';
 import { recordPlatformLog, splitWorkerName, truncateUtf8 } from '../../src/metering.ts';
@@ -65,9 +64,6 @@ describe('splitWorkerName', () => {
     expect(splitWorkerName('platform-dispatch')).toBeNull();
   });
 
-  // The whole feature rests on writing the SAME `index1` the tail worker writes.
-  // If these ever disagree, the row lands under a key `GET /projects/:id/logs`
-  // cannot select, and the user sees nothing — the exact bug this fixes.
   it('agrees with the tail worker for every user script name', () => {
     const names = [
       'user-my-app-dpl_abc123',
@@ -130,8 +126,8 @@ describe('recordPlatformLog', () => {
     expect(logs[0].message.join(' ')).toContain('2500');
   });
 
-  // Both the SQL predicate in `GET /projects/:id/logs` and the CLI's
-  // client-side pass must keep this row under `--level error`.
+  // Decision: Both the SQL predicate in GET /projects/:id/logs and the CLI's client-side filter have to keep
+  // this row under `--level error`.
   it('satisfies the server-side --level error predicate', () => {
     const { dp } = writePlatformLog();
     const [outcome, logData, exceptionData, , , statusCode] = dp.blobs;
@@ -170,8 +166,6 @@ describe('recordPlatformLog', () => {
     expect(writes).toHaveLength(0);
   });
 
-  // A log write is best effort. It must never convert the 503 it is explaining
-  // into an uncaught throw, which the runtime would surface as a 500.
   it('swallows a failing write instead of throwing into the 503 path', () => {
     const env = {
       LOGS: {
@@ -261,15 +255,6 @@ describe('recordPlatformLog with minimal runtime logs', () => {
   });
 });
 
-// Analytics Engine caps the SUM of a data point's blobs at 16 KB (raised from
-// 5 KB in June 2025 — `platform_logs` holds rows of 13,695 bytes today, which
-// proves the higher cap is live). There is NO per-blob limit. A data point over
-// the cap is dropped, and `recordPlatformLog` swallows the failure by design,
-// so an unbounded field would silently lose the very row this feature adds.
-//
-// The exposure is real, not theoretical: the longest URL already recorded in
-// `platform_logs` is 6,703 bytes, and this row would carry it twice — once raw in
-// blob4 and once as the pathname inside the blob2 message.
 describe('recordPlatformLog blob bounds', () => {
   const encoder = new TextEncoder();
 
@@ -309,9 +294,6 @@ describe('recordPlatformLog blob bounds', () => {
     expect(dp.blobs[3]).not.toContain('…');
   });
 
-  // A byte budget must count the bytes that go on the wire, and it must never
-  // cut a multi-byte character in half — a split sequence decodes to U+FFFD,
-  // which is itself 3 bytes and would push the field back over its budget.
   it('truncates multi-byte text on a character boundary', () => {
     const url = `https://my-app.void.app/${'漢'.repeat(4000)}`;
     const { dp } = writePlatformLog({ url });
@@ -319,7 +301,6 @@ describe('recordPlatformLog blob bounds', () => {
     const bytes = encoder.encode(dp.blobs[3]).length;
     expect(bytes).toBeLessThanOrEqual(2048);
     expect(dp.blobs[3]).not.toContain('�');
-    // Every retained glyph survived whole.
     expect(dp.blobs[3].endsWith('漢…')).toBe(true);
   });
 
@@ -330,9 +311,6 @@ describe('recordPlatformLog blob bounds', () => {
     expect(encoder.encode(dp.blobs[1]).length).toBeLessThanOrEqual(1400);
   });
 
-  // `index1` is the read key. Truncating it would produce a row that
-  // `GET /projects/:id/logs` can never select — worse than a dropped row. It is
-  // bounded upstream by the project slug, and the tail worker writes it whole.
   it('never truncates the project key', () => {
     const { dp } = writePlatformLog({ workerName: `user-${'s'.repeat(300)}-dpl_abc123` });
 
@@ -353,10 +331,7 @@ describe('truncateUtf8', () => {
     expect(bytes(truncateUtf8('abcdef', 5))).toBe(5);
   });
 
-  // Regression: an earlier walk-back dropped a whole character even when the
-  // cut already landed on a boundary, losing content for no reason.
   it('keeps every character that fits when the cut lands on a boundary', () => {
-    // '漢漢漢' is 9 bytes; a 6-byte budget holds exactly one plus the ellipsis.
     expect(truncateUtf8('漢漢漢', 6)).toBe('漢…');
     expect(bytes(truncateUtf8('漢漢漢', 6))).toBe(6);
   });

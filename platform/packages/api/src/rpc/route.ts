@@ -34,7 +34,7 @@ async function withBackgroundWork(
   context: Context<ApiEnv>,
   handle: (waitUntil: (work: Promise<unknown>) => void) => Promise<Response>,
 ): Promise<Response> {
-  // Without an execution context (tests, local scripts) background work finishes before the reply.
+  // Decision: Without an execution context (tests, local scripts), background work finishes before the reply.
   const inline: Array<Promise<unknown>> = [];
   const response = await handle((work) => {
     try {

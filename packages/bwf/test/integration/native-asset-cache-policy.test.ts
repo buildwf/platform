@@ -25,7 +25,6 @@ import { routingPlugin } from '../../src/plugin-routing.ts';
 
 const runtimeSource = (file: string) => join(import.meta.dirname, '../../src/runtime', file);
 
-/** Facts of a build that qualifies for the asset Worker bypass. */
 function bypassFacts(overrides: Partial<AssetWorkerBypassFacts>): AssetWorkerBypassFacts {
   return {
     runWorkerFirst: ['/**'],
@@ -144,7 +143,7 @@ beforeAll(async () => {
   const stableManifest = JSON.parse(
     readFileSync(join(stableOutput, '.vite/manifest.json'), 'utf8'),
   ) as Manifest;
-  // A single-input build can use a synthetic manifest key. Verify the emitted
+  // Decision: A single-input build can use a synthetic manifest key. Verify the emitted
   // entry and its stable filenames rather than assuming its source-path key.
   const stableEntries = Object.values(stableManifest).filter((entry) => entry.isEntry);
   expect(stableEntries).toHaveLength(1);
@@ -497,7 +496,6 @@ describe('native static edge Worker routing in real Workers', () => {
 
   type StaticDeploy = { routing: StaticEdgeRouting; assets: string; output: string };
 
-  /** Stage and bundle a static deploy as `runCloudflareStaticDeploy` does, marking Worker responses. */
   async function deployStaticSite(name: string, routing?: RoutingConfig): Promise<StaticDeploy> {
     const root = join(staticDirectory, name);
     const outputDir = join(root, 'dist');
@@ -599,7 +597,6 @@ describe('native static edge Worker routing in real Workers', () => {
       deployStaticSite('https', { alwaysUseHttps: true }),
     ]);
     site = startStaticSite(plain, '404-page');
-    // A SPA deploy only changes the asset layer's not-found handling.
     spa = startStaticSite(plain, 'single-page-application');
     https = startStaticSite(redirected, '404-page');
   });
@@ -709,10 +706,10 @@ it('keeps assets and intentional 404s distinct through compression', async () =>
       expect(response.status, `${method} ${path}`).toBe(status);
       const bytes = new Uint8Array(await response.arrayBuffer());
 
-      // Route middleware such as compress() also applies to assets served from the Worker.
+      // Decision: Route middleware such as compress() also applies to assets served from the Worker.
       const text =
         method === 'GET' &&
-        // Miniflare reports a Worker's own encoding as mf-content-encoding.
+        // Decision: Miniflare reports a Worker's own encoding as mf-content-encoding.
         (response.headers.get('content-encoding') ??
           response.headers.get('mf-content-encoding')) === 'gzip'
           ? gunzipSync(bytes).toString()

@@ -30,7 +30,7 @@ type DbModule = {
 };
 
 const roots: Array<string> = [];
-// The generated module imports the built runtime env; tests share the source one.
+// Decision: The generated module imports the built runtime env; tests swap in the source one.
 const builtEnv = JSON.stringify(fileURLToPath(import.meta.resolve('#self/_env')));
 const sourceEnv = JSON.stringify(new URL('../../src/runtime/env.ts', import.meta.url).href);
 
@@ -70,7 +70,6 @@ const CORES: Record<Dialect, string> = {
   mysql: 'drizzle-orm/mysql-core',
 };
 
-/** A project whose schema declares its columns without names, for drizzle's casing to name. */
 function createRoot(dialect: Dialect): string {
   const root = mkdtempSync(join(tmpdir(), 'platform-db-casing-'));
   roots.push(root);
@@ -88,7 +87,6 @@ function loadSource(root: string, dialect: Dialect, casing?: DatabaseCasing): st
   return load.call({}, '\0virtual:platform-db');
 }
 
-/** Load the app's generated `@builtbyfriends/bwf/db` with drizzle's real drivers. */
 async function loadDb(root: string, dialect: Dialect, casing?: DatabaseCasing) {
   const code = loadSource(root, dialect, casing);
   expect(code).toContain(builtEnv);
@@ -129,7 +127,6 @@ describe('@builtbyfriends/bwf/db with database.casing', () => {
       });
 
       expect(rows).toEqual([ADA]);
-      // Outside a request, such as in a cron job or at startup, `db` reads from the primary.
       expect(await envContext.run({ DB: binding }, () => db.select().from(users))).toEqual([ADA]);
       expect(await createDb(binding).select().from(users)).toEqual([ADA]);
       expect(await createDb(binding, { session: 'first-primary' }).select().from(users)).toEqual([
@@ -206,7 +203,7 @@ describe('@builtbyfriends/bwf/db with database.casing', () => {
     }
   });
 
-  // Better Auth's adapter queries through the app's `db`, so its tables get the same casing.
+  // Decision: Better Auth's adapter queries through the app's `db`, so its tables get the same casing.
   it('keeps the column names that the Better Auth tables declare', async () => {
     const root = createRoot('sqlite');
     const { createDb, users } = await loadDb(root, 'sqlite', 'snake_case');

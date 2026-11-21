@@ -49,7 +49,7 @@ import { resolveCommandProjectId } from './resolve-project.ts';
 import { writeProvisionedWranglerConfig } from './wrangler.ts';
 
 export async function runEmailCommand(root: string, args: EmailArgs): Promise<void> {
-  // The developer's own Cloudflare account needs no bwf token or project.
+  // Decision: The developer's own Cloudflare account needs no bwf token or project.
   if (args.platform === 'cloudflare') {
     return runEmailCloudflareCommand(root, args);
   }
@@ -200,9 +200,9 @@ export async function emailAllow(
   address: string,
 ): Promise<void> {
   const dest = await client.addEmailDestination(projectId, address);
-  // Cloudflare mails its link on create only; the platform re-sends its own
-  // on every repeat add (`platformVerificationPending`). A 201 alone does not
-  // prove a send: the api adopts an address Cloudflare already held.
+  // Decision: Cloudflare mails its link on create only; the platform re-sends its own on each repeat add
+  // (`platformVerificationPending`). A 201 alone doesn't prove a send: the api adopts an address
+  // Cloudflare already held.
   const sent =
     dest.verificationSent !== false && (dest.created || dest.platformVerificationPending);
   if (dest.status === 'verified') {
@@ -267,9 +267,8 @@ export async function emailLogs(
   note(lines.join('\n'), 'Email Logs');
 }
 
-// ── Custom domains on the customer's own Cloudflare zone ──────────────────────
-//
-// The API token is held in memory, sent once, and never printed, logged, or stored locally.
+// Decision: Custom domains on the customer's own Cloudflare zone. The API token is held in memory, sent once,
+// and not printed, logged or stored locally.
 
 /**
  * Permission groups prefilled in the dashboard token link. `zone_settings: edit` gates
@@ -287,7 +286,7 @@ const CF_TOKEN_TEMPLATE_PERMISSION_GROUPS = [
 export function buildCfApiTokenTemplateUrl(domain: string): string {
   const url = new URL('https://dash.cloudflare.com/profile/api-tokens');
   url.searchParams.set('permissionGroupKeys', JSON.stringify(CF_TOKEN_TEMPLATE_PERMISSION_GROUPS));
-  // Both are required by the form; the customer narrows them in the summary.
+  // Decision: Both are required by the form; the customer narrows them in the summary.
   url.searchParams.set('accountId', '*');
   url.searchParams.set('zoneId', 'all');
   url.searchParams.set('name', `bwf email — ${domain}`);
@@ -297,19 +296,19 @@ export function buildCfApiTokenTemplateUrl(domain: string): string {
 /** 'refused' and 'unknown' are both rejected; 'refused' names a known foreign prefix in the error. */
 export type CfApiTokenShape = 'cfut' | 'legacy' | 'refused' | 'unknown';
 
-// `cfut_`, 40 characters, then a CRC32 checksum whose rendered length is not documented,
-// so the tail is loose. `GET /user/tokens/verify` is the real gate, not this regex.
+// Decision: `cfut_`, 40 characters, then a CRC32 checksum whose rendered length isn't documented, so the tail
+// is loose. `GET /user/tokens/verify` is the real gate, not this regex.
 const CFUT_TOKEN_PATTERN = /^cfut_[A-Za-z0-9_-]{44,64}$/;
-// Pre-2026 tokens: an unprefixed 40-character string. Still accepted by CF.
+// Decision: Pre-2026 tokens: an unprefixed 40-character string. CF still accepts them.
 const LEGACY_CF_TOKEN_PATTERN = /^[A-Za-z0-9_-]{40}$/;
-// Another service's token is named without a network call instead of surfacing as a CF 401.
+// Decision: Another service's token is named without a network call instead of surfacing as a CF 401.
 // `cfk_` is Cloudflare's global key, not a scoped token.
 const REFUSED_TOKEN_PREFIXES = ['ghp_', 'github_pat_', 'sk-', 'xox', 'cfk_'] as const;
 
 /** Shape-only classification of a clipboard or pasted value. Never logs the value. */
 export function classifyCfApiTokenShape(value: string): CfApiTokenShape {
   const token = value.trim();
-  // Refused prefixes first: `ghp_` + 36 chars also matches the legacy 40-char shape.
+  // Decision: Refused prefixes first: `ghp_` plus 36 characters also matches the legacy 40-character shape.
   if (REFUSED_TOKEN_PREFIXES.some((prefix) => token.startsWith(prefix))) {
     return 'refused';
   }
@@ -337,7 +336,7 @@ function readClipboard(): string | null {
       try {
         return execSync('wl-paste', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
       } catch {
-        // No clipboard tool (SSH, CI, a bare Wayland session) — the paste prompt is the path.
+        // Decision: No clipboard tool (SSH, CI, a bare Wayland session): the paste prompt is the path.
       }
     }
     return null;
@@ -360,7 +359,7 @@ function clearClipboard(): void {
       }
     }
   } catch {
-    // Best-effort: a failure here must not fail the add.
+    // Decision: A failure to clear the clipboard mustn't fail the add.
   }
 }
 
@@ -421,7 +420,7 @@ function createEnterRace(waitForEnter?: () => Promise<unknown>): EnterRace {
   let onData: (() => void) | undefined;
   const promise = new Promise<'enter'>((resolve) => {
     if (!stdin.isTTY) {
-      return; // Never resolves — non-interactive is gated before any race starts.
+      return; /* Decision: Never resolves: non-interactive runs are gated before any race starts. */
     }
     onData = () => resolve('enter');
     stdin.on('data', onData);
@@ -543,8 +542,8 @@ export async function emailDomainAdd(
     return fail(`email: invalid domain '${rawDomain}'.`);
   }
 
-  // A foreign MX on the apex stops here; an unreadable one is left to the platform, which
-  // re-checks over public DNS.
+  // Decision: A foreign MX on the apex stops here; an unreadable one is left to the platform, which checks
+  // again over public DNS.
   const dns = deps.dns ?? (await createNodeEmailDns());
   const checkApexMx = async (adminProject?: string): Promise<void> => {
     const mx = await probeMx(dns, domain);
@@ -565,8 +564,8 @@ export async function emailDomainAdd(
     }
   };
 
-  // On an administrator-managed platform new domains go to the administrator. An owner row
-  // registered before the switch stays the owner's to renew.
+  // Decision: On an administrator-managed platform new domains go to the administrator. An owner row registered
+  // before the switch stays the owner's to renew.
   let renewal = false;
   const settings = await client.getEmailSettings(projectId);
   if (settings.domains.management === 'admin') {
@@ -595,7 +594,7 @@ export async function emailDomainAdd(
     await checkApexMx();
   }
 
-  // Token creation needs a browser or a masked paste prompt.
+  // Decision: Token creation needs a browser or a masked paste prompt.
   const interactive = deps.isInteractive ?? !isWranglerNonInteractiveOrCI();
   if (!interactive) {
     return fail(
@@ -639,8 +638,8 @@ export async function emailDomainAdd(
       const interval = deps.watchIntervalMs ?? 1000;
       const snapshotTrimmed = snapshot.trim();
       const enterDuringWatch = createEnterRace(deps.waitForEnter);
-      // Either race outcome must stop the poll branch, or an orphaned loop keeps reading the
-      // clipboard (and could verify a later token) after the flow has moved on.
+      // Decision: Either race outcome has to stop the poll branch, or an orphaned loop keeps reading the clipboard
+      // (and could verify a later token) after the flow has moved on.
       let watchSettled = false;
       let watchTimer: ReturnType<typeof setTimeout> | undefined;
       outcome = await Promise.race([
@@ -657,7 +656,7 @@ export async function emailDomainAdd(
               continue;
             }
             const shape = classifyCfApiTokenShape(value);
-            // Wrong shape, including another vendor's token: keep waiting, no network call.
+            // Decision: Wrong shape, including another vendor's token: keep waiting, no network call.
             if (shape === 'refused' || shape === 'unknown') {
               continue;
             }
@@ -679,8 +678,8 @@ export async function emailDomainAdd(
       ]);
       watchSettled = true;
       enterDuringWatch.stop();
-      // Unref the timer the losing poll branch is parked on — it wakes once,
-      // sees the flag and exits; it must not keep the process alive meanwhile.
+      // Decision: Unref the timer the losing poll branch is parked on. It wakes once, sees the flag and exits; it
+      // mustn't keep the process alive meanwhile.
       watchTimer?.unref();
     }
 
@@ -970,8 +969,6 @@ async function runEmailDomainCommand(
   }
 }
 
-// ── --platform cloudflare: the developer's own Cloudflare account ───────────────
-
 /** Test seams for {@link runEmailCloudflareCommand}. */
 export interface EmailCloudflareCommandDeps {
   /** Runner for the provider reads and the `enable` writes. */
@@ -1034,8 +1031,8 @@ export async function runEmailCloudflareCommand(
   deps: EmailCloudflareCommandDeps = {},
 ): Promise<void> {
   const rawExit = deps.exit ?? ((code: number): never => process.exit(code));
-  // Keep project validation ahead of Cloudflare-config discovery, including its legacy-TOML
-  // refusal. No config context is needed until the command is ready to make account reads.
+  // Decision: Keep project validation ahead of Cloudflare-config discovery, including its legacy-TOML refusal.
+  // No config context is needed until the command is ready to make account reads.
   const bwfConfig = readConfig(root);
   const from = bwfConfig.email?.from;
   if (!from) {
@@ -1087,11 +1084,10 @@ async function runEmailCloudflareCommandInConfig(
     return exit(1);
   };
 
-  // 1. Inputs from the local project: `email.from` is the only domain input.
   const { from, handlers } = project;
 
-  // 2. The same pinned transport + account + worker name as `bwf deploy --platform
-  //    cloudflare`, so every wrangler child here consults the account the deploy will.
+  // Decision: The same pinned transport, account and worker name as `bwf deploy --platform cloudflare`, so the
+  // wrangler children here consult the account the deploy will.
   const rootConfig = parseRootWranglerConfig(configPath);
   let apiBaseUrl: string;
   try {
@@ -1129,7 +1125,6 @@ async function runEmailCloudflareCommandInConfig(
     dns: deps.dns ?? (await createNodeEmailDns()),
   };
 
-  // 3. Preflight — read-only.
   let pre: EmailPreflight;
   try {
     pre = await preflightEmail(inputs);
@@ -1165,9 +1160,9 @@ async function runEmailCloudflareCommandInConfig(
     return exit(1);
   }
 
-  // 4. Confirm. A ready preflight needs no prompt, except a sending onboarding the committed
-  //    binding records as refused: apply would retry it, so it gets its own prompt. So does
-  //    a saved sending-only setup still waiting for onboarding (deploys never retry it).
+  // Decision: A ready preflight needs no prompt, except a sending onboarding the committed binding records as
+  // refused: apply would retry it, so it gets its own prompt. So does a saved sending-only setup still
+  // waiting for onboarding (deploys don't retry it).
   if (pre.blockers.some((b) => b.scope === 'all')) {
     return fail('email: nothing was changed — fix the ✘ rows above and rerun.');
   }
@@ -1195,7 +1190,6 @@ async function runEmailCloudflareCommandInConfig(
     }
   }
 
-  // 5. Apply, then write the config patch.
   const out = await applyEmailSetup(pre, inputs);
   if (out.lines.length > 0) {
     print(out.lines.join('\n'));
@@ -1218,9 +1212,9 @@ async function runEmailCloudflareCommandInConfig(
       pendingLabel: '(no rule yet)',
     }),
   );
-  // Match deploy's capability checks. Apps receiving mail can retain their Workers Free
-  // setup when sending onboarding fails; sending-only apps must verify sending itself.
-  // A refused onboarding has already printed the Workers Paid steps with the apply rows.
+  // Decision: Match deploy's capability checks. Apps receiving mail can keep their Workers Free setup when
+  // sending onboarding fails; sending-only apps have to verify sending itself. A refused onboarding
+  // has already printed the Workers Paid steps with the apply rows.
   if (!out.ready && sendingOnly) {
     log.warn(
       pre.sendingRetryable

@@ -124,7 +124,7 @@ app.post('/preview', async (context) => {
       if (!isAiLoggingMode(form.aiLogging)) {
         throw new OperatorError(400, 'Choose a supported AI Gateway logging setting.');
       }
-      // The form loads the default from a possibly cached read. Sending an untouched value could
+      // Decision: The form loads the default from a possibly cached read. Sending an untouched value could
       // undo a newer saved default, so only a changed selector becomes part of the change.
       if (form.aiLogging !== form.aiLoggingInitial) {
         body.aiLogging = form.aiLogging;
@@ -167,7 +167,8 @@ app.post('/preview', async (context) => {
     expectedRevision: result.expectedRevision,
     before,
     after: result.catalog,
-    // The dry run reads the saved defaults under the catalog lock, so this matches what apply replaces.
+    // Decision: The dry run reads the saved defaults under the catalog lock, so this matches what apply
+    // replaces.
     aiLoggingBefore: result.aiLogging.modesBefore,
     aiLoggingAfter: result.aiLogging.modes,
     affectedAccounts: result.affectedAccounts,

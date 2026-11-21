@@ -17,8 +17,8 @@
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-// Cache CryptoKeys per secret — importKey is expensive and the secret
-// never changes per isolate.
+// Decision: Cache CryptoKeys per secret: importKey is expensive and the secret doesn't change per
+// isolate.
 const signKeyCache = new Map<string, CryptoKey>();
 const verifyKeyCache = new Map<string, CryptoKey>();
 
@@ -160,11 +160,9 @@ export async function verifyConfirmToken(
   if (payload.exp <= now) {
     return null;
   }
-  // Future-issued tokens are nonsense — only an attacker (or a badly
-  // skewed clock on the issuing api worker) would emit `iat > now`.
-  // Allow up to 60s of forward skew to tolerate clock drift between
-  // the issuing worker and the verifying worker; reject anything
-  // further in the future as forged.
+  // Decision: Only an attacker (or a badly skewed clock on the issuing api worker) would emit
+  // `iat > now`. Allow up to 60s of forward skew to tolerate clock drift between the issuing
+  // and verifying workers; reject anything further in the future as forged.
   if (payload.iat > now + 60) {
     return null;
   }

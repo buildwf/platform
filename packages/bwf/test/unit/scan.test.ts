@@ -148,7 +148,6 @@ describe('scanRoutes', () => {
 
   it('handles missing middleware directory', async () => {
     createFile('routes/hello.ts');
-    // No middleware/ directory
 
     const result = await scanRoutes(TMP);
     expect(result.middleware).toEqual([]);
@@ -166,7 +165,8 @@ describe('scanRoutes', () => {
   });
 
   it('sorts a static route before a dynamic sibling', async () => {
-    // Static '/users/new' must register before '/users/:id' (Hono resolves overlap by registration order).
+    // Decision: Static '/users/new' has to register before '/users/:id' (Hono resolves overlap by
+    // registration order).
     createFile('routes/users/[id].ts', 'export const GET = () => {}');
     createFile('routes/users/new.ts', 'export const GET = () => {}');
 

@@ -11,15 +11,13 @@ type AccessTokenResponse = Readonly<{
 
 type CachedToken = {
   token: string;
-  // Epoch ms after which the cached token should be considered stale.
   expiresAtMs: number;
 };
 
-// Refresh installation tokens ~5 minutes before GitHub expires them so an
-// in-flight build never races the expiry.
+// Decision: Refresh installation tokens about 5 minutes before GitHub expires them so an in-flight build
+// doesn't race the expiry.
 const EXPIRY_SKEW_MS = 5 * 60 * 1000;
 
-// Cache installation tokens per installation id for the life of the isolate.
 const tokenCache = new Map<string, CachedToken>();
 
 /**
@@ -30,11 +28,11 @@ const tokenCache = new Map<string, CachedToken>();
  * being built (`{ contents: 'read' }`), not every repo the install covers.
  */
 type InstallationTokenScope = Readonly<{
-  // Immutable numeric GitHub repository ids (as text). Sent to GitHub as
-  // `repository_ids` (numeric) so the token is limited to exactly these repos.
+  // Decision: Immutable numeric GitHub repository ids (as text). Sent to GitHub as numeric `repository_ids` so
+  // the token is limited to exactly these repos.
   repositoryIds?: ReadonlyArray<string>;
-  // Permission narrowing, e.g. `{ contents: 'read' }`. A token can only ever be
-  // a SUBSET of the App's installed permissions, so this never widens access.
+  // Decision: Permission narrowing, such as `{ contents: 'read' }`. A token is a subset of the App's installed
+  // permissions, so this can't widen access.
   permissions?: Record<string, string>;
 }>;
 
@@ -56,8 +54,8 @@ export async function getInstallationToken(
   installationId: string,
   opts?: InstallationTokenScope,
 ): Promise<string> {
-  // Only the unscoped (installation-wide) token may be served from / written to
-  // the installation-id-keyed cache. A scoped request always mints fresh.
+  // Decision: Only the unscoped (installation-wide) token may be read from or written to the
+  // installation-id-keyed cache. A scoped request mints fresh.
   if (!opts) {
     const cached = tokenCache.get(installationId);
     if (cached && cached.expiresAtMs - EXPIRY_SKEW_MS > Date.now()) {
@@ -96,7 +94,7 @@ export async function getInstallationToken(
   }
 
   const data = (await res.json()) as AccessTokenResponse;
-  // Cache only the installation-wide token — see the doc comment above.
+  // Decision: Cache only the installation-wide token (see the doc comment above).
   if (!opts) {
     tokenCache.set(installationId, {
       token: data.token,
@@ -128,7 +126,6 @@ function errInfo(err: unknown): { name?: string; message: string } {
   return { message: String(err) };
 }
 
-// area:'github' distinguishes from the deploy-pipeline logger (area:'deploy').
 function logCompareFailure(
   reason: 'token-mint-failed' | 'network-error' | 'http-4xx' | 'http-5xx' | 'exhausted',
   fields: Record<string, unknown>,
@@ -183,9 +180,9 @@ export async function getBranchHeadComparisonStatus(
     try {
       token = await getInstallationToken(env, installationId);
     } catch (err) {
-      // Minting the installation token failed (e.g. broken App key, GitHub
-      // 401/5xx on the access-token POST). Treat as transient — log the cause
-      // (this would otherwise be a silent unhandled rejection), then retry.
+      // Decision: Minting the installation token failed (broken App key, GitHub 401/5xx on the access-token POST).
+      // Treat it as transient: log the cause, which would otherwise be a silent unhandled rejection, then
+      // retry.
       logCompareFailure('token-mint-failed', {
         installationId,
         repoFullName,
@@ -215,9 +212,8 @@ export async function getBranchHeadComparisonStatus(
         const data = (await res.json()) as CompareResponse;
         return data.status ?? null;
       }
-      // A 5xx is transient (GitHub-side hiccup) and worth retrying; a 404 or
-      // other 4xx is definitive (no such repo/ref, App lacks access) — return
-      // null without burning retries.
+      // Decision: A 5xx is a transient GitHub hiccup worth retrying; a 404 or other 4xx is definitive (no such repo
+      // or ref, App lacks access), so return null without using retries.
       if (res.status < 500) {
         const body = (await res.text().catch(() => '<unreadable>')).slice(0, 500);
         logCompareFailure('http-4xx', {
@@ -243,7 +239,6 @@ export async function getBranchHeadComparisonStatus(
         body,
       });
     } catch (err) {
-      // Network/transport failure — transient, fall through to retry.
       logCompareFailure('network-error', {
         installationId,
         repoFullName,
@@ -318,15 +313,12 @@ export async function getBranchExistence(
       if (res.status === 404) {
         return 'absent';
       }
-      // Any other status < 500 (e.g. 403 no-access) is definitive but
-      // inconclusive — return 'unknown' without burning retries. A 5xx is a
-      // transient GitHub hiccup worth retrying.
+      // Decision: Any other status below 500 (such as 403) is definitive but inconclusive: return 'unknown' without
+      // using retries. A 5xx is transient and worth retrying.
       if (res.status < 500) {
         return 'unknown';
       }
-    } catch {
-      // Network/transport failure — transient, fall through to retry.
-    }
+    } catch {}
     if (attempt < COMPARE_RETRY_ATTEMPTS) {
       await new Promise((r) => setTimeout(r, COMPARE_RETRY_DELAY_MS));
     }
@@ -359,8 +351,8 @@ export async function getRepoInstallation(
     },
   });
 
-  // 404 is the App-not-installed signal; treat any non-ok response as
-  // "uncovered" so the OIDC exchange fails closed.
+  // Decision: 404 means the App isn't installed; treat any non-ok response as uncovered so the OIDC exchange
+  // fails closed.
   if (!res.ok) {
     return null;
   }

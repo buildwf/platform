@@ -53,7 +53,7 @@ import {
   type TestEnv,
 } from './helpers.ts';
 
-// Each fixture domain below is the apex of its own visible test zone.
+// Decision: Each fixture domain below is the apex of its own visible test zone.
 const zones = Object.fromEntries(
   [
     'example.com',
@@ -958,7 +958,7 @@ describe('durable zone email connections', () => {
         'concurrent-two.example.com': [],
       };
       let provisionedDomain = '';
-      // Both lookups must identify the same provider zone for this locking regression.
+      // Decision: Both lookups have to find the same provider zone for this locking regression.
       stubCustomerCf({
         zones: {
           ...zones,
@@ -2009,7 +2009,6 @@ describe('durable zone email connections', () => {
       (await env.db.select().from(emailOperations).where(eq(emailOperations.id, removeB)))[0]
         ?.status,
     ).toBe('pending');
-    // Represent an operator-proven resolution of the earlier ambiguous write.
     await env.db
       .update(emailOperations)
       .set({ status: 'completed' })
@@ -3082,7 +3081,7 @@ describe('durable zone email connections', () => {
 });
 
 describe('outbound-only email domains', () => {
-  // Microsoft 365 / Google Workspace keep the apex MX; Platform only onboards Email Sending.
+  // Decision: Microsoft 365 and Google Workspace keep the apex MX. Platform only onboards Email Sending.
   const FOREIGN_MX = { 'outbound.example.com': ['brand-example.mail.protection.outlook.com'] };
   const INBOUND_TAGS = [
     'mxLookup',
@@ -3149,7 +3148,6 @@ describe('outbound-only email domains', () => {
       }),
     ).resolves.toBeNull();
 
-    // A sync keeps to the same two steps and skips the preview once the domain is onboarded.
     sendingSubdomains.push({ name: 'outbound.example.com', enabled: true });
     const sync = await requestEmailDomainSync(env.db, bindings(), added.routeId, actor);
     await runEmailOperation(env.db, bindings(), sync);
@@ -3157,7 +3155,7 @@ describe('outbound-only email domains', () => {
     expect(await stepKinds(sync)).toEqual(['sending_onboard', 'publish']);
     expect(callsByTag(stub.calls, 'sendingPreview')).toHaveLength(1);
 
-    // Removal never calls Email Routing or Workers, so a Sending-only token can finish it.
+    // Decision: Removal doesn't call Email Routing or Workers, so a token with only Sending access can finish it.
     const removal = await requestEmailDomainRemove(env.db, bindings(), added.routeId, actor);
     await runEmailOperation(env.db, bindings(), removal);
     expect((await getEmailOperation(env.db, project.id, removal))?.operation.status).toBe(
@@ -3375,8 +3373,6 @@ describe('shared mail domain ingress', () => {
     } as ApiEnv['Bindings'];
   }
 
-  // A shared-domain project with slug `acme`, alias `acme-mail` and one
-  // recipient row per name, each `ready` unless `statuses` says otherwise.
   async function aliasedProject(
     statuses: {
       slug?: 'ready' | 'pending' | 'blocked';

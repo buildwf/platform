@@ -6,8 +6,8 @@ const scripts: Record<string, string> = JSON.parse(
   readFileSync(join(import.meta.dirname, '../../../../package.json'), 'utf-8'),
 ).scripts;
 
-// The API's confirmation page posts back through the gateway, so the gateway
-// must relay that POST before the new API serves the page.
+// Decision: The API's confirmation page posts back through the gateway, so the gateway has to relay that
+// POST before the new API serves the page.
 describe('hosted deploy order', () => {
   it.each([
     ['deploy', 'deploy:email-gateway', 'deploy:api'],

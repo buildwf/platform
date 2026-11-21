@@ -102,8 +102,8 @@ function run(args: Array<string>, input?: string) {
         ...process.env,
         BWF_API_URL: origin,
         PLATFORM_OPERATOR_TOKEN: operatorToken,
-        // `vp run` forces color; combining it with NO_COLOR emits a Node warning
-        // on stderr and corrupts the JSON error response this fixture asserts.
+        // Decision: `vp run` forces color. Combined with NO_COLOR it writes a Node warning to stderr, which corrupts
+        // the JSON error response this fixture asserts.
         FORCE_COLOR: undefined,
         NO_COLOR: '1',
       },
@@ -138,7 +138,7 @@ test('built CLI configures the logging policy enforced by the actual AI proxy', 
   const { default: proxy } = (await import(/* @vite-ignore */ proxyUrl)) as {
     default: { fetch(request: Request, env: unknown): Promise<Response> };
   };
-  // Hosted Platform does not set the uncached auth-database flag.
+  // Decision: Hosted Platform doesn't set the uncached auth-database flag.
   const uncached = env.PLATFORM_AUTH_DATABASE_UNCACHED;
   delete env.PLATFORM_AUTH_DATABASE_UNCACHED;
   onTestFinished(() => {
@@ -155,7 +155,6 @@ test('built CLI configures the logging policy enforced by the actual AI proxy', 
   const saved = await run([...command, '--yes', '--json']);
   expect(saved.code, saved.stderr).toBe(0);
   expect(JSON.parse(saved.stdout)).toMatchObject({ mode: 'metadata' });
-  // The proxy reads only the published ROUTING value, which the API wrote.
   expect(await env.ROUTING.get(aiLoggingKey(project.id))).toBe('metadata');
 
   const ai = {
@@ -198,8 +197,6 @@ test('built CLI configures the logging policy enforced by the actual AI proxy', 
       extraHeaders: { 'cf-aig-collect-log-payload': 'false' },
     }),
   );
-  // A new policy applies without a deploy. Output wording and the KV cache time are
-  // unit tested (operator-cli, proxy).
   const changed = await run(['project', 'ai-logging', project.id, 'off', '--yes', '--json']);
   expect(changed.code, changed.stderr).toBe(0);
   expect((await proxy.fetch(request(), bindings)).status).toBe(200);

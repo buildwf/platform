@@ -132,7 +132,7 @@ export async function runAiSetupPrompt(
     const { createProjectWithSlugRetry } = await import('./cli/create-project.ts');
     let created;
     try {
-      // Share the slug-retry loop with deploy/link paths so server-side plan
+      // Decision: Share the slug-retry loop with deploy/link paths so server-side plan
       // rejections (e.g. free-plan short-slug 403) re-prompt consistently.
       // The prompt callback returns `undefined` on Ctrl+C so the helper can
       // exit cleanly instead of calling process.exit().
@@ -170,7 +170,6 @@ export async function runAiSetupPrompt(
   }
 
   writeProjectConfig(root, attachSelectedPlatform({ projectId, slug }, client.apiUrl));
-  // Restart the dev server so mergeBindings picks up fresh credentials
   await server.restart();
   printSuccess(`Linked to ${slug}.`);
 }

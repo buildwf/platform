@@ -1,7 +1,7 @@
 import type { SubcommandDef } from './subcommand-prompt.ts';
 
 const LOG_LEVELS = new Set(['error', 'warn', 'info', 'log', 'debug', 'all']);
-// A status class (`5xx`), an exact code in the 100-599 HTTP range (`500`), or
+// Decision: A status class (`5xx`), an exact code in the 100-599 HTTP range (`500`), or
 // `all`. Exact codes are range-bounded so a typo like `600` errors instead of
 // silently returning an empty result.
 const STATUS_FILTER = /^([1-5]xx|[1-5]\d{2}|all)$/;

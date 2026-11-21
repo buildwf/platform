@@ -4,8 +4,6 @@ import { clearProxyTokenStateCache } from '../../src/proxy-token.ts';
 
 const JWT_SECRET = 'test-secret-key';
 
-// --- HMAC helper ---
-
 function base64urlEncode(data: Uint8Array): string {
   let binary = '';
   for (const byte of data) {
@@ -27,13 +25,10 @@ async function signAiToken(projectId: string, secret: string): Promise<string> {
   return base64urlEncode(sig);
 }
 
-// --- Mock factories ---
-
 function createMockApi(resources: Record<string, string> = {}) {
   return {
     fetch: vi.fn(async (url: string, init?: RequestInit) => {
       const path = new URL(url).pathname;
-      // resolve-worker endpoint (no body)
       if (path.includes('/internal/resolve-worker/')) {
         return Response.json({ error: 'not found' }, { status: 404 });
       }
@@ -49,7 +44,6 @@ function createMockApi(resources: Record<string, string> = {}) {
   };
 }
 
-// DISPATCH mock that always throws (simulates no deployed worker — forces REST API fallback)
 function createMockDispatch() {
   return {
     get: vi.fn(() => {
@@ -78,8 +72,6 @@ function post(path: string, body: unknown): Request {
   });
 }
 
-// --- CF D1 API mock response ---
-
 function cfD1Response(results: Array<unknown>, meta?: Record<string, unknown>) {
   return Response.json({
     success: true,
@@ -90,8 +82,6 @@ function cfD1Response(results: Array<unknown>, meta?: Record<string, unknown>) {
 function asFetchMock(mock: unknown): typeof fetch {
   return mock as typeof fetch;
 }
-
-// --- Tests ---
 
 describe('D1 proxy endpoints', () => {
   let token: string;
@@ -236,7 +226,7 @@ describe('D1 proxy endpoints', () => {
     });
 
     it('returns 404 for unknown binding', async () => {
-      const env = createEnv({}); // no resources
+      const env = createEnv({});
       const res = await worker.fetch(
         post('/d1/query', {
           binding: 'MISSING',

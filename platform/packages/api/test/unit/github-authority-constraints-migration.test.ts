@@ -68,7 +68,6 @@ it('removes rows without authority and then enforces GitHub authority constraint
         ('b-no-repo', 'p-no-repo', 'owner', 'github_actions', 'starting'),
         ('b-collaborator', 'p-collaborator', 'collaborator', 'container', 'queued');
     `);
-    // The user delete above left this connection without an authorizer.
     expect(
       (
         await db.query(
@@ -127,8 +126,8 @@ it('removes rows without authority and then enforces GitHub authority constraint
   }
 }, 30_000);
 
-// 0.23.0 and 0.24.0 only create connections with an authorizer and repository id, and
-// deletes the connections a user authorized before deleting that user.
+// Decision: 0.23.0 and 0.24.0 only create connections with an authorizer and repository id, and delete the
+// connections a user authorized before deleting that user.
 it('allows upgrading the 0.23.0 and 0.24.0 schema to the GitHub authority constraints', () => {
   const compatibility = JSON.parse(readFileSync(resolve(root, 'compatibility.json'), 'utf8')) as {
     lineage: string;

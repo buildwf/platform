@@ -224,7 +224,7 @@ export async function platformAppAccess(context: Context<ApiEnv>): Promise<Respo
     return context.json({ error: 'Invalid app access setup.' }, 400);
   }
   try {
-    // A completed receipt is harmless to replay; initialization itself happens behind the traffic gate.
+    // Decision: A completed receipt is harmless to replay; initialization itself happens behind the traffic gate.
     const receipt = (await getPlatformSetting(context.get('db'), SETTING)) as SetupReceipt | null;
     if (
       !receipt?.complete &&
@@ -297,8 +297,8 @@ export async function platformAppAccessTurnOff(context: Context<ApiEnv>): Promis
       );
     }
     const configuration = await disablePlatformZeroTrust(context.env, db);
-    // First administrator setup does not wait for this route. Report a user
-    // who signed in meanwhile, so the uninstall stops instead of continuing.
+    // Decision: First administrator setup doesn't wait for this route. Report a user who signed in meanwhile, so
+    // the uninstall stops instead of continuing.
     const [signedIn] = await db.select({ id: users.id }).from(users).limit(1);
     return context.json({
       installationId: context.env.PLATFORM_INSTALLATION_ID,

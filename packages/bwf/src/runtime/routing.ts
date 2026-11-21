@@ -17,7 +17,7 @@ import { toUrlString } from './route-url.ts';
 import { ASSET_EXTENSIONS } from './routing-assets.ts';
 import { createAssetCachePolicy, intentionalNotFoundRequests } from './routing-worker.ts';
 import { isUnchangedStaticAsset, markStaticAsset } from './static-asset-marker.ts';
-// Generated routes take Hono from here. Importing it by file path instead gives a dev Worker a
+// Decision: Generated routes take Hono from here. Importing it by file path instead gives a dev Worker a
 // second copy beside the one this runtime imports, loaded as one request for each Hono file.
 export { Hono } from 'hono';
 export { matchedRoutes } from 'hono/route';
@@ -64,10 +64,10 @@ export function createRoutingRuntime(
 ): RoutingRuntime {
   const originalUrls = new WeakMap<Request, URL>();
   const fallbackHandled = new WeakSet<Request>();
-  // Outer requests a fallback answered. The fallback already applied the
+  // Decision: Outer requests a fallback answered. The fallback already applied the
   // destination's header rules, as edge routing and platform dispatch do.
   const fallbackServed = new WeakSet<Request>();
-  // Contexts whose inner header pass ran after next(). A handler that throws
+  // Decision: Contexts whose inner header pass ran after next(). A handler that throws
   // past it, such as notFound, leaves the context out.
   const headerApplied = new WeakSet<Context>();
   const explicitNotFound = new WeakSet<Context>();
@@ -88,7 +88,7 @@ export function createRoutingRuntime(
       return;
     }
     bodies.add(body);
-    // Middleware such as Hono's compress() replaces the body with a transform
+    // Decision: Middleware such as Hono's compress() replaces the body with a transform
     // of this stream. That still carries a miss; an unrelated replacement does not.
     if (Object.isExtensible(body)) {
       const pipeThrough = body.pipeThrough;
@@ -114,7 +114,7 @@ export function createRoutingRuntime(
     routeMisses.set(c, misses);
     trackMissBody(c, response.body);
     trackResponseCopies(c);
-    // Fetch's clone tees the body, so neither clone shares its former stream.
+    // Decision: Fetch's clone tees the body, so neither clone shares its former stream.
     if (Object.isExtensible(response)) {
       const clone = response.clone;
       Object.defineProperty(response, 'clone', {
@@ -143,7 +143,7 @@ export function createRoutingRuntime(
       return;
     }
     tracksResponseCopies.add(c);
-    // Carry provenance to the response Hono exposes after assignment or a header edit.
+    // Decision: Carry provenance to the response Hono exposes after assignment or a header edit.
     const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(c), 'res');
     if (descriptor?.get && descriptor.set) {
       const set = descriptor.set;
@@ -187,7 +187,7 @@ export function createRoutingRuntime(
   const dispatch = async (request: Request, c: Context, trace: string): Promise<Response> => {
     const response = annotate(await app.fetch(request, c.env, c.executionCtx), trace);
     if (authDependentRequests.has(request)) {
-      // The enclosing response may depend on auth even if middleware clones or replaces it.
+      // Decision: The enclosing response may depend on auth even if middleware clones or replaces it.
       authDependentRequests.add(c.req.raw);
     }
     if (trackAssetMisses && response.status === 404) {
@@ -268,7 +268,7 @@ export function createRoutingRuntime(
     if (trackAssetMisses) {
       intentionalNotFoundRequests.delete(c.req.raw);
       const notFound = c.notFound.bind(c);
-      // Hono calls its fallback directly when the router runs out of handlers.
+      // Decision: Hono calls its fallback directly when the router runs out of handlers.
       c.notFound = () => {
         explicitNotFound.add(c);
         try {
@@ -284,7 +284,7 @@ export function createRoutingRuntime(
         try {
           originalUrls.set(c.req.raw, new URL(original));
         } catch {
-          /* Ignore malformed dispatcher metadata. */
+          // Decision: Ignore malformed dispatcher metadata.
         }
       }
     }
@@ -365,7 +365,7 @@ export function createRoutingRuntime(
         try {
           c.res.headers.set('X-Platform-Routing', 'pass-through');
         } catch {
-          /* Headers may be immutable. */
+          // Decision: Headers may be immutable.
         }
       }
     },
@@ -408,7 +408,7 @@ export function createRoutingRuntime(
       if (!matched.length) {
         return;
       }
-      // The last match wins for each header name, Set-Cookie included.
+      // Decision: The last match wins for each header name, Set-Cookie included.
       const last = new Map<string, [string, string]>();
       for (const [name, value] of matched) {
         last.set(name.toLowerCase(), [name, value]);
@@ -421,7 +421,7 @@ export function createRoutingRuntime(
         ) {
           continue;
         }
-        // A Set-Cookie rule adds its cookie and keeps the response's own cookies.
+        // Decision: A Set-Cookie rule adds its cookie and keeps the response's own cookies.
         // After a rewrite the destination's pass may already have added it last.
         if (key === 'set-cookie' && c.res.headers.getSetCookie().at(-1) === value) {
           continue;
@@ -429,7 +429,7 @@ export function createRoutingRuntime(
         c.header(name, value, { append: key === 'set-cookie' });
       }
       if (asset) {
-        // A configured Cache-Control is the file's policy from here on, so auth
+        // Decision: A configured Cache-Control is the file's policy from here on, so auth
         // still treats the response as a static file and only makes it private.
         markStaticAsset(c, c.res);
       }

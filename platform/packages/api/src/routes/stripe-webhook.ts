@@ -41,7 +41,7 @@ export const stripeWebhookRoutes = new Hono<ApiEnv>().post('/', async (context) 
   const metadata = object.metadata ?? {};
   const db = context.get('db');
 
-  // A person of a connected application: its plan lives in app_people, not on an account.
+  // Decision: A person of a connected application: their plan lives in app_people, not on an account.
   if (metadata.clientId && metadata.personId) {
     const key = { client_id: metadata.clientId, person_id: metadata.personId };
     if (event.type === 'checkout.session.completed' && isPaidPlan(metadata.plan)) {

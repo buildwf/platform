@@ -1,8 +1,8 @@
 import { importPKCS8, SignJWT } from 'jose';
 import type { ApiEnv } from '../env.ts';
 
-// Cache the imported signing key per PKCS#8 PEM string — importPKCS8 is
-// expensive and the private key never changes per isolate.
+// Decision: Cache the imported signing key per PKCS#8 PEM string: importPKCS8 is expensive and the key doesn't
+// change within an isolate.
 const keyCache = new Map<string, CryptoKey>();
 
 async function getSigningKey(privateKeyPem: string): Promise<CryptoKey> {

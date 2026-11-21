@@ -61,7 +61,7 @@ export function readCloudflareLink(root: string): CloudflareLink | null {
       };
     }
   } catch {
-    /* Invalid state must never turn into an ordinary provisioning deploy. */
+    // Decision: Invalid state mustn't turn into an ordinary provisioning deploy.
   }
   throw new Error(
     'The saved Cloudflare link is invalid. Restore .bwf/cloudflare-link.json before retrying.',
@@ -147,8 +147,8 @@ export async function prepareExistingCloudflareDeploy(options: {
     workerName: config.name,
   });
   const patch: Record<string, unknown> = { account_id: options.accountId, keep_vars: true };
-  // Native deploys may add version metadata only to their generated artifact.
-  // Reuse the inspected binding when omitted; authored replacements still fail validation.
+  // Decision: Native deploys may add version metadata only to their generated artifact.
+  // Reuse the inspected binding when it's omitted; authored replacements still fail validation.
   const metadataBindings = existing.bindings.filter(
     (binding) => binding.type === 'version_metadata',
   );
@@ -173,7 +173,7 @@ export async function prepareExistingCloudflareDeploy(options: {
       modify(updated, [key], value, { formattingOptions: { insertSpaces: true, tabSize: 2 } }),
     );
   }
-  // Save the guard before the destination so a retry cannot enter provisioning unguarded.
+  // Decision: Save the guard before the destination so a retry can't enter provisioning unguarded.
   saveCloudflareLink(options.root, {
     ...(pending ?? {}),
     accountId: options.accountId,

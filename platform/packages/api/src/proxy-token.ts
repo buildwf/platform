@@ -94,8 +94,6 @@ export function isAcceptedGeneration(state: ProxyTokenState, gen: number): boole
   return gen >= state.gen;
 }
 
-// --- Keys ---
-
 const encoder = new TextEncoder();
 
 const legacyKeys = new Map<string, Promise<CryptoKey>>();
@@ -136,17 +134,17 @@ async function hkdfHmacKey(secret: string, salt: string, info: string): Promise<
   return crypto.subtle.deriveKey(
     { name: 'HKDF', hash: 'SHA-256', salt: encoder.encode(salt), info: encoder.encode(info) },
     base,
-    // Without `length`, WebCrypto derives a 64-byte (block size) HMAC key.
+    // Decision: Without `length`, WebCrypto derives a 64-byte (block size) HMAC key.
     { name: 'HMAC', hash: 'SHA-256', length: 256 },
     false,
     ['sign', 'verify'],
   );
 }
 
-// JWT_SECRET signs login JWTs, OAuth/link state and the legacy token as a raw
-// HMAC key. The keys below are HKDF outputs with their own salt and info,
-// so they differ from that raw key and from each other: a tenant token never
-// verifies as a proxy internal value, and neither verifies as any raw-key MAC.
+// Decision: JWT_SECRET signs login JWTs, OAuth/link state and the legacy token as a raw HMAC key. The keys
+// below are HKDF outputs with their own salt and info, so they differ from that raw key and from each
+// other: a tenant token doesn't verify as a proxy internal value, and neither verifies as a raw-key
+// MAC.
 function proxyTokenKey(secret: string): Promise<CryptoKey> {
   return cachedKey(proxyTokenKeys, secret, () =>
     hkdfHmacKey(secret, 'void-proxy-token', 'proxy-token'),
@@ -162,8 +160,6 @@ function proxyInternalKey(secret: string): Promise<CryptoKey> {
 function aiUsageKey(secret: string): Promise<CryptoKey> {
   return cachedKey(aiUsageKeys, secret, () => hkdfHmacKey(secret, 'void-ai-usage', 'ai-usage'));
 }
-
-// --- Encoding ---
 
 const MAC = /^[A-Za-z0-9_-]{43}$/;
 const GENERATION_TOKEN = /^([1-9][0-9]{0,15})\.([A-Za-z0-9_-]{43})$/;
@@ -193,8 +189,6 @@ async function verify(key: Promise<CryptoKey>, message: string, mac: string): Pr
 function proxyTokenMessage(projectId: string, gen: number): string {
   return `void-proxy-token:${projectId}:${gen}`;
 }
-
-// --- Tenant tokens ---
 
 /** Generation 0 is the legacy token. */
 export async function deriveProxyToken(
@@ -287,8 +281,6 @@ export async function verifyProxyToken(
   return true;
 }
 
-// --- Isolate cache ---
-
 export type ProxyTokenStateCache = Readonly<{
   read(routing: Pick<KVNamespace, 'get'>, projectId: string): Promise<ProxyTokenState>;
   clear(): void;
@@ -332,8 +324,6 @@ export function createProxyTokenStateCache(
   };
 }
 
-// --- Proxy-to-API metadata auth ---
-
 /** Header the proxy uses to authenticate itself to the API metadata routes. */
 export const PROXY_INTERNAL_AUTH_HEADER = 'x-platform-proxy-internal';
 
@@ -371,8 +361,6 @@ export async function verifyProxyInternalAuth(
   }
   return verify(proxyInternalKey(jwtSecret), proxyInternalMessage(route, projectId), value);
 }
-
-// --- AI usage tag ---
 
 /**
  * The project value the proxy writes into AI Gateway metadata and the usage

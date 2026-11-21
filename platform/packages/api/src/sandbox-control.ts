@@ -70,9 +70,9 @@ export class SandboxControl extends WorkerEntrypoint<
     if (!checkpoint || checkpoint.state !== 'complete' || checkpoint.admission_protocol < 3) {
       return { ok: false, reason: 'unavailable' };
     }
-    // One database snapshot resolves authority; routing KV is not an ownership
-    // or plan cache. Fresh cutover candidates may run under their
-    // deployment fence, but failed, abandoned and retained deployments cannot.
+    // Decision: One database snapshot decides authority; routing KV isn't an ownership or plan cache. Fresh
+    // cutover candidates may run under their deployment fence, but failed, abandoned and retained
+    // deployments can't.
     const [authority] = await db
       .select({
         project: projects,
@@ -171,9 +171,9 @@ export class SandboxControl extends WorkerEntrypoint<
     if (!identity || !validIdentifier(instance) || !validIdentifier(generation)) {
       throw new Error('Invalid Sandbox controller identity.');
     }
-    // Teardown must remain available after deletion, suspension, ownership
-    // transfer or DB outage. Props address only this controller's original
-    // account and generation; it cannot free another controller's capacity.
+    // Decision: Teardown has to stay available after deletion, suspension, ownership transfer or a DB outage.
+    // The props address only this controller's original account and generation, so it can't free
+    // another controller's capacity.
     await this.counter(identity).stopped(this.instanceId(identity, instance), generation);
   }
 }

@@ -1,5 +1,3 @@
-/** Lease a customer API token from the platform for a custom-domain send. */
-
 import { hmacSign } from './hmac.ts';
 import type { Env } from './types.ts';
 
@@ -8,7 +6,6 @@ export type EmailDomainLease = { kind: 'api_token'; token: string; accountId: st
 const LEASE_DEADLINE_MS = 5_000;
 const MAX_LEASE_RESPONSE_BYTES = 4 * 1024;
 
-/** The bearer value for the send_raw Authorization header. */
 export function leaseBearer(lease: EmailDomainLease): string {
   return lease.token;
 }
@@ -117,7 +114,7 @@ export async function leaseEmailDomainCredential(
     try {
       reader.releaseLock();
     } catch {
-      // A timed-out read may still be settling after cancellation.
+      // Decision: A timed-out read may still be settling after cancellation.
     }
   }
 }

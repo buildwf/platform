@@ -58,7 +58,7 @@ export async function chooseCloudflareQueueNames(input: {
     return { consumers: data.consumers as Array<string | null> };
   };
 
-  // Names come from unsanitized file paths. Report every invalid one before any lookup.
+  // Decision: Names come from unsanitized file paths. Report all invalid ones before any lookup.
   const invalid = Object.keys(desired.queueNames)
     .filter((queueName) => !isValidQueueName(queueName))
     .map((queueName) => `  • ${queueName} (queue)`);
@@ -78,8 +78,8 @@ export async function chooseCloudflareQueueNames(input: {
     };
   }
 
-  // `queues/jobs.ts` and `queues/app-jobs.ts` in Worker `app` would both claim the Cloudflare
-  // queue `app-jobs`, and nothing says which one an existing `app-jobs` belongs to.
+  // Decision: `queues/jobs.ts` and `queues/app-jobs.ts` in Worker `app` would both claim the Cloudflare queue
+  // `app-jobs`, and nothing says which one an existing `app-jobs` belongs to.
   const queueNames = desired.queueNames;
   const clashes = Object.keys(queueNames)
     .filter((queueName) => Object.hasOwn(queueNames, queueNames[queueName]!))
@@ -107,7 +107,7 @@ export async function chooseCloudflareQueueNames(input: {
   for (const queueName of Object.keys(desired.queueNames)) {
     const scopedName = desired.queueNames[queueName]!;
     const scoped = isValidQueueName(scopedName) ? await lookup(scopedName) : null;
-    // A queue this Worker consumed before queues were named after the Worker keeps its name.
+    // Decision: A queue this Worker consumed before queues were named after the Worker keeps its name.
     const plain = scoped?.consumers.includes(workerName) ? undefined : await lookup(queueName);
     const choice = chooseCloudflareQueueName({ workerName, queueName, scopedName, scoped, plain });
     names[queueName] = choice.name;

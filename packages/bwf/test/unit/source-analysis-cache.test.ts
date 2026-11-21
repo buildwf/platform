@@ -19,7 +19,7 @@ describe('deriveFromSource', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  /** Move the clock past the window in which a file's stat is not trusted. */
+  // Decision: Move the clock past the window in which a file's stat isn't trusted.
   function settle(): void {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(Date.now() + 60_000);

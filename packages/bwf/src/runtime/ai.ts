@@ -11,7 +11,7 @@ import { UsageLimit, limitFromResponse } from './limits.ts';
 
 const PLATFORM_FILE_MARKER = '__platformFile';
 
-// Per-provider auth header/prefix for the self-host direct gateway path. The
+// Decision: Per-provider auth header/prefix for the self-host direct gateway path. The
 // gateway passes provider auth through unchanged, so each entry mirrors the
 // provider's documented native auth convention. Providers NOT listed here fall
 // back to `Authorization: Bearer <key>` (correct for openai, groq, mistral,
@@ -308,20 +308,20 @@ function toDirectBody(body: unknown): { body: BodyInit | undefined; contentType?
 function resolveBackend(): AiBackend {
   const runtimeEnv = getRawRuntimeEnv();
 
-  // Priority 1: Service binding (production via bwf)
+  // Decision: Priority 1: service binding to the bwf proxy (production deploys through bwf).
   const proxy = runtimeEnv.__PLATFORM_PROXY as Fetcher | undefined;
   if (proxy) {
     return makeServiceBindingBackend(proxy, runtimeEnv);
   }
 
-  // Priority 2: HTTPS to our proxy (local dev with bwf auth)
+  // Decision: Priority 2: HTTPS to the bwf proxy (local dev signed in to bwf).
   const token = runtimeEnv.__PLATFORM_TOKEN;
   const projectId = runtimeEnv.__PLATFORM_PROJECT_ID;
   if (typeof token === 'string' && typeof projectId === 'string') {
     return makeHttpBackend(token, projectId, runtimeEnv);
   }
 
-  // Priority 3: Direct AI binding (user's own CF account). bwf's generated
+  // Decision: Priority 3: Direct AI binding (user's own CF account). bwf's generated
   // wrangler config stamps custom binding names into a private runtime var;
   // default and managed deployments continue to use `AI`.
   const aiBindingName =
@@ -380,7 +380,7 @@ function makeProxyBackend(send: ProxySend, runtimeEnv: RuntimeEnv): AiBackend {
   ): Promise<Response> {
     let signal: AbortSignal | undefined;
     if (typeof payload.options === 'object' && payload.options !== null) {
-      // AbortSignal is request-local state, not a serializable binding option.
+      // Decision: AbortSignal is request-local state, not a serializable binding option.
       const { signal: bindingSignal, ...wireOptions } = payload.options as AiOptions;
       signal = bindingSignal;
       payload = { ...payload, options: wireOptions };
@@ -470,7 +470,7 @@ function makeDirectBackend(
   runtimeEnv: RuntimeEnv,
   gatewayId: string | undefined,
 ): AiBackend {
-  // The binding normally throws an Error containing only a message. Inspect the
+  // Decision: The binding normally throws an Error containing only a message. Inspect the
   // raw response before its parser discards status and Retry-After metadata.
   // https://github.com/cloudflare/workerd/blob/main/src/cloudflare/internal/ai-api.ts
   const run = async (model: string, inputs: unknown, options?: unknown): Promise<unknown> => {

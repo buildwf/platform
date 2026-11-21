@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const shared = vi.hoisted(() => ({ dbPath: '' }));
 
-// Mock the SQLite layer directly (no `importActual`) so the test never loads
-// better-sqlite3's native binding — it feeds the export path a canned schema.
+// Decision: Mock the SQLite layer directly (no `importActual`) so the test doesn't load better-sqlite3's
+// native binding.
 vi.mock('../../src/migrations/runner', () => {
   const fakeDb = {
     prepare(sql: string) {

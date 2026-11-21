@@ -51,11 +51,10 @@ describe('sendErrorAlertEmail', () => {
 
   it('recommends the request-level command first, then logs, both sized to the window', async () => {
     const { binding, sent } = mockBinding();
-    // 1h window, sent at the last error => ceil(1)+1 = 2h suggested range.
     await sendErrorAlertEmail(binding, 'u@example.com', 'recappi', 1252, { start, end }, end);
 
-    // `requests` is the only view that can show edge-generated / static 5xx,
-    // which never reach a worker and so never produce log rows.
+    // Decision: `requests` is the only view that shows edge-generated or static 5xx. Those never reach a worker,
+    // so they leave no log rows.
     expect(sent[0].text).toContain('bwf project requests --status 5xx --range 2h');
     expect(sent[0].html).toContain('bwf project requests --status 5xx --range 2h');
     expect(sent[0].text).toContain('bwf project logs --level error --range 2h');
@@ -64,8 +63,8 @@ describe('sendErrorAlertEmail', () => {
 
   it('anchors the suggested range at send time, not at the last error', async () => {
     const { binding, sent } = mockBinding();
-    // A point burst at 10:00 whose delivery kept failing until 12:01. A range
-    // derived from the window alone would be 1h and would exclude the errors.
+    // Decision: A burst at 10:00 whose delivery kept failing until 12:01. A range taken from the window alone
+    // would be 1h and miss the errors.
     const burst = Date.parse('2026-07-23T10:00:00Z');
     const sentAt = Date.parse('2026-07-23T12:01:00Z');
     await sendErrorAlertEmail(
@@ -79,14 +78,13 @@ describe('sendErrorAlertEmail', () => {
 
     expect(sent[0].text).toContain('--range 4h');
     expect(sent[0].text).not.toContain('--range 1h');
-    // The window itself is still reported honestly.
     expect(sent[0].text).toContain('2026-07-23 10:00 UTC');
   });
 
   it('caps the suggested range at the CLI 7-day limit for old windows', async () => {
     const { binding, sent } = mockBinding();
     const oldStart = Date.parse('2026-07-01T00:00:00Z');
-    const recentEnd = Date.parse('2026-07-16T00:00:00Z'); // 15 days
+    const recentEnd = Date.parse('2026-07-16T00:00:00Z');
     await sendErrorAlertEmail(
       binding,
       'u@example.com',
@@ -202,7 +200,6 @@ describe('platform email identity', () => {
     { ...identity, AUTH_REDIRECT_URI: 'https://user:pass@api.example.com/auth/callback' },
     { ...identity, EMAIL_FROM: 'user@example.com\r\nBcc: attacker@example.com' },
     { ...identity, DASHBOARD_URL: 'javascript:alert(1)' },
-    // A source deployment on a custom API must not inherit the hosted sender either.
     { ...identity, PLATFORM_INSTALLATION_ID: undefined, EMAIL_FROM: undefined },
   ])('rejects unsafe or incomplete email configuration before sending: %j', async (config) => {
     const { binding, sent } = mockBinding();

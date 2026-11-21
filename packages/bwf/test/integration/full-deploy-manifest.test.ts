@@ -73,7 +73,7 @@ type Captured = {
   } | null;
 };
 
-// Every asset is reported as present, so the deploy skips uploads and goes straight to finalize.
+// Decision: Every asset is reported as present, so the deploy skips uploads and goes straight to finalize.
 function installPlatformMocks(role: ProjectRole = 'owner'): Captured {
   const captured: Captured = { finalizeBody: null };
 
@@ -179,7 +179,7 @@ describe('managed deployment manifests (built Worker)', () => {
 
     savedToken = process.env.BWF_TOKEN;
     savedProject = process.env.BWF_PROJECT;
-    // Explicit token bypasses getToken() + the GitHub-Actions OIDC branch.
+    // Decision: Explicit token bypasses getToken() + the GitHub-Actions OIDC branch.
     process.env.BWF_TOKEN = 'test-token-do-not-use';
     vi.stubEnv('BWF_API_URL', 'https://platform.example.test');
     vi.stubEnv('PLATFORM_REGISTRY_DIR', join(fixture, 'registry'));
@@ -192,7 +192,7 @@ describe('managed deployment manifests (built Worker)', () => {
       kind: 'connected',
       proxyUrl: 'https://proxy.example.test',
     });
-    // Select the saved project; runDeploy verifies its current role through the API.
+    // Decision: Select the saved project; runDeploy verifies its current role through the API.
     delete process.env.BWF_PROJECT;
   });
 
@@ -287,7 +287,7 @@ describe('managed deployment manifests (built Worker)', () => {
         body: typeof init?.body === 'string' ? init.body : '',
       }));
       expect(calls.every(({ url }) => url.startsWith('https://platform.example.test/'))).toBe(true);
-      // Project IDs travel in the RPC input, so check the bodies for the saved one.
+      // Decision: Project IDs travel in the RPC input, so check the bodies for the saved one.
       expect(calls.some(({ body }) => body.includes('project-on-original-platform'))).toBe(false);
       const finalize = calls.find(({ url }) => url.endsWith('/rpc/deploy.finalize'));
       expect(JSON.parse(finalize?.body ?? '{}').projectId).toBe('proj_named_layouts_test');
@@ -299,7 +299,7 @@ describe('managed deployment manifests (built Worker)', () => {
   it('rejects a saved reader project before building or uploading', async () => {
     const captured = installPlatformMocks('reader');
 
-    // Do not skip the build: access must be checked before a build path is selected,
+    // Decision: Do not skip the build: access must be checked before a build path is selected,
     // regardless of the fixture's existing artifacts.
     await expect(runDeploy(fixture)).rejects.toThrow(
       'You have reader access to "named-layouts-test" and cannot deploy.',

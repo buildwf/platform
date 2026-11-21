@@ -28,7 +28,7 @@ export async function loadEnvPublic(): Promise<EnvPublicModule> {
   return mod;
 }
 
-// Files we don't bother parsing — the AST walker would either fail or have
+// Decision: Files we don't bother parsing — the AST walker would either fail or have
 // nothing relevant to find. Anything else with a `@builtbyfriends/bwf/env` import is fair
 // game.
 const SKIP_EXT =
@@ -78,7 +78,6 @@ export function extractEnvBindings(program: AstProgram): ImportBindings | null {
     found = true;
     for (const spec of (node as AstImportDeclaration).specifiers ?? []) {
       if (spec.type === 'ImportSpecifier') {
-        // import { env } or import { env as e }
         const importedName = (spec as AstImportSpecifier).imported;
         if (!isIdentifier(importedName)) {
           continue;
@@ -87,7 +86,6 @@ export function extractEnvBindings(program: AstProgram): ImportBindings | null {
           direct.add((spec as AstImportSpecifier).local.name);
         }
       } else if (spec.type === 'ImportNamespaceSpecifier') {
-        // import * as bwfEnv
         namespace.add((spec as AstImportNamespaceSpecifier).local.name);
       }
     }
@@ -107,7 +105,7 @@ type OffsetIndex = {
 function buildOffsetIndex(code: string): OffsetIndex {
   const lineStarts: Array<number> = [0];
   for (let i = 0; i < code.length; i++) {
-    if (code.charCodeAt(i) === 10 /* \n */) {
+    if (code.charCodeAt(i) === 10 /* Decision: 10 is the character code of a newline. */) {
       lineStarts.push(i + 1);
     }
   }
@@ -115,7 +113,6 @@ function buildOffsetIndex(code: string): OffsetIndex {
 }
 
 function offsetToLineCol(index: OffsetIndex, offset: number): { line: number; column: number } {
-  // Binary search for the largest lineStarts[i] <= offset.
   const lineStarts = index.lineStarts;
   let lowerBound = 0;
   let upperBound = lineStarts.length - 1;
@@ -151,7 +148,6 @@ export function walkEnvReads(
         return false;
       }
 
-      // Case 1: direct env.X — node.object is an Identifier in directNames.
       if (isIdentifier(current.object) && bindings.directNames.has(current.object.name)) {
         references.push({
           node: current,
@@ -161,8 +157,6 @@ export function walkEnvReads(
         return true;
       }
 
-      // Case 2: namespace.env.X — node.object is itself a MemberExpression
-      // matching <namespaceName>.env.
       const obj = current.object;
       if (
         isMemberExpression(obj) &&
@@ -182,7 +176,7 @@ export function walkEnvReads(
       return false;
     },
   });
-  // Resolve after the walk so later declarations and hoisted bindings are known.
+  // Decision: Resolve after the walk so later declarations and hoisted bindings are known.
   for (const { node, name, bindingType } of references) {
     if (resolve(node, name)?.type === bindingType) {
       visit(node);
@@ -232,21 +226,19 @@ function recordHit(node: AstMemberExpression, hits: Array<Hit>): void {
 export function envClientGuardPlugin(root: string): Plugin {
   return {
     name: 'platform:env-client-guard',
-    // Run after other transforms so the `code` we get is plain JS we can parse.
+    // Decision: Run after other transforms so the `code` we get is plain JS we can parse.
     enforce: 'post',
     async transform(code, id) {
-      // Only run on the client environment. SSR, worker, RSC etc. legitimately
+      // Decision: Only run on the client environment. SSR, worker, RSC etc. legitimately
       // read server keys via the same `@builtbyfriends/bwf/env` import.
       if (this.environment?.name !== 'client') {
         return;
       }
 
-      // Bail out cheaply before the schema load.
       if (!isBwfEnvScriptCandidate(id, code)) {
         return;
       }
 
-      // No env.ts in the project → nothing to enforce against.
       const { _hasRegisteredSchema, _getRegisteredSchema } = await loadEnvPublic();
       if (!_hasRegisteredSchema()) {
         return;
@@ -260,7 +252,7 @@ export function envClientGuardPlugin(root: string): Plugin {
       try {
         parsed = parseSync(id, code);
       } catch {
-        // If the file doesn't parse with the rolldown parser, leave it alone
+        // Decision: If the file doesn't parse with the rolldown parser, leave it alone
         // — Vite's own pipeline will surface the syntax error.
         return;
       }
@@ -294,7 +286,7 @@ export function envClientGuardPlugin(root: string): Plugin {
         }
 
         const key = hit.property!;
-        // Unknown to the schema? Could be a CF binding or a typo — neither
+        // Decision: Unknown to the schema? Could be a CF binding or a typo — neither
         // is the guard's concern. The runtime proxy still catches misuse.
         if (!(key in schema)) {
           continue;

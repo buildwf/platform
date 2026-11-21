@@ -5,10 +5,8 @@ import { prerender } from 'react-dom/static';
 import { adminComponents, adminLayoutTree } from '../../src/admin/react/pages.ts';
 import { PageView, SpaContext, type PageObject } from '../../src/admin/react/spa.tsx';
 
-/**
- * Reads a response and, for an admin SPA shell, appends the markup the browser renders from the
- * embedded page object, so tests can keep asserting on what the admin sees.
- */
+// Decision: For an admin SPA shell, append the markup the browser renders from the embedded page object, so
+// tests can assert on what the admin sees.
 export async function adminHtml(response: Response): Promise<string> {
   const html = await response.text();
   const match = html.match(
@@ -25,6 +23,6 @@ export async function adminHtml(response: Response): Promise<string> {
       </Suspense>
     </SpaContext>,
   );
-  // `<div id="app">` marks where the rendered page starts, as the old server-rendered shell did.
+  // Decision: `<div id="app">` marks where the rendered page starts; tests rely on it.
   return `${html}<div id="app">${await new Response(prelude).text()}</div>`;
 }

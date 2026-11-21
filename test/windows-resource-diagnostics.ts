@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-/** Best-effort, once-per-file diagnostics: never replace the original test failure. */
+// Decision: Best effort and once per file: it mustn't replace the original test failure.
 export function createWindowsResourceReporter(): () => Promise<void> {
   let snapshot: Promise<void> | undefined;
   return () => {

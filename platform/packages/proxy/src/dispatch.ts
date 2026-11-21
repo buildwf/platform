@@ -109,9 +109,8 @@ export async function dispatchToWorker(
   }
 
   try {
-    // Sent exactly once. The Worker's own middleware runs before its
-    // `/__platform/*` handler checks the token, so a rejected request is not free
-    // to replay.
+    // Decision: Sent once. The Worker's own middleware runs before its /__platform/* handler checks the token,
+    // so a rejected request isn't free to replay.
     const res = await worker.fetch(`https://worker/__platform${path}`, {
       method: 'POST',
       headers: {
@@ -121,15 +120,14 @@ export async function dispatchToWorker(
       body: JSON.stringify(body),
     });
 
-    // 404 means old deploy without /__platform handler → fall back
     if (res.status === 404) {
       return null;
     }
 
     return res;
   } catch {
-    // A write may already have committed before a response/transport failure.
-    // Only explicitly read-only callers may replay through a REST fallback.
+    // Decision: A write may already have committed before a response or transport failure, so only read-only
+    // callers may replay through a REST fallback.
     return options.fallbackOnDispatchError
       ? null
       : Response.json(

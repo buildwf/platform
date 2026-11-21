@@ -1,4 +1,4 @@
-// The bwf CLI. cli.ts checks the runtime and then loads this module.
+// Decision: The bwf CLI. cli.ts checks the runtime and then loads this module.
 
 import { log } from '@voidzero-dev/vite-plus-prompts';
 import { accountSubcommands, parseAccountArgs } from './account-args.ts';
@@ -272,7 +272,6 @@ if (helpPath) {
   log.error(`cli: Unknown command '${command}'. Run \`bwf --help\` for usage.`);
   process.exit(1);
 } else if (!command && process.stdin.isTTY) {
-  // Interactive top-level prompt
   const topLevelCommands: Array<SubcommandDef> = [
     {
       name: 'init',

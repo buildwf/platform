@@ -90,14 +90,11 @@ export function inspectPackage(tarball) {
   };
 }
 
-/**
- * Names this repository releases, so they must come from the packed cohort.
- * The @builtbyfriends/realtime packages are released from their own
- * repository and come from npm like any other dependency. `bwf` is listed
- * because the unscoped name on npm belongs to someone else: a request for it
- * means something installs the CLI by its bin name instead of
- * @builtbyfriends/bwf.
- */
+// Decision: Names this repository releases, so they have to come from the packed cohort.
+// The @builtbyfriends/realtime packages are released from their own repository and come from npm
+// like any other dependency. `bwf` is listed because the unscoped name on npm belongs to someone
+// else: a request for it means something installs the CLI by its bin name instead of
+// @builtbyfriends/bwf.
 export function isReleaseCohortName(name) {
   const base = name
     .split('/')
@@ -113,7 +110,6 @@ export function isReleaseCohortName(name) {
   );
 }
 
-/** Read-only loopback registry: local release cohort plus public npm dependencies. */
 export async function startPackedRegistry(packages) {
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
   const byFile = new Map(packages.map((pkg, index) => [`/_platform_tarball/${index}.tgz`, pkg]));
@@ -151,15 +147,15 @@ export async function startPackedRegistry(packages) {
         return;
       }
       if (isReleaseCohortName(name)) {
-        // Never let missing local versions silently resolve to a registry release.
+        // Decision: Don't let a missing local version quietly resolve to a registry release.
         response.writeHead(404).end('Package is outside the packed release cohort.');
         return;
       }
       const upstream = new URL('https://registry.npmjs.org');
       upstream.pathname = url.pathname;
       upstream.search = url.search;
-      // Install clients need compact package metadata, not decades of full
-      // registry history. Cache a bounded snapshot across independent fixtures.
+      // Decision: Install clients need compact package metadata, not the full registry history.
+      // Cache a bounded snapshot across independent fixtures.
       const accept = request.headers.accept ?? 'application/vnd.npm.install-v1+json';
       const key = `${accept}\n${upstream.href}`;
       let result = metadata.get(key);

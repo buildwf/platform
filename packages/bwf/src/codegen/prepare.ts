@@ -82,7 +82,7 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
     removeGeneratedFile(outDir, 'routes.d.ts', removed);
   }
 
-  // .bwf/tsconfig.json lists queues.d.ts whenever the queues directory exists,
+  // Decision: .bwf/tsconfig.json lists queues.d.ts whenever the queues directory exists,
   // so write it then, even with no queue files.
   if (existsSync(paths.queuesDir)) {
     const dts = generateQueueTypes(scan.queues, paths.queuesDir, outDir);
@@ -91,7 +91,7 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
     removeGeneratedFile(outDir, 'queues.d.ts', removed);
   }
 
-  // .bwf/tsconfig.json lists procedures.d.ts whenever the procedures directory exists.
+  // Decision: .bwf/tsconfig.json lists procedures.d.ts whenever the procedures directory exists.
   if (existsSync(paths.proceduresDir)) {
     const dts = generateProcedureTypes(scan.procedures ?? [], paths.proceduresDir, outDir);
     writeGeneratedFile(outDir, 'procedures.d.ts', dts, written);
@@ -100,7 +100,7 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
   }
 
   const schema = discoverSchema(root, paths);
-  // Matches the Vite plugin, which serves its own `@builtbyfriends/bwf/db` for `database.casing`.
+  // Decision: Matches the Vite plugin, which serves its own `@builtbyfriends/bwf/db` for `database.casing`.
   const hasDbRuntime = schema != null || authEnabled || getDatabaseCasing(config) !== undefined;
   if (hasDbRuntime) {
     if (generateDbDts(outDir, schema, dialect)) {
@@ -110,7 +110,7 @@ export async function prepareProject(root: string): Promise<PrepareProjectResult
     removeGeneratedFile(outDir, 'db.d.ts', removed);
   }
 
-  // Vite follows the project's tsconfig extends chain when loading auth.ts.
+  // Decision: Vite follows the project's tsconfig extends chain when loading auth.ts.
   if (ensureProjectTsconfig(root, hasRouteTypes, hasDbRuntime, schema != null, { paths })) {
     written.push(join('.bwf', 'tsconfig.json'));
   }

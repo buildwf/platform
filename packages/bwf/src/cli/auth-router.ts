@@ -29,7 +29,7 @@ async function chooseDestination(
       label: connection.displayName,
       hint: connection.apiUrl,
     })),
-    // With no saved connection, a bwf platform has no origin to sign in to yet.
+    // Decision: With no saved connection, a bwf platform has no origin to sign in to yet.
     ...(connections.length === 0
       ? [
           {
@@ -69,10 +69,9 @@ export async function runAuthRouter(
     await runAccountCommand(root, { subcommand });
     return;
   }
-  // Account commands resolve their origin through BWF_API_URL. Scope a
-  // prompt-selected origin to this invocation without changing the project.
-  // BWF_TOKEN stays bound to the original BWF_API_URL: the prompt must never
-  // choose its recipient, so another origin falls back to its saved login.
+  // Decision: Account commands resolve their origin through BWF_API_URL. Scope a prompt-selected origin to this
+  // invocation without changing the project. BWF_TOKEN stays bound to the original BWF_API_URL: the
+  // prompt mustn't choose its recipient, so another origin falls back to its saved login.
   const previous = { BWF_API_URL: process.env.BWF_API_URL, BWF_TOKEN: process.env.BWF_TOKEN };
   const tokenBound = Boolean(
     previous.BWF_TOKEN &&

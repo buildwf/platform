@@ -76,7 +76,6 @@ describe('ZeroTrustCloudflareClient', () => {
       aud: 'health-audience',
       domain: healthDestination,
       destinations: [{ type: 'public', uri: healthDestination }],
-      // Installer defaults need not match project Access session/IdP settings.
       session_duration: '24h',
       policies: bypassPolicy('Platform health check'),
     };
@@ -180,7 +179,7 @@ describe('ZeroTrustCloudflareClient', () => {
 
   it('calls the global fetch without binding it to the client by default', async () => {
     const requests: Array<string> = [];
-    // Workers rejects a host fetch invoked with any receiver other than the global object.
+    // Decision: Workers rejects a host fetch called with any receiver other than the global object.
     vi.stubGlobal('fetch', function (this: unknown, input: string | URL | Request) {
       if (this !== undefined && this !== globalThis) {
         throw new TypeError('Illegal invocation: function called with incorrect `this` reference.');
@@ -577,7 +576,6 @@ describe('ZeroTrustCloudflareClient', () => {
         const created = await client.ensureApplication(spec);
         const recorded = applications.get(created.id)!;
         applications.delete(created.id);
-        // Platform recreated the application, but the create response was lost.
         applications.set('replacement-app', {
           ...recorded,
           id: 'replacement-app',

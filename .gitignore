@@ -8,7 +8,8 @@ dist
 .cloudflare
 .bwf-wrangler.jsonc
 .env
-.claude
+.claude/*
+!.claude/skills/
 plan.md
 TODOs.md
 .dev.vars

@@ -75,10 +75,6 @@ export function createEmailTestHarness(): EmailTestHarness {
 
 export type { CapturedMessage } from './dev-inbox.ts';
 
-// ---------------------------------------------------------------------------
-// Inbound test harness
-// ---------------------------------------------------------------------------
-
 export interface InboundDeliverOptions {
   from: string;
   to: string;
@@ -169,7 +165,7 @@ function compileRoutes(routes: Record<string, EmailHandler>): {
     }
     compiled.push({ address: key, pattern, handler });
   }
-  // The scanner's own comparator (`router/email.ts`), so the harness cannot
+  // Decision: The scanner's own comparator (`router/email.ts`), so the harness cannot
   // drift from the order the generated dispatcher tries patterns in.
   compiled.sort(compareEmailRoutes);
   return { compiled, defaultHandler };
@@ -179,7 +175,7 @@ async function buildSyntheticRaw(opts: InboundDeliverOptions): Promise<Uint8Arra
   if (opts.raw !== undefined) {
     return typeof opts.raw === 'string' ? new TextEncoder().encode(opts.raw) : opts.raw;
   }
-  // Default: a minimal text/plain message so handlers calling parseEmail()
+  // Decision: Default: a minimal text/plain message so handlers calling parseEmail()
   // see the expected from/to/subject/body. normalizeEmail requires either
   // text or html — synthesize a placeholder body when neither is supplied.
   const text = opts.text ?? (opts.html ? undefined : '(empty)');
@@ -218,7 +214,6 @@ function parseHeaderBlock(raw: Uint8Array, maxDistinct: number): Headers {
       try {
         known = headers.has(name);
       } catch {
-        // Not a name a Headers object accepts — skip it.
         current = '';
         return;
       }
@@ -230,13 +225,11 @@ function parseHeaderBlock(raw: Uint8Array, maxDistinct: number): Headers {
         if (!known) {
           distinct++;
         }
-      } catch {
-        // Not a value a Headers object accepts — skip it.
-      }
+      } catch {}
     }
     current = '';
   };
-  // Line by line, not `split`, so lines past the cap are never materialized.
+  // Decision: Line by line, not `split`, so lines past the cap are never materialized.
   for (let pos = 0; pos <= block.length;) {
     const nl = block.indexOf('\r\n', pos);
     const line = nl === -1 ? block.slice(pos) : block.slice(pos, nl);
@@ -267,7 +260,7 @@ export function createInboundTestHarness(opts: InboundTestHarnessOptions): Inbou
   async function deliver(input: InboundDeliverOptions): Promise<InboundDeliveryResult> {
     const raw = await buildSyntheticRaw(input);
 
-    // Mirrors the router's admission (`routeInbound` in `email-router.ts`):
+    // Decision: Mirrors the router's admission (`routeInbound` in `email-router.ts`):
     // size, then distinct-header count, each a reject before any handler
     // runs, prefixed with the zone (the recipient's domain). Own-account
     // (`slug: null`) has no router. Headers come from the bytes, as
@@ -290,12 +283,12 @@ export function createInboundTestHarness(opts: InboundTestHarnessOptions): Inbou
         throw e;
       }
     }
-    // The caller's own headers win, applied after admission: they are not on
+    // Decision: The caller's own headers win, applied after admission: they are not on
     // the wire.
     for (const [k, v] of new Headers(input.headers ?? {})) {
       headers.set(k, v);
     }
-    // Subject is not re-set from `input.subject`: the bytes carry the RFC
+    // Decision: Subject is not re-set from `input.subject`: the bytes carry the RFC
     // 2047-encoded form production hands the handler.
     if (!headers.has('Subject') && input.subject) {
       headers.set('Subject', input.subject);
@@ -319,7 +312,7 @@ export function createInboundTestHarness(opts: InboundTestHarnessOptions): Inbou
       return plus === -1 ? undefined : local.slice(0, plus);
     })();
 
-    // Production's own proxy, built as the generated `email()` entry builds
+    // Decision: Production's own proxy, built as the generated `email()` entry builds
     // it, so every proxy check throws here as it does after deploy.
     const { message, getActions } = createMessageProxy(
       {
@@ -334,14 +327,14 @@ export function createInboundTestHarness(opts: InboundTestHarnessOptions): Inbou
 
     const ctx = {
       waitUntil() {
-        // no-op
+        // Decision: Nothing to extend: the harness has no request lifetime.
       },
       passThroughOnException() {
-        // no-op
+        // Decision: Nothing to pass through to: the harness has no origin behind it.
       },
     } as unknown as ExecutionContext;
 
-    // Case is preserved and patterns match with `i`, as the generated
+    // Decision: Case is preserved and patterns match with `i`, as the generated
     // dispatcher does, so captured params keep their case. On the platform a
     // recipient without `+` has no tag, so only `_default` can take it.
     const fullLocal = input.to.split('@')[0] ?? '';
@@ -368,7 +361,7 @@ export function createInboundTestHarness(opts: InboundTestHarnessOptions): Inbou
         await defaultHandler(message, env, ctx, info);
         return { handler: '_default', params: {} };
       }
-      // No match and no `_default`: the dispatcher (`router/compile.ts`)
+      // Decision: No match and no `_default`: the dispatcher (`router/compile.ts`)
       // rejects with this exact reason, built from the wire recipient.
       message.setReject(
         `no handler matched recipient "${input.to}" — add email/_default.ts to handle unmatched mail`,
@@ -377,13 +370,13 @@ export function createInboundTestHarness(opts: InboundTestHarnessOptions): Inbou
     }
 
     const result = await dispatch();
-    // Recorded after the handler returns: a throwing handler enacts nothing.
+    // Decision: Recorded after the handler returns: a throwing handler enacts nothing.
     record(getActions());
     deliveries.push(result);
     return result;
   }
 
-  // An admission refusal, recorded the way a handler's own `setReject` is:
+  // Decision: An admission refusal, recorded the way a handler's own `setReject` is:
   // the queue is that one reject, and the delivery is unhandled.
   function refuse(reason: string): InboundDeliveryResult {
     record([{ type: 'reject', reason }]);
@@ -392,7 +385,7 @@ export function createInboundTestHarness(opts: InboundTestHarnessOptions): Inbou
     return result;
   }
 
-  // The proxy already made `setReject` terminal, so the queue is what the
+  // Decision: The proxy already made `setReject` terminal, so the queue is what the
   // router would enact.
   function record(actions: ReadonlyArray<EmailAction>): void {
     for (const action of actions) {

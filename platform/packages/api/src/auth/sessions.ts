@@ -114,7 +114,7 @@ export async function validateHumanSession(
     return false;
   }
   if (!payload.sid) {
-    // Preserve legacy installations until the coordinated session migration is activated.
+    // Decision: Preserve legacy installations until the coordinated session migration is activated.
     const settings = await readAuthSettings(db);
     return !settings?.sessions_required && !settings?.protection;
   }

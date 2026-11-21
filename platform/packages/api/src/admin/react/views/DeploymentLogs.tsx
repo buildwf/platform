@@ -233,7 +233,7 @@ export function DeploymentLogs({
           setEntries((current) => [...fresh, ...(current ?? [])]);
         }
       } catch {
-        // The next tail poll can recover.
+        // Decision: The next tail poll can recover.
       }
     };
     void poll();

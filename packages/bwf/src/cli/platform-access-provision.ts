@@ -71,8 +71,8 @@ export function platformAccessIdentityProvider(provider: ObjectValue): {
   name: string;
 } {
   const id = text(provider.id, 'identity provider ID');
-  // Cloudflare's built-in provider can have an empty display name. Identity
-  // selection still uses its validated ID, including in the interactive picker.
+  // Decision: Cloudflare's built-in provider can have an empty display name. Identity selection still uses its
+  // validated ID, including in the interactive picker.
   const name = provider.name;
   return {
     id,
@@ -148,9 +148,8 @@ async function verifyCompanyAccessPolicies(
       .filter(isPlatformAccessCompanyIdentityProvider)
       .map((provider) => provider.id),
   );
-  // The applications offer only the selected providers at sign-in, so a login
-  // method, Entra ID group or authentication context rule for any other
-  // provider matches nobody.
+  // Decision: The applications offer only the selected providers at sign-in, so a login method, Entra ID group
+  // or authentication context rule for any other provider matches nobody.
   const selectedCompanyProviders = new Set(
     identityProviderIds.filter((id) => companyProviders.has(id)),
   );
@@ -342,7 +341,7 @@ export async function inspectPlatformAccess(
   const organization = object(await client.get('organizations'), 'Access organization');
   const authDomain = text(organization.auth_domain, 'Access team domain');
   const teamDomain = authDomain.startsWith('https://') ? authDomain : `https://${authDomain}`;
-  // Reuse the runtime validator to avoid accepting a credential destination outside Access.
+  // Decision: Reuse the runtime validator to avoid accepting a credential destination outside Access.
   parsePlatformAccessProtection({
     teamDomain,
     applications: [{ origin: 'https://validation.example.com', audience: 'validation' }],

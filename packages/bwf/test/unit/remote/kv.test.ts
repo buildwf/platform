@@ -52,7 +52,6 @@ describe('ProxyKVNamespace', () => {
     });
 
     it('returns ArrayBuffer with type=arrayBuffer', async () => {
-      // For arrayBuffer type, the proxy returns binary data
       const binaryData = new Uint8Array([1, 2, 3, 4]);
       const fetchMock = vi.fn(
         async () =>

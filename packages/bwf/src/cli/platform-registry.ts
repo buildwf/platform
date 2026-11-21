@@ -46,7 +46,7 @@ const DEFAULT_REGISTRY: PlatformConnectionRegistry = {
 };
 
 const PLATFORM_RECOVERY_KEYRING_SERVICE = 'dev.platform.cli.platform';
-// Earlier releases saved the recovery key under this service, so a machine that
+// Decision: Earlier releases saved the recovery key under this service, so a machine that
 // upgrades can still decrypt its installation secrets.
 const LEGACY_PLATFORM_RECOVERY_KEYRING_SERVICE = 'dev.void.cli.platform';
 const PLATFORM_RECOVERY_ENVELOPE_VERSION = 1 as const;
@@ -320,9 +320,7 @@ export function findPlatformConnections(
   let normalizedUrl: string | null = null;
   try {
     normalizedUrl = normalizePlatformApiUrl(selector);
-  } catch {
-    // Names, slugs, and IDs are also valid selectors.
-  }
+  } catch {}
   const installations = connections.some((connection) => connection.installationId)
     ? listInstallationManifests(directory)
     : [];
@@ -539,7 +537,7 @@ function pendingWorkerSecretUpdateState(
   try {
     parsed = JSON.parse(value);
   } catch {
-    // Preserve malformed pending material so the installer reports corruption.
+    // Decision: Preserve malformed pending material so the installer reports corruption.
     return 'active';
   }
   if (

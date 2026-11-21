@@ -1,6 +1,5 @@
 import type { Page } from 'playwright';
 
-/** Observe the rendered app, excluding the unchanged SSR hydration payload. */
 export async function waitForRenderedText(
   page: Page,
   text: string,

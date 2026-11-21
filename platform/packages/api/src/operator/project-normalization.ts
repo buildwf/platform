@@ -22,8 +22,8 @@ async function servingDeployment(
   project: Project,
 ): Promise<string | null> {
   if (project.active_deployment_id) {
-    // Keep committed pointer authority: rollback preserves historical status,
-    // including a retained failed target that now serves the project.
+    // Decision: Keep committed pointer authority: rollback keeps historical status, including a retained failed
+    // target that now serves the project.
     const active = await getDeployment(db, project.active_deployment_id);
     if (!active || active.project_id !== project.id) {
       throw new OperatorError(

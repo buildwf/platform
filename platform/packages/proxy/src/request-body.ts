@@ -93,8 +93,8 @@ export async function readRequestJson(request: Request, maxBytes: number): Promi
       size = nextSize;
     }
   } finally {
-    // An uncooperative stream may never settle cancellation. Start cleanup,
-    // but do not let it extend the hard request-body deadline.
+    // Decision: An uncooperative stream may never settle its cancel. Cleanup starts, but it can't extend the
+    // hard request-body deadline.
     void reader.cancel().catch(() => {});
     reader.releaseLock();
   }

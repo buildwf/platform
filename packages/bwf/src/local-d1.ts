@@ -77,7 +77,7 @@ function readConfiguredDatabaseId(root: string, bindingName: string): string | u
     return undefined;
   }
 
-  // Wrangler and Miniflare use the preview ID for local development when one is present.
+  // Decision: Wrangler and Miniflare use the preview ID for local development when one is present.
   for (const value of [match.preview_database_id, match.database_id, match.binding]) {
     if (typeof value === 'string' && value.length > 0) {
       return value;

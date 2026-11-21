@@ -6,7 +6,6 @@ import { createInterface } from 'node:readline';
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 import { cleanups, temporaryDirectory } from '../helpers/cloudflare-operation-process.ts';
 
-// Record what the CLI hands to each child process, without changing what runs.
 const spawned: Array<{ argvBytes: number; largestEnvValueBytes: number }> = [];
 vi.mock('node:child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:child_process')>();
@@ -33,7 +32,7 @@ vi.mock('@voidzero-dev/vite-plus-prompts', async (importOriginal) => ({
   log: { error: vi.fn(), info: vi.fn(), step: vi.fn(), success: vi.fn(), warn: mockWarn },
 }));
 
-// The CLI waits on spawnSync, which blocks this process, so the fake D1 API runs in its own.
+// Decision: The CLI waits on spawnSync, which blocks this process, so the fake D1 API runs in its own.
 const fakeD1Api = `
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -81,7 +80,7 @@ async function startFakeD1Api(directory: string) {
       }
     });
   });
-  // The last report can still be in the pipe when the CLI returns.
+  // Decision: The last report can still be in the pipe when the CLI returns.
   const settled = async (count: number) => {
     for (let attempt = 0; entries.length < count && attempt < 100; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -148,7 +147,6 @@ it('imports a 25 MB SQL file into direct Cloudflare D1 in CI without a prompt or
       authorization: 'Bearer synthetic-token',
     },
   ]);
-  // Nothing proportional to the file reaches a child's argv or environment.
   expect(spawned.length).toBeGreaterThan(0);
   for (const child of spawned) {
     expect(child.argvBytes).toBeLessThan(16 * 1024);

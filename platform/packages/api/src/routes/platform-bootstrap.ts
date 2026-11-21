@@ -22,8 +22,8 @@ import type { ApiEnv } from '../env.ts';
 const app = new Hono<ApiEnv>();
 const noStore: MiddlewareHandler<ApiEnv> = async (context, next) => {
   context.header('Cache-Control', 'no-store');
-  // Native form submissions need their same-origin Origin header. no-referrer
-  // serializes that header as null, while strict-origin hides paths and codes.
+  // Decision: Native form posts need their same-origin Origin header. no-referrer sends that header as null,
+  // while strict-origin still hides paths and codes.
   context.header(
     'Referrer-Policy',
     context.req.path === '/setup' ? 'strict-origin' : 'no-referrer',

@@ -88,9 +88,7 @@ export async function* fetchStream<
       if (typeof body.message === 'string') {
         message = body.message;
       }
-    } catch {
-      /* Use the default interruption message for malformed events. */
-    }
+    } catch {}
     throw limit ?? new FetchError(message);
   };
 
@@ -104,7 +102,7 @@ export async function* fetchStream<
       buffer += decoder.decode(value, { stream: true });
 
       const lines = buffer.split('\n');
-      buffer = lines.pop()!; // Keep incomplete last line
+      buffer = lines.pop()!;
 
       for (const line of lines) {
         const trimmed = line.trim();
@@ -134,7 +132,7 @@ export async function* fetchStream<
       }
     }
 
-    // The stream may end without a trailing newline.
+    // Decision: The stream may end without a trailing newline.
     const trimmed = buffer.trim();
     if (trimmed.startsWith('data: ')) {
       const data = trimmed.slice(6);
@@ -159,8 +157,6 @@ function chunkText(data: string): string | undefined {
     if ('response' in parsed) {
       return undefined;
     }
-  } catch {
-    // Not JSON: plain text frame.
-  }
+  } catch {}
   return data;
 }

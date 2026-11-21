@@ -14,8 +14,6 @@ import type { Resource } from '../types.ts';
 import { terminateBuildsForProject, type TerminatedBuild } from './builds.ts';
 import { type Db, type DbOrTx } from './client.ts';
 
-// --- Resources ---
-
 export async function createResource(
   db: Db,
   projectId: string,
@@ -56,8 +54,6 @@ export async function getResourceByBinding(
     )
     .then((rows) => rows[0]);
 }
-
-// --- Deletion ---
 
 export type ProjectCleanupJobInput = typeof projectCleanupJobs.$inferInsert;
 
@@ -131,35 +127,30 @@ export async function deleteProjectCascade(
   deletedResources: ReadonlyArray<Resource>;
 }> {
   return await db.transaction(async (tx) => {
-    // Lock the project row FOR UPDATE — the SAME lock the build-creation paths
-    // take FIRST (supersedeAndCreateContainerBuild, createGithubActionsBuildWithinLimit)
-    // — so a concurrent push/OIDC can't insert a fresh build BETWEEN the
-    // terminalize below and the builds delete. A build that committed before this
-    // lock is caught by terminateBuildsForProject; one that lost the race blocks
-    // until this tx commits, then finds the project (and its ON DELETE CASCADE
-    // github_connections row) gone and creates nothing.
+    // Decision: Lock the project row FOR UPDATE, the lock the build-creation paths take first
+    // (supersedeAndCreateContainerBuild, createGithubActionsBuildWithinLimit), so a concurrent push or
+    // OIDC exchange can't insert a build between the terminate below and the builds delete. A build
+    // that committed earlier is caught by terminateBuildsForProject; one that lost the race waits, then
+    // finds the project and its cascaded github_connections row gone.
     await tx.execute(sql`SELECT id FROM ${projects} WHERE id = ${projectId} FOR UPDATE`);
-    // Terminalize + capture in-flight builds BEFORE deleting their rows. The build
-    // row is the only durable handle the reaper/cancel path uses to stop a running
-    // container DO; once the row is gone the DO (or a GitHub Actions runner) would
-    // keep building until its own timeout, burning fleet/runner capacity for a
-    // project that no longer exists. The caller stops the container DOs after this
-    // tx commits; github_actions builds have no DO, so terminalizing (then
-    // deleting) their row to revoke the deploy token is all that's possible.
+    // Decision: End and capture in-flight builds before deleting their rows. The build row is the only durable
+    // handle the reaper and cancel path use to stop a running container DO; without it the DO (or a
+    // GitHub Actions runner) keeps building until its own timeout. The caller stops container DOs after
+    // commit; github_actions builds have no DO, so ending and deleting the row to revoke the deploy
+    // token is all we can do.
     const cancelled = await terminateBuildsForProject(tx, projectId, {
       reason: 'project deleted',
     });
     await tx.delete(domains).where(eq(domains.project_id, projectId));
-    // RETURNING the deleted rows so the caller can clean up the CF object behind
-    // any resource that raced teardown's one-time best-effort snapshot (its row
-    // is removed here, so without this it would have no durable handle left).
+    // Decision: RETURNING the deleted rows lets the caller clean up the CF object behind a resource that raced
+    // teardown's one-time snapshot; once its row is gone there's no other durable handle.
     const deletedResources = await tx
       .delete(resources)
       .where(eq(resources.project_id, projectId))
       .returning();
-    // Record resources that appeared after the pre-cascade cleanup snapshot in
-    // the same transaction that removes their only durable handles. A failed
-    // provider delete after COMMIT can then be retried by the scheduled worker.
+    // Decision: Record resources that appeared after the pre-cascade cleanup snapshot in the same transaction that
+    // removes their only durable handles, so the scheduled worker can retry a provider delete that
+    // fails after COMMIT.
     await enqueueProjectCleanupJobs(
       tx,
       deletedResources
@@ -167,9 +158,8 @@ export async function deleteProjectCascade(
         .flatMap((resource) => cleanupJobsForResource(projectId, resource)),
     );
     await tx.delete(projectSecrets).where(eq(projectSecrets.project_id, projectId));
-    // builds reference both projects and deployments with ON DELETE NO ACTION,
-    // so they must be removed before the deployments delete below (otherwise the
-    // build->deployment FK aborts the teardown transaction).
+    // Decision: builds reference projects and deployments with ON DELETE NO ACTION, so delete them before the
+    // deployments, or the build-to-deployment FK aborts the teardown.
     await tx.delete(builds).where(eq(builds.project_id, projectId));
     await tx.delete(deployments).where(eq(deployments.project_id, projectId));
     await tx.delete(projects).where(eq(projects.id, projectId));

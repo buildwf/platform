@@ -91,7 +91,7 @@ async function readPackageDependencies(directory: string) {
     }
     return dependencies.length ? dependencies : undefined;
   } catch {
-    // As in cf, missing or unreadable package context must not reject an upload.
+    // Decision: As in cf, missing or unreadable package context mustn't reject an upload.
     return undefined;
   }
 }
@@ -175,8 +175,8 @@ function bindingsFromOutput(
         });
         break;
       case 'unsafe:durable_object_namespace':
-        // The config translator uses this exact local form for Container DOs.
-        // Do not turn arbitrary unsafe bindings into upload metadata.
+        // Decision: The config translator uses this exact local form for Container DOs.
+        // Don't turn arbitrary unsafe bindings into upload metadata.
         if (Object.keys(value).some((key) => !['type', 'class_name', 'dev'].includes(key))) {
           throw new Error(`Cloudflare binding ${name} is not a verified local Durable Object.`);
         }
@@ -366,7 +366,7 @@ export function exportsFromOutput(exports: unknown, bindings: Array<Json>): Json
       );
     }
   }
-  // The converter reads only `worker.exports` for this field.
+  // Decision: The converter reads only `worker.exports` for this field.
   const converted =
     object(
       convertToWranglerConfig({
@@ -415,8 +415,8 @@ async function preflightWorkflowExports(options: {
       }
       throw cause;
     }
-    // The canonical uploader prompts before reassigning an account-wide name.
-    // The pinned path must not silently adopt another Worker's Workflow.
+    // Decision: The canonical uploader prompts before reassigning an account-wide name.
+    // The pinned path mustn't quietly adopt another Worker's Workflow.
     if (
       workflow.name !== name ||
       workflow.script_name !== options.workerName ||
@@ -595,7 +595,7 @@ function assertContainerApplicationSettings(application: Json, plan: ContainerPl
     }
     return !isDeepStrictEqual(current[key] ?? [], value);
   });
-  // The provider may omit disabled/default settings or add unrelated configuration fields.
+  // Decision: The provider may omit disabled or default settings, or add unrelated configuration fields.
   // Compare only authored fields; an explicit empty key list still rejects existing keys.
   const logs = object(object(plan.settings.observability)?.logs);
   const currentLogs = object(object(application.observability)?.logs);
@@ -827,7 +827,7 @@ async function prepareContainerMetadata(options: {
           if (pushed.status !== 0 || pushed.signal || pushed.error) {
             throw new Error('Cloudflare Container image push failed.');
           }
-          // cf prints this on stdout before 1.0.0-beta.21, and on stderr since.
+          // Decision: cf prints this on stdout before 1.0.0-beta.21, and on stderr since.
           const matches = [
             ...`${pushed.stdout}\n${pushed.stderr}`.matchAll(/Pushed image:\s*(\S+)/g),
           ];
@@ -980,8 +980,8 @@ async function ensureContainerApplications(options: {
       );
     }
     assertContainerApplicationIdentity(application, plan, namespace);
-    // Candidate upload must not mutate settings shared with the live version. Traffic-only
-    // activation cannot publish or roll back these settings, so reject differences instead.
+    // Decision: A candidate upload mustn't change settings shared with the live version. Traffic-only activation
+    // can't publish or roll back these settings, so reject differences instead.
     assertContainerApplicationSettings(application, plan);
     const confirmed = await apiResult(url, options.token, 'GET', undefined, options.verifyUploader);
     assertContainerApplicationIdentity(confirmed, plan, namespace);
@@ -1073,8 +1073,8 @@ async function uploadAssets(options: {
       if (!path) {
         throw new Error('Cloudflare requested an asset outside the verified Worker output.');
       }
-      // Cloudflare stores each multipart part's MIME type on the asset. A string
-      // field has no Content-Type and makes browser modules unloadable.
+      // Decision: Cloudflare stores each multipart part's MIME type on the asset. A string field has no
+      // Content-Type and makes browser modules unloadable.
       form.append(
         hash,
         new File([readFileSync(path).toString('base64')], hash, {
@@ -1141,9 +1141,8 @@ export async function uploadPinnedCloudflareVersion(options: {
         'limits',
         'placement',
         'cache',
-        // Worker-level settings that version uploads cannot set. Observability and
-        // Logpush are published separately during post-activation trigger
-        // synchronization; tail consumers are not applied.
+        // Decision: Worker-level settings that version uploads can't set. Observability and Logpush are published
+        // separately during post-activation trigger sync; tail consumers aren't applied.
         'logpush',
         'tailConsumers',
       ]).has(key),
@@ -1180,8 +1179,8 @@ export async function uploadPinnedCloudflareVersion(options: {
   const exports = exportsFromOutput(config.exports, bindings);
   const containerPlans = containerPlansFromOutput(built.containers, exports, bindings);
   const accountUrl = `${options.apiBaseUrl.replace(/\/$/, '')}/accounts/${encodeURIComponent(options.accountId)}`;
-  // The scripts uploader normally carries forward remote vars. Preserve only
-  // those implicit bindings from the live version, never the inactive upload.
+  // Decision: The scripts uploader normally carries forward remote vars. Preserve only those implicit bindings
+  // from the live version, not from the inactive upload.
   const active = await apiResult(
     `${accountUrl}/workers/workers/${encodeURIComponent(options.workerName)}/versions/${encodeURIComponent(activeSecrets.versionId)}`,
     options.token,
@@ -1304,7 +1303,7 @@ export async function uploadPinnedCloudflareVersion(options: {
     },
     options.verifyUploader,
     undefined,
-    // Match cf's schema negotiation for Workflow exports and execution settings.
+    // Decision: Match cf's schema negotiation for Workflow exports and execution settings.
     Object.values(exports ?? {}).some((entry) => object(entry)?.type === 'workflow')
       ? { 'Cloudflare-Workers-Script-Api-Date': '2026-11-09' }
       : undefined,

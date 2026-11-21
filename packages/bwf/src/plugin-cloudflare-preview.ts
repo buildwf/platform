@@ -15,7 +15,7 @@ export function withLocalPreviewBindings(plugins: Array<Plugin>, root: string): 
     }
     process.removeListener('exit', cleanup);
   };
-  // Only the entry plugin reads Build Output during config resolution. Its other
+  // Decision: Only the entry plugin reads Build Output during config resolution. Its other
   // hooks and the remaining plugins continue to see the application's real root.
   const entry = plugins.find((plugin) => plugin.name === 'vite-plugin-cloudflare');
   if (!entry?.config) {
@@ -44,7 +44,7 @@ export function withLocalPreviewBindings(plugins: Array<Plugin>, root: string): 
         }
       }
       writeFileAtomic(path, JSON.stringify(worker));
-      // The upstream preview resolves declared secrets from this env directory.
+      // Decision: The upstream preview resolves declared secrets from this env directory.
       // A private artifact copy isolates local-only declarations from deployment
       // and from other previews, including when the original build had no .env.
       return await hook.call(this, { ...config, root: directory, envDir: root }, environment);

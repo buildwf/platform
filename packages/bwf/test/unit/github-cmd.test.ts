@@ -230,7 +230,6 @@ describe('formatInstallations', () => {
       repositories: [{ full_name: 'user/private', id: 99 }],
     });
     const result = formatInstallations([inst]);
-    // The repo list block should not appear (no bullet points)
     expect(result).not.toContain('user/private');
     expect(result).toContain('all');
   });
@@ -245,7 +244,6 @@ describe('formatInstallations', () => {
     const result = formatInstallations([a, b]);
     expect(result).toContain('alice');
     expect(result).toContain('bob');
-    // Two blocks separated by double newline
     expect(result).toContain('\n\n');
   });
 
@@ -258,7 +256,6 @@ describe('formatInstallations', () => {
     const result = formatInstallations([inst]);
     expect(result).toContain('selected');
     expect(result).toContain('0 repos');
-    // No bullet character since repo list is empty
     expect(result).not.toContain('•');
   });
 });

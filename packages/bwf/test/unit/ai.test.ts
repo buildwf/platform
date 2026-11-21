@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-/** Fake Workers AI binding (`env.AI`) whose gateway URLs include the gateway id and provider. */
 function makeDirectAi(
   opts: { getUrl?: (id: string, provider: string) => Promise<string>; run?: () => unknown } = {},
 ) {
@@ -502,7 +501,6 @@ describe('runtime ai', () => {
       const { envContext } = await import('../../src/runtime/env-raw.ts');
       const { ai } = await import('../../src/runtime/ai.ts');
 
-      // Any accidental fall-through to the bwf proxy would hit fetch — assert it doesn't.
       const fetchMock = vi.fn(
         async (_url: string | URL | Request, _init?: RequestInit) =>
           new Response('proxy-should-not-be-used', { status: 500 }),
@@ -613,7 +611,7 @@ describe('runtime ai', () => {
 
         expect(direct.gateway.mock.results[0].value.getUrl).toHaveBeenCalledWith(provider);
         const headers = new Headers(fetchMock.mock.calls[0][1]!.headers);
-        // `Authorization: Bearer <key>` 401s at the gateway pass-through for these providers.
+        // Decision: `Authorization: Bearer <key>` 401s at the gateway pass-through for these providers.
         expect(headers.get(header)).toBe(value);
         expect(headers.get('authorization')).toBe(authorization);
       },
@@ -755,7 +753,7 @@ describe('runtime ai', () => {
       );
 
       const init = fetchMock.mock.calls[0][1]!;
-      // The self-host path passes FormData straight through — fetch itself sets
+      // Decision: The self-host path passes FormData straight through — fetch itself sets
       // the multipart content-type + boundary, so we must NOT force content-type
       // and must NOT base64-envelope the parts like the managed proxy does.
       expect(init.body).toBeInstanceOf(FormData);

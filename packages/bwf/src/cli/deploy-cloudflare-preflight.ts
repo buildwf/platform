@@ -78,8 +78,8 @@ export async function prepareCloudflareDeploySource(
 ): Promise<
   ({ configPath: string } & Awaited<ReturnType<typeof computeDesiredCloudflareResources>>) | null
 > {
-  // Every gate on this path validates the artifact the build emits, so a skipped build would
-  // check a stale or missing one.
+  // Decision: All gates on this path validate the artifact the build emits, so a skipped build would check a
+  // stale or missing one.
   if (options.skipBuild) {
     log.error(
       [
@@ -94,7 +94,7 @@ export async function prepareCloudflareDeploySource(
     return null;
   }
 
-  // Reject app shapes the native verifier cannot prove safe before any account operation.
+  // Decision: Reject app shapes the native verifier can't prove safe before any account operation.
   let application: ApplicationAnalysis;
   try {
     application = analyzeApplicationSync(root, { config: bwfConfig, environment: 'prod' });
@@ -108,8 +108,8 @@ export async function prepareCloudflareDeploySource(
     return null;
   }
 
-  // The migration gates re-collect migrations after the build, because build plugins can
-  // rewrite them; these pre-build ones only fail fast.
+  // Decision: The migration gates collect migrations again after the build, because build plugins can rewrite
+  // them; these pre-build ones only fail fast.
   const configPath = discoverRootWranglerConfig(root);
   const facts = await computeDesiredCloudflareResources(root, bwfConfig, configPath, application);
   const { desired, dialect, migrations: preBuildMigrations, migrationsDir } = facts;
@@ -131,9 +131,9 @@ export async function prepareCloudflareDeploySource(
     return null;
   }
 
-  // bwf generates and applies migrations from one folder only, and the provisioner never
-  // rewrites a set migrations_dir. Any spelling of that folder matches; another folder stops
-  // the deploy here. A handoff applies no migrations, so it is kept.
+  // Decision: bwf generates and applies migrations from one folder only, and the provisioner doesn't rewrite a
+  // set migrations_dir. Any spelling of that folder matches; another folder stops the deploy here. A
+  // handoff applies no migrations, so it's kept.
   const storedDir =
     desired.d1 &&
     readStoredResourceName(
@@ -151,7 +151,7 @@ export async function prepareCloudflareDeploySource(
     const expected = JSON.stringify(desired.d1.migrationsDir);
     let fix = `Set migrations_dir to ${expected} in d1_databases of ${basename(configPath)}, or remove it and bwf will fill it in.`;
     if (basename(configPath) === MATERIALIZED_CLOUDFLARE_FILE) {
-      // Removing helps only for an authored value; one bwf filled in lives in bwf.lock.json.
+      // Decision: Removing helps only for an authored value; one bwf filled in lives in bwf.lock.json.
       const authored = readStoredResourceName(
         bwfConfig.cloudflare ?? {},
         'd1_databases',
@@ -166,7 +166,7 @@ export async function prepareCloudflareDeploySource(
     return null;
   }
 
-  // Custom migration patterns must stay under migrations_dir, as written: Wrangler checks the
+  // Decision: Custom migration patterns have to stay under migrations_dir, as written: Wrangler checks the
   // pattern against that spelling.
   if (desired.d1) {
     const migrationsPattern = resolveWranglerMigrationPattern(
@@ -250,7 +250,7 @@ export async function preflightCloudflareWorker(input: {
     }
   }
 
-  // One transport, account and uploader for every credentialed command of this deploy.
+  // Decision: One transport, account and uploader for all credentialed commands of this deploy.
   const connection = await connectCloudflareDeployAccount({
     root,
     configPath,
@@ -278,8 +278,8 @@ export async function preflightCloudflareWorker(input: {
   const workerName = readWranglerTopLevelString(rootConfig, 'name') ?? deriveWorkerName(root);
   printDeployContext(workerName, 'Cloudflare');
 
-  // Email setup makes credentialed calls, so it runs before the env-schema probe runs any
-  // project code. Its config writes become part of the baseline the probe check compares.
+  // Decision: Email setup makes credentialed calls, so it runs before the env-schema probe runs any project
+  // code. Its config writes become part of the baseline the probe check compares.
   let emailMap: EmailAddressMapInput | null = null;
   if (needsEmail) {
     if (!assertUploaderStillPinned()) {
@@ -322,7 +322,7 @@ export async function preflightCloudflareWorker(input: {
     }
     emailMap = email.map;
   } else {
-    // The app stopped using email, but its routing rules still point at this Worker. Warn only:
+    // Decision: The app stopped using email, but its routing rules still point at this Worker. Warn only:
     // removing the config would orphan the live rules, and `[]` would delete them.
     const staleAddresses = Array.isArray(rootConfig.addresses)
       ? (rootConfig.addresses as Array<unknown>).filter((a): a is string => typeof a === 'string')
@@ -343,8 +343,8 @@ export async function preflightCloudflareWorker(input: {
     }
   }
 
-  // env.ts is project code, so read its key names in an uncredentialed subprocess. Running it
-  // before provisioning makes a broken env.ts fail fast.
+  // Decision: env.ts is project code, so read its key names in an uncredentialed subprocess. Running it before
+  // provisioning makes a broken env.ts fail fast.
   const schemaProbeEnv = buildSchemaProbeEnv(accountId, apiBaseUrl);
   let schemaResult: EnvSchemaProbeResult;
   try {
@@ -362,8 +362,8 @@ export async function preflightCloudflareWorker(input: {
   }
   const schemaFacts: SelfHostSchemaFacts = schemaResult.facts;
 
-  // The probe can still rewrite files. Check the root config before any credentialed command,
-  // and before the provisioner makes its own legitimate writes.
+  // Decision: The probe can still rewrite files. Check the root config before any credentialed command, and
+  // before the provisioner makes its own legitimate writes.
   if (!deepEqual(rootConfig, parseRootWranglerConfig(configPath))) {
     log.error(
       [
@@ -375,7 +375,7 @@ export async function preflightCloudflareWorker(input: {
     return exit(1);
   }
 
-  // The probe ran project code, so the uploader is re-checked before this credentialed run.
+  // Decision: The probe ran project code, so the uploader is checked again before this credentialed run.
   if (!(await confirmCloudflareDeployAuthentication(connection, configPath))) {
     return exit(1);
   }
@@ -414,9 +414,9 @@ export async function preflightCloudflareWorker(input: {
     rootConfig = parseRootWranglerConfig(configPath);
   }
 
-  // Sandbox needs Workers Paid. A read-only Containers probe checks the plan and token before
-  // provisioning; its failure cannot tell the two apart, so the message covers both. Apps
-  // without Sandbox never run it.
+  // Decision: Sandbox needs Workers Paid. A read-only Containers probe checks the plan and token before
+  // provisioning; its failure can't tell the two apart, so the message covers both. Apps without
+  // Sandbox don't run it.
   if (needsSandbox) {
     if (!assertUploaderStillPinned()) {
       return exit(1);
@@ -437,8 +437,8 @@ export async function preflightCloudflareWorker(input: {
     cliLog.info('cloudflare_sandbox_available');
   }
 
-  // Whether the root config lacks the D1 migrations_dir. A set one for another folder already
-  // stopped the deploy in prepareCloudflareDeploySource.
+  // Decision: Whether the root config lacks the D1 migrations_dir. A set one for another folder already stopped
+  // the deploy in prepareCloudflareDeploySource.
   const d1MigrationsDirMissing = (): boolean =>
     desired.d1?.migrationsDir !== undefined &&
     readStoredResourceName(
@@ -448,8 +448,8 @@ export async function preflightCloudflareWorker(input: {
       'migrations_dir',
     ) === undefined;
 
-  // Create missing inferred resources. Missing ids trigger this directly, absent queues after
-  // the probe below; `--provision` forces it. The provisioner is read-first and idempotent.
+  // Decision: Create missing inferred resources. Missing ids trigger this directly, absent queues after the
+  // probe below; `--provision` forces it. The provisioner is read-first and idempotent.
   const provisionAndVerify = async (): Promise<void> => {
     if (existingWorker) {
       const { missing } = checkCloudflareProvisionDrift(configPath, desired);
@@ -481,7 +481,7 @@ export async function preflightCloudflareWorker(input: {
       log.error(`deploy: provisioning failed — ${getErrorMessage(err)}`);
       return exit(1);
     }
-    // A skipped resource (e.g. Hyperdrive with no connection source) would ship a Worker that
+    // Decision: A skipped resource (for example Hyperdrive with no connection source) would ship a Worker that
     // fails on first use.
     const skipped = result.resources.filter((r) => r.action === 'skipped');
     if (skipped.length > 0) {
@@ -521,8 +521,8 @@ export async function preflightCloudflareWorker(input: {
     }
   };
 
-  // Queues have no id in the config, so the drift check cannot see a missing one. Naming reads
-  // each queue by name; only a confirmed not-found triggers provisioning.
+  // Decision: Queues have no id in the config, so the drift check can't see a missing one. Naming reads each
+  // queue by name; only a confirmed not-found triggers provisioning.
   let queueNames: Awaited<ReturnType<typeof chooseCloudflareQueueNames>>;
   try {
     queueNames = await chooseCloudflareQueueNames({
@@ -543,8 +543,8 @@ export async function preflightCloudflareWorker(input: {
   const absentQueues = queueNames.absent;
 
   const { missing: initiallyMissing } = checkCloudflareProvisionDrift(configPath, desired);
-  // A handoff applies no migrations, so preserve the existing local migration settings.
-  // Reconciling migrations_dir must not send an already-bound database to the provisioner.
+  // Decision: A handoff applies no migrations, so keep the existing local migration settings.
+  // Reconciling migrations_dir mustn't send an already-bound database to the provisioner.
   const d1NeedsConfigReconciliation = !existingWorker && d1MigrationsDirMissing();
   if (
     options.provision ||
@@ -556,15 +556,15 @@ export async function preflightCloudflareWorker(input: {
     await provisionAndVerify();
   }
 
-  // Persist the Worker name and account before the build. The CF Vite plugin copies
-  // `account_id` only from the config file, so an env-only account would otherwise leave the
-  // artifact without one, and the secret gate resolves the Worker from the root `name`.
+  // Decision: Persist the Worker name and account before the build. The CF Vite plugin copies `account_id` only
+  // from the config file, so an env-only account would leave the artifact without one, and the secret
+  // gate resolves the Worker from the root `name`.
   writeProvisionedWranglerConfig(root, { name: workerName, accountId }, { configPath });
 
-  // Snapshot the config before the build runs project code. A build can only edit files, so
-  // the remote migration and the emitted-config check compare against these pins to catch a
-  // binding, container or migration it added, dropped or retargeted. Nothing legitimate
-  // rewrites a binding id in the root config after this point.
+  // Decision: Snapshot the config before the build runs project code. A build can only edit files, so the
+  // remote migration and the emitted-config check compare against these pins to catch a binding,
+  // container or migration it added, dropped or retargeted. Nothing legitimate rewrites a binding id
+  // in the root config after this point.
   const preBuildRootConfig = parseRootWranglerConfig(configPath);
   const bindingIdentitySnapshot = snapshotBindingIdentities(preBuildRootConfig);
   const passthroughIdentitySnapshot = snapshotPassthroughIdentities(preBuildRootConfig);

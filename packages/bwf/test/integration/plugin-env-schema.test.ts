@@ -26,7 +26,6 @@ function createTempRoot(): string {
 async function runConfig(plugin: ReturnType<typeof envSchemaPlugin>): Promise<void> {
   const hook = plugin.config as unknown;
   if (typeof hook === 'function') {
-    // The hook is called by vite with (config, env) — pass stubs.
     await (hook as (c: unknown, e: unknown) => unknown).call({}, {}, { mode: 'development' });
     return;
   }
@@ -68,7 +67,7 @@ async function buildEntry(
       rollupOptions: { input: join(root, 'entry.js'), preserveEntrySignatures: 'strict' },
     },
   };
-  // The app builder resolves the config again for each environment, in the
+  // Decision: The app builder resolves the config again for each environment, in the
   // same process, as `vite build` does with the Cloudflare plugin.
   const output = app
     ? await createBuilder({ ...inline, builder: {} }).then((builder) =>
@@ -139,7 +138,7 @@ describe('envSchemaPlugin auto-discovery', () => {
     expect(existsSync(dtsPath)).toBe(true);
 
     const dts = readFileSync(dtsPath, 'utf-8');
-    // `export {}` makes the file an augmentation instead of an ambient module.
+    // Decision: `export {}` makes the file an augmentation instead of an ambient module.
     expect(dts).toContain('export {}');
     expect(dts).toContain('declare module "@builtbyfriends/bwf/env"');
     expect(dts).toContain('declare module "@builtbyfriends/bwf/handler"');
@@ -161,7 +160,6 @@ describe('envSchemaPlugin auto-discovery', () => {
     await runConfig(plugin);
 
     const dts = readFileSync(join(root, '.bwf', 'env.d.ts'), 'utf-8');
-    // Relative path from .bwf/ to src/env.ts.
     expect(dts).toContain('typeof import("../src/env.ts")');
   });
 
@@ -221,10 +219,10 @@ describe('envSchemaPlugin auto-discovery', () => {
       join(root, '.env'),
       [
         'export VITE_B=local-export',
-        // Vite drops the inline comment.
+        // Decision: Vite drops the inline comment.
         'VITE_C=local-comment # note',
         'VITE_D=local-plain',
-        // Vite reads this key; bwf's own parser skips it.
+        // Decision: Vite reads this key; bwf's own parser skips it.
         'VITE_E.F=local-dot',
         'MODE=local-mode',
         '',
@@ -355,7 +353,7 @@ describe('envSchemaPlugin auto-discovery', () => {
     });
   });
 
-  // Register via defineEnv: jiti's env.ts module instance is invisible to Vitest.
+  // Decision: Register via defineEnv: jiti's env.ts module instance is invisible to Vitest.
   it('warns when vite `define` shadows a schema env key', async () => {
     const { defineEnv } = await import('../../src/runtime/env-public.ts');
     const { string } = await import('../../src/runtime/env-helpers.ts');
@@ -369,9 +367,9 @@ describe('envSchemaPlugin auto-discovery', () => {
     );
 
     const plugin = envSchemaPlugin(root);
-    await runConfig(plugin); // sets envFile so configResolved emits the warning
+    await runConfig(plugin);
 
-    // bwfWarn writes via console.log (with ANSI yellow), not console.warn.
+    // Decision: bwfWarn writes via console.log (with ANSI yellow), not console.warn.
     const warnSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     await runConfigResolved(plugin, {
@@ -380,7 +378,6 @@ describe('envSchemaPlugin auto-discovery', () => {
       define: {
         'process.env.STRIPE_KEY': '"shadowed"',
         'import.meta.env.VITE_TITLE': '"hello"',
-        // unrelated define — should not be flagged
         __BUILD_VERSION__: '"1.2.3"',
       },
     });
@@ -512,7 +509,7 @@ describe('envSchemaPlugin reserved __PLATFORM_ names', () => {
     defineEnv({});
   });
 
-  // The .env check does not depend on the command, so serve covers it.
+  // Decision: The .env check does not depend on the command, so serve covers it.
   for (const withEnvTs of [false, true]) {
     it.each(['__PLATFORM_PROXY_TOKEN', '__PLATFORM_EMAIL_FROM'])(
       `rejects %s in .env (env.ts: ${withEnvTs})`,
@@ -531,7 +528,7 @@ describe('envSchemaPlugin reserved __PLATFORM_ names', () => {
     );
   }
 
-  // Wrangler loads these forms into the dev Worker too.
+  // Decision: Wrangler loads these forms into the dev Worker too.
   it.each([
     ['export __PLATFORM_PROXY_TOKEN=x', '__PLATFORM_PROXY_TOKEN'],
     ['__PLATFORM_EMAIL_FROM: a@b.c', '__PLATFORM_EMAIL_FROM'],
@@ -583,7 +580,6 @@ describe('envSchemaPlugin with "sideEffects": false', () => {
     join(import.meta.dirname, '../../src/runtime/env-public.ts'),
   ).href;
 
-  /** Build an app that declares no side effects, with an entry that imports env.ts for its side effect. */
   async function buildEntryImportingEnv(
     consumer: 'server' | 'client',
     options: { symlinkTo?: string } = {},
@@ -626,12 +622,12 @@ describe('envSchemaPlugin with "sideEffects": false', () => {
       .join('\n');
   }
 
-  // bwf's server entries import env.ts to register its schema.
+  // Decision: bwf's server entries import env.ts to register its schema.
   it('keeps env.ts in a server build', async () => {
     expect(await buildEntryImportingEnv('server')).toContain('48213');
   });
 
-  // Vite loads a symlinked env.ts under its target's path. Windows needs privileges for a file
+  // Decision: Vite loads a symlinked env.ts under its target's path. Windows needs privileges for a file
   // symlink.
   it.skipIf(process.platform === 'win32')(
     'keeps a symlinked env.ts whose target has another name',

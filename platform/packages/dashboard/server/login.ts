@@ -15,16 +15,15 @@ export type Props = Readonly<{
 export const loader = defineHandler<Props>(async (context) => {
   const platformUrl = getPublicApiUrl(context);
 
-  // Derive origin from Host header — context.req.url can be localhost in prod
-  // due to Workers Assets internal dispatch
+  // Decision: The origin comes from the Host header: Workers Assets internal dispatch can make
+  // context.req.url localhost in production.
   const host = context.req.header('host')!;
   const isLocal = isLocalDashboardHost(host);
   const protocol = isLocal ? 'http' : 'https';
   const callbackUrl = `${protocol}://${host}/auth/callback`;
 
-  // Bind the OAuth callback to this browser session to prevent login CSRF.
-  // The nonce is included in both a cookie and the redirect URL. The callback
-  // verifies the cookie value matches the URL param — an attacker's crafted
+  // Decision: Binds the OAuth callback to this browser session to prevent login CSRF. The nonce goes in a
+  // cookie and in the redirect URL, and the callback checks they match, so an attacker's crafted
   // callback URL won't match the victim's cookie.
   const nonce = getCookie(context, 'platform_auth_nonce') ?? crypto.randomUUID();
   setCookie(context, 'platform_auth_nonce', nonce, {
@@ -111,9 +110,7 @@ export const loader = defineHandler<Props>(async (context) => {
     if (apiHostname === 'localhost' || apiHostname === '127.0.0.1') {
       devLoginUrl = `${platformUrl}/auth/dev-login?redirect=${encodeURIComponent(callbackWithNonce)}`;
     }
-  } catch {
-    // malformed platformUrl — treat as non-local
-  }
+  } catch {}
 
   return { methods, platformName, unavailable, devLoginUrl };
 });

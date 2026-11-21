@@ -70,17 +70,18 @@ function tryParseJson<T>(text: string): T | null {
 }
 
 const ASSET_SESSION_MAX_RETRIES = 3;
-// Cloudflare sets no subrequest time limit; 60 s matches the platform's other Cloudflare API calls.
+// Decision: Cloudflare sets no subrequest time limit; 60 s matches the platform's other Cloudflare API
+// calls.
 const ASSET_SESSION_ATTEMPT_TIMEOUT_MS = 60_000;
 const ASSET_SESSION_RETRY_DELAY_MS = 1000;
 const ASSET_BUCKET_UPLOAD_RETRY_DELAY_MS = 1000;
 
-const MAX_UPLOAD_RETRIES = 5; // 5 retries + 1 initial = 6 total tries (matching Wrangler)
+const MAX_UPLOAD_RETRIES = 5; /* Decision: 5 retries + 1 initial = 6 total tries (matching Wrangler). */
 const UPLOAD_CONCURRENCY = 3;
 /** Maximum concurrent static-asset storage operations per deploy. */
 export const STATIC_ASSET_UPLOAD_CONCURRENCY = 4;
 const GATEWAY_BACKOFF_BASE_MS = 5000;
-const MAX_GATEWAY_ERRORS = 5; // start counting attempts after this many 524s (4 free retries)
+const MAX_GATEWAY_ERRORS = 5; /* Decision: Start counting attempts after this many 524s (4 free retries). */
 
 /**
  * Strip a manifest down to the exact `{ hash, size }` shape CF's
@@ -190,7 +191,7 @@ export async function createAssetUploadSession(
       console.warn(
         `[assets] session response missing jwt or buckets, retrying. raw: ${text.slice(0, 200)}`,
       );
-      return undefined; // retry — likely CF plain-text bug
+      return undefined; /* Decision: Retry: likely the CF plain-text response bug. */
     },
     {
       maxRetries: ASSET_SESSION_MAX_RETRIES,
@@ -225,7 +226,7 @@ export async function uploadAssetBuckets(
 
   let completionJwt = '';
 
-  // Adaptive concurrency — shared across bucket tasks, drops to 1 on 524
+  // Decision: Adaptive concurrency, shared across bucket tasks; drops to 1 on a 524.
   let concurrency = UPLOAD_CONCURRENCY;
   let activeCount = 0;
   const waiters: Array<() => void> = [];
@@ -255,7 +256,7 @@ export async function uploadAssetBuckets(
     let lastErr: unknown;
 
     while (true) {
-      // Short-circuit: another bucket already got the JWT — upload is complete
+      // Decision: Another bucket already got the JWT, so the upload is complete.
       if (completionJwt) {
         return;
       }
@@ -273,7 +274,7 @@ export async function uploadAssetBuckets(
       } catch (err) {
         if (err instanceof AssetHashMissError) {
           throw err;
-        } // non-retriable
+        }
         lastErr = err;
         if (attempts >= MAX_UPLOAD_RETRIES) {
           break;
@@ -282,7 +283,7 @@ export async function uploadAssetBuckets(
         releaseSlot();
       }
 
-      // Error path — slot already released, backoff outside the concurrency limit
+      // Decision: Error path: the slot is already released, so back off outside the concurrency limit.
       console.warn(
         `[assets] bucket ${bucketIndex + 1} upload failed, retrying...`,
         lastErr instanceof Error ? lastErr.message : lastErr,
@@ -291,7 +292,6 @@ export async function uploadAssetBuckets(
       await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempts) * retryDelayMs));
 
       if (lastErr instanceof AssetUploadError && lastErr.status === 524) {
-        // Gateway error — throttle concurrency + additional backoff
         concurrency = 1;
         while (waiters.length > 0) {
           waiters.shift()!();
@@ -313,7 +313,6 @@ export async function uploadAssetBuckets(
       }
     }
 
-    // All retries exhausted
     if (isJwtExpired(jwt)) {
       throw new Error(
         `Asset upload timed out on bucket ${bucketIndex + 1}/${buckets.length} — the upload session has expired. ` +
@@ -331,15 +330,14 @@ export async function uploadAssetBuckets(
     const bucketIndex = i;
     tasks.push(uploadBucket(buckets[bucketIndex], bucketIndex));
   }
-  // Use allSettled so a late bucket failure doesn't abort the deploy when the
-  // completion JWT was already received (CF confirmed all hashes are present).
+  // Decision: Use allSettled so a late bucket failure doesn't abort the deploy when the completion JWT was
+  // already received (CF confirmed all hashes are present).
   const results = await Promise.allSettled(tasks);
 
   if (completionJwt) {
     return completionJwt;
   }
 
-  // No JWT — find the first bucket error to surface, or throw a generic message
   const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
   throw (
     failed?.reason ?? new Error('asset upload completed but no completion JWT received from CF')
@@ -373,9 +371,9 @@ async function postAssetUpload(
 
   const text = await response.text();
   const data = tryParseJson<{ result?: { jwt?: string } }>(text);
-  // Wrangler's fetchResult throws on malformed JSON responses. Match that:
-  // a valid CF response always has a `result` key. Plain-text 2xx bodies
-  // (CF edge-node bug) or unexpected JSON shapes should be retried.
+  // Decision: Wrangler's fetchResult throws on malformed JSON responses. Match that: a valid CF response
+  // has a `result` key. Plain-text 2xx bodies (CF edge-node bug) or unexpected JSON shapes
+  // should be retried.
   if (!data?.result) {
     throw new AssetUploadError(response.status, `malformed upload response: ${text.slice(0, 200)}`);
   }
@@ -384,7 +382,7 @@ async function postAssetUpload(
 
 function isJwtExpired(jwt: string): boolean {
   try {
-    // CF JWTs use base64url encoding — normalize to standard base64 before decoding
+    // Decision: CF JWTs use base64url encoding: normalize to standard base64 before decoding.
     const raw = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(atob(raw));
     return typeof payload.exp === 'number' && payload.exp < Date.now() / 1000;
@@ -458,11 +456,11 @@ function createBase64MultipartBody(parts: ReadonlyArray<AssetUploadPart>): {
   return { body: readable, contentType: `multipart/form-data; boundary=${boundary}` };
 }
 
-const BASE64_CHUNK_BYTES = 48 * 1024; // 48 KiB raw → 64 KiB of base64 output
+const BASE64_CHUNK_BYTES = 48 * 1024; /* Decision: 48 KiB raw gives 64 KiB of base64 output. */
 
-// Encode `bytes` as base64 in bounded chunks so a large asset is never
-// rendered into a single mega-allocation. Chunks are aligned to 3 bytes
-// (base64's natural boundary) except for the final tail, which pads as usual.
+// Decision: Encode `bytes` as base64 in bounded chunks so a large asset isn't rendered into a single
+// huge allocation. Chunks are aligned to 3 bytes (base64's natural boundary) except for the
+// final tail, which pads as usual.
 function* base64Chunks(bytes: Uint8Array): Generator<Uint8Array> {
   for (let offset = 0; offset < bytes.length; offset += BASE64_CHUNK_BYTES) {
     yield textEncoder.encode(bytesToBase64(bytes.subarray(offset, offset + BASE64_CHUNK_BYTES)));
@@ -539,7 +537,7 @@ export async function computeAssetStreamHashes(
       if (size > maxBytes) {
         throw new Error('Asset body exceeded its recorded size.');
       }
-      // Only a two-byte remainder crosses reads; do not copy a large R2 chunk.
+      // Decision: Only a two-byte remainder crosses reads; don't copy a large R2 chunk.
       let offset = 0;
       if (tail.length > 0) {
         const count = Math.min(3 - tail.length, value.length);
@@ -614,7 +612,7 @@ export function buildAssetMetadata(
   };
 }
 
-export const KV_THRESHOLD = 2 * 1024 * 1024; // 2 MB
+export const KV_THRESHOLD = 2 * 1024 * 1024;
 
 /**
  * Delete assets that are no longer referenced by any retained deployment.
@@ -635,11 +633,10 @@ export async function deleteUnreferencedAssets(
 
   await runUntilFirstError(toDelete, (hash) => kv.delete(`assets/${projectId}/${hash}`));
 
-  // A direct upload can overwrite an old content-addressed R2 key between
-  // retention selection and deletion. Preserve recently uploaded objects so
-  // an in-flight deploy has time to claim them in PostgreSQL. Callers also
-  // serialize GC/final cutover with the project lock; this timestamp guard
-  // avoids needlessly aborting the common upload-before-finalize race.
+  // Decision: A direct upload can overwrite an old content-addressed R2 key between retention selection
+  // and deletion. Keep recently uploaded objects so an in-flight deploy has time to claim them in
+  // PostgreSQL. Callers also serialize GC and final cutover with the project lock; this
+  // timestamp guard avoids needlessly aborting the common upload-before-finalize race.
   const now = Date.now();
   const protectionMs = PENDING_UPLOAD_PROTECTION_SECONDS * 1000;
   const r2ToDelete: Array<string> = [];
@@ -763,7 +760,7 @@ export async function deleteWorkerBundle(
 export async function deleteProjectAssets(r2: R2Bucket, projectId: string): Promise<void> {
   await paginatedR2Delete(r2, `assets/${projectId}/`);
   await paginatedR2Delete(r2, `deployment-inputs/${projectId}/`);
-  // Page caches written by earlier releases, which served ISR.
+  // Decision: Page caches written by earlier releases, which served ISR.
   await paginatedR2Delete(r2, `isr-cache/${projectId}/`);
 }
 

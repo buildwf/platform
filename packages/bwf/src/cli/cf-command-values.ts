@@ -1,4 +1,4 @@
-// Leave room for a 64 MiB Worker, base64 expansion, and JSON metadata.
+// Decision: Leave room for a 64 MiB Worker, base64 expansion and JSON metadata.
 export const CF_VERSION_SOURCE_MAX_OUTPUT_BYTES: number = 128 * 1024 * 1024;
 
 /** Accept a cf positional only when it cannot be read as a flag or carry control characters. */

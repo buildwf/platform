@@ -53,24 +53,23 @@ export function isWranglerSecretOnlyDraft(entry: Record<string, unknown>): boole
   const runtimeKeys = Object.keys(scriptRuntime);
   return (
     scriptRuntime.usage_model === 'standard' &&
-    // Cloudflare may omit unset limits instead of returning an empty object.
+    // Decision: Cloudflare may omit unset limits instead of returning an empty object.
     (scriptRuntime.limits === undefined ||
       (isRecord(scriptRuntime.limits) && Object.keys(scriptRuntime.limits).length === 0)) &&
     runtimeKeys.every((key) => key === 'usage_model' || key === 'limits')
   );
 }
 
-// Keep these bytes aligned with the private placeholder written by bwf's
-// Cloudflare secret transport. Unlike the legacy Wrangler placeholder, cf
-// uploads include a compatibility date, so metadata alone cannot distinguish
-// them from an existing fetch-only application after a secret update.
+// Decision: Keep these bytes aligned with the private placeholder written by bwf's Cloudflare secret
+// transport. Unlike the legacy Wrangler placeholder, cf uploads include a compatibility date,
+// so metadata alone can't tell them apart from an existing fetch-only app after a secret update.
 export const PLATFORM_SECRET_DRAFT_SOURCE =
   'export default { fetch() { return new Response(""); } };\n';
 
 /** Message on the placeholder that bwf's secret transport deploys to a Worker without code. */
 export const PLATFORM_SECRET_DRAFT_MESSAGE = 'platform:secret-draft';
 
-// Placeholders that earlier releases deployed carry this message.
+// Decision: Placeholders that earlier releases deployed carry these messages.
 const LEGACY_SECRET_DRAFT_MESSAGES: ReadonlyArray<unknown> = [
   'nosam:secret-draft',
   'void:secret-draft',
@@ -124,7 +123,7 @@ export function isBwfSecretOnlyDraft(entry: Record<string, unknown>): boolean {
     'modules',
     'bindings',
     'env',
-    // The cf adapter adds this compatibility view to the beta response.
+    // Decision: The cf adapter adds this compatibility view to the beta response.
     'resources',
   ]);
   if (
@@ -178,7 +177,7 @@ export function isBwfSecretOnlyDraft(entry: Record<string, unknown>): boolean {
   ) {
     return false;
   }
-  // Never use contradictory adapter metadata as proof of an empty application.
+  // Decision: Don't use contradictory adapter metadata as proof of an empty application.
   if (entry.resources !== undefined) {
     if (!isRecord(entry.resources) || Object.keys(entry.resources).length !== 1) {
       return false;

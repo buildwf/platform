@@ -3,9 +3,9 @@ import { defineConfig } from 'vite-plus';
 export default defineConfig({
   run: {
     tasks: {
-      // The last step of the `build` script: records the source revision in the runtime manifest.
-      // It isn't cached, so a new revision reruns only this step, and it gets the full
-      // environment, including PLATFORM_SOURCE_REVISION.
+      // Decision: The last step of the `build` script: records the source revision in the runtime manifest.
+      // It isn't cached, so a new revision reruns only this step, and it gets the full environment,
+      // including PLATFORM_SOURCE_REVISION.
       'build:stamp': {
         command: 'node scripts/stamp-source-revision.mjs',
         cache: false,

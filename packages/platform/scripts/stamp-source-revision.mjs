@@ -3,7 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'pathslash';
 import { resolvePlatformSourceRevision } from './source-revision.mjs';
 
-// Records the source revision in the manifest that scripts/build-runtime.mjs wrote, so a new
+// Decision: Records the source revision in the manifest that scripts/build-runtime.mjs wrote, so a new
 // revision reruns only this step and not the cached runtime build.
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = join(packageRoot, '..', '..');

@@ -158,7 +158,7 @@ async function withMySqlClient<T>(
   const connection = await createConnection({
     uri: getLocalDatabaseUrl(root, 'mysql'),
     multipleStatements: true,
-    // Read dates, JSON and large integers as MySQL's own text, not as JavaScript values.
+    // Decision: Read dates, JSON and large integers as MySQL's own text, not as JavaScript values.
     ...(options.textValues
       ? { dateStrings: true, jsonStrings: true, supportBigNumbers: true, bigNumberStrings: true }
       : {}),
@@ -182,7 +182,7 @@ function validatePendingMigrations(
 }
 
 export async function runDbCommand(root: string, args: DbArgs): Promise<void> {
-  // Keep raw SQL exports clean for piping into other tools.
+  // Decision: Keep raw SQL exports clean for piping into other tools.
   if (!(args.action === 'export' && !args.output)) {
     console.log();
   }
@@ -389,9 +389,9 @@ async function runGenerate(root: string, dialect: DatabaseDialect): Promise<void
   const { prepareProject } = await import('../codegen/prepare.ts');
   const { PLACEHOLDER_DB_URL, writeDrizzleConfig } = await import('../drizzle/config.ts');
 
-  // Generate the auth schema, then include those tables in Drizzle Kit's schema input. This makes
-  // Better Auth tables ordinary, reviewable migration SQL instead of a deploy-time
-  // side effect. `prepareProject` removes a stale file when auth is no longer enabled.
+  // Decision: Generate the auth schema, then include those tables in Drizzle Kit's schema input. This makes
+  // Better Auth tables ordinary, reviewable migration SQL instead of a deploy-time side effect.
+  // `prepareProject` removes a stale file when auth is no longer on.
   await prepareProject(root);
   const authSchemaPath = join(root, '.bwf', 'better-auth-schema.ts');
   const additionalSchemas = existsSync(authSchemaPath) ? [authSchemaPath] : undefined;
@@ -434,7 +434,7 @@ async function runStatus(root: string, dialect: DatabaseDialect): Promise<void> 
     return;
   }
 
-  // A local database that cannot be read has an unknown status, not "pending".
+  // Decision: A local database that can't be read has an unknown status, not "pending".
   let localApplied: Array<string> | undefined;
   let localError: unknown;
   if (dialect === 'postgresql') {
@@ -484,7 +484,7 @@ async function runStatus(root: string, dialect: DatabaseDialect): Promise<void> 
         }));
       }
     } catch {
-      // Graceful degradation — local migration status remains useful offline.
+      // Decision: Local migration status stays useful offline, so a remote failure isn't fatal.
     }
   } else {
     const token = getToken(root);
@@ -494,9 +494,7 @@ async function runStatus(root: string, dialect: DatabaseDialect): Promise<void> 
         const client = new PlatformClient(token, { root });
         const result = await client.getMigrationStatus(config.projectId, dialect);
         remoteApplied = result.applied;
-      } catch {
-        // graceful degradation — remote unavailable
-      }
+      } catch {}
     }
   }
 
@@ -533,7 +531,7 @@ async function runStatus(root: string, dialect: DatabaseDialect): Promise<void> 
 
   log.info(lines.join('\n'));
 
-  // Count files that are not applied; the database may record names that have no file here.
+  // Decision: Count files that aren't applied; the database may record names that have no file here.
   const parts = [formatCount(allMigrations.length, 'migration')];
   if (localSet !== null) {
     const localPending = allMigrations.filter((m) => !localSet.has(m.name)).length;
@@ -550,7 +548,7 @@ async function runStatus(root: string, dialect: DatabaseDialect): Promise<void> 
   outro(parts.join(', '));
 }
 
-// Hyperdrive reaches only public hosts, so a loopback or socket database is never the deployed one.
+// Decision: Hyperdrive reaches only public hosts, so a loopback or socket database isn't the deployed one.
 const LOCAL_DATABASE_HOSTS = new Set(['', 'localhost', '127.0.0.1', '::1', '[::1]']);
 
 /**
@@ -650,7 +648,7 @@ async function confirmReset(
 ): Promise<void> {
   if (dialect === 'postgresql') {
     const { Client } = await import('pg');
-    // `?host=` and PGHOST can replace the URL host, so check the host pg will connect to.
+    // Decision: `?host=` and PGHOST can replace the URL host, so check the host pg will connect to.
     const { host, port, database } = new Client({
       connectionString: getLocalDatabaseUrl(root, dialect),
     });
@@ -667,9 +665,8 @@ async function resetDatabase(
   dialect: DatabaseDialect,
   yes?: boolean,
 ): Promise<number> {
-  // Coherence check must happen before any destructive work. Report a
-  // malformed `_journal.json` like `runStatus`, `runMigrate`, and the deploy
-  // path do, not as a raw stack trace.
+  // Decision: The coherence check has to happen before any destructive work. Report a malformed
+  // `_journal.json` like `runStatus`, `runMigrate` and the deploy path do, not as a raw stack trace.
   const paths = readProjectPaths(root);
   const migrationsDir = paths.migrationsDir;
   const migrations = collectMigrations(migrationsDir);
@@ -701,7 +698,7 @@ async function resetDatabase(
         );
       }
       for (const { kind, name } of objects.rows) {
-        // Qualify the name: search_path could find an object of that name in another schema.
+        // Decision: Qualify the name: search_path could find an object of that name in another schema.
         await client.query(`DROP ${kind} IF EXISTS public.${quoteSqlIdentifier(name)} CASCADE`);
       }
       await applyPgMigrations(client, migrations);
@@ -712,19 +709,19 @@ async function resetDatabase(
   if (dialect === 'mysql') {
     const { applyPendingMySqlMigrations, withMySqlMigrationLock } =
       await import('../migrations/runner-mysql.ts');
-    // The migration lock keeps deploys and other migration runs out from the first drop until
-    // the files are applied again.
+    // Decision: The migration lock keeps deploys and other migration runs out from the first drop until the files
+    // are applied again.
     await withMySqlClient(root, (client) =>
       withMySqlMigrationLock(client, async () => {
-        // MySQL 8 returns an unaliased information_schema column as `TABLE_NAME`. A view stays
-        // when its tables are dropped, and its migration would then fail, so drop views too.
+        // Decision: MySQL 8 returns an unaliased information_schema column as `TABLE_NAME`. A view stays when its
+        // tables are dropped, and its migration would then fail, so drop views too.
         const tables = await client.query(
           "SELECT table_name AS table_name, table_type AS table_type FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type IN ('BASE TABLE', 'VIEW')",
         );
         await client.query('SET FOREIGN_KEY_CHECKS = 0');
         try {
           for (const row of tables) {
-            // Deploys of any project on this database keep their lease rows in this table.
+            // Decision: Deploys of any project on this database keep their lease rows in this table.
             if (row.table_name === '_void_migration_lock') {
               continue;
             }
@@ -766,14 +763,14 @@ async function runSeed(
   dialect: DatabaseDialect,
   yes?: boolean,
 ): Promise<void> {
-  // Load the seed before the reset, so a wrong path or a broken module stops the command
-  // before any data is dropped. Importing a module runs its code, so ask about the database first.
+  // Decision: Load the seed before the reset, so a wrong path or a broken module stops the command before any
+  // data is dropped. Importing a module runs its code, so ask about the database first.
   const seed = resolveSeedTarget(root, file);
   const sql = seed.kind === 'sql' ? readFileSync(seed.path, 'utf-8') : undefined;
   await confirmReset(root, dialect, yes);
   const seedFn = sql === undefined ? await loadSeedFunction(seed.path) : undefined;
 
-  // Reset first (drop + re-run migrations). The drop is confirmed above, so do not ask again.
+  // Decision: The drop is confirmed above, so don't ask again.
   const migrationCount = await resetDatabase(root, dialect, true);
   log.step(`Reset database. Applied ${formatCount(migrationCount, 'migration')}.`);
 
@@ -938,8 +935,8 @@ async function confirmDestructiveRemote(
   return true;
 }
 
-// D1's maximum SQL statement length. A direct D1 `--file` of this size or smaller cannot hit
-// that limit on the query API, which prints rows; a larger dump runs as a D1 import (up to 5 GB).
+// Decision: D1's maximum SQL statement length. A direct D1 `--file` of this size or smaller can't hit that
+// limit on the query API, which prints rows; a larger dump runs as a D1 import (up to 5 GB).
 const D1_MAX_SQL_STATEMENT_BYTES = 100_000;
 
 async function runExecute(
@@ -1014,7 +1011,6 @@ async function runExecute(
     }
 
     if (dialect !== 'sqlite') {
-      // External database: fetch the connection string from the platform, then connect directly.
       const client = new PlatformClient(token, { root });
       const dbUrl = await fetchRemoteDatabaseUrl(client, projectConfig.projectId);
 
@@ -1023,7 +1019,6 @@ async function runExecute(
       return;
     }
 
-    // D1 remote: route through the platform proxy.
     const platformClient = new PlatformClient(token, { root });
     const configuredBinding = configuredD1Binding(root);
     let binding = configuredBinding;
@@ -1031,13 +1026,13 @@ async function runExecute(
       const d1Bindings = (await platformClient.getResources(projectConfig.projectId))
         .filter((r) => r.type === 'd1')
         .map((r) => r.binding_name);
-      // The configured binding wins. A renamed binding leaves its old resource
-      // behind, so only a single D1 resource is a safe fallback.
+      // Decision: The configured binding wins. A renamed binding leaves its old resource behind, so only a single
+      // D1 resource is a safe fallback.
       if (!d1Bindings.includes(configuredBinding) && d1Bindings.length === 1) {
         binding = d1Bindings[0]!;
       }
     } catch {
-      // Keep the configured binding name (or 'DB' by default) if resource discovery fails.
+      // Decision: Keep the configured binding name (or 'DB' by default) if resource discovery fails.
     }
 
     const proxyUrl = getProxyUrl(root);
@@ -1072,8 +1067,8 @@ async function runExecute(
     if (isCloudflareAccessChallenge(res) && !first.accessHeaders['CF-Access-Client-Id']) {
       await res.body?.cancel();
       ensurePlatformAccessToken(proxyUrl, true, false, first.accessHeaders['cf-access-token']);
-      // A verified perimeter challenge occurs before D1 executes. Retry once
-      // at the original proxy URL; never follow or authenticate to Location.
+      // Decision: A verified perimeter challenge happens before D1 executes. Retry once at the original proxy URL;
+      // don't follow or authenticate to Location.
       res = await requestProxy().response;
     }
 
@@ -1133,9 +1128,8 @@ async function runExecute(
   try {
     const statement = prepareSingleStatement(db, sql);
     if (statement?.reader) {
-      // `reader` is the statement's own answer to "returns rows": SELECT, WITH ... SELECT,
-      // PRAGMA reads, EXPLAIN and RETURNING. Writes and DDL run silently, like every other
-      // target.
+      // Decision: `reader` is the statement's own answer to "returns rows": SELECT, WITH ... SELECT, PRAGMA reads,
+      // EXPLAIN and RETURNING. Writes and DDL run silently, like other targets.
       const rows = statement.all();
       if (rows.length > 0) {
         printTable(rows);
@@ -1271,8 +1265,7 @@ async function runMigrate(root: string, dialect: DatabaseDialect, remote?: boole
         log.error(getErrorMessage(error));
         process.exit(1);
       }
-      // Without `migrations_dir`, Cloudflare applies `./migrations`, which the check below
-      // would not read.
+      // Decision: Without `migrations_dir`, Cloudflare applies `./migrations`, which the check below wouldn't read.
       if (!context.migrationsDir) {
         const dir = paths.sourceRelative('db/migrations');
         log.error(
@@ -1331,9 +1324,8 @@ async function runMigrate(root: string, dialect: DatabaseDialect, remote?: boole
 
     const client = new PlatformClient(token, { root });
 
-    // Fetch remote applied set so we only validate and send pending migrations.
-    // This is required — if we can't determine what's already applied, we must
-    // abort rather than risk validating (and rejecting) already-applied migrations.
+    // Decision: Fetch the remote applied set so we only validate and send pending migrations. If we can't tell
+    // what's already applied, abort, so we don't validate (and reject) migrations already applied.
     let remoteApplied: Set<string>;
     try {
       const status = await client.getMigrationStatus(config.projectId, dialect);
@@ -1468,7 +1460,7 @@ async function runRestore(
   dialect: DatabaseDialect,
   { target, platform: explicitPlatform, yes }: Extract<DbArgs, { action: 'restore' }>,
 ): Promise<void> {
-  // `.bwf` is not checked in, so a fresh checkout or CI shows a direct deploy only through its
+  // Decision: `.bwf` isn't checked in, so a fresh checkout or CI shows a direct deploy only through its
   // Cloudflare config. A one-off `deploy --platform cloudflare` keeps the saved platform, so its
   // restore command passes the platform explicitly.
   const platform = readDeploymentPlatform(root);
@@ -1519,7 +1511,7 @@ async function runRestore(
     );
     process.exit(1);
   }
-  // `--platform cloudflare` always reaches this database; the bare commands follow the saved
+  // Decision: `--platform cloudflare` reaches this database in all cases; the bare commands follow the saved
   // platform.
   const platformFlag = platform === 'cloudflare' ? '' : ' --platform cloudflare';
   if (previousBookmark) {
@@ -1527,7 +1519,7 @@ async function runRestore(
       `To undo this restore, run \`bwf db restore${platformFlag} --bookmark=${previousBookmark}\`.`,
     );
   }
-  // A restore also rewinds the migration table, so the next deploy applies those files again.
+  // Decision: A restore also rewinds the migration table, so the next deploy applies those files again.
   const paths = readProjectPaths(root);
   try {
     const applied = new Set(await readCloudflareD1Migrations(context));
@@ -1560,7 +1552,6 @@ async function runStudio(root: string, dialect: DatabaseDialect, remote?: boolea
       process.exit(1);
     }
 
-    // External database: use the direct deploy credential or fetch the managed URL.
     let dbUrl: string;
     if (readDeploymentPlatform(root) === 'cloudflare') {
       dbUrl = process.env.DATABASE_URL ?? '';
@@ -1643,7 +1634,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     return;
   }
 
-  // Refuse drift or a partial drizzle-kit state before changing anything, local or remote.
+  // Decision: Refuse drift or a partial drizzle-kit state before changing anything, local or remote.
   const currentMigrations = collectMigrations(migrationsDir);
   try {
     assertJournalCoherence(migrationsDir, currentMigrations, paths.sourceRelative);
@@ -1652,7 +1643,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     process.exit(1);
   }
 
-  // The bundled `migrations.js` imports each `.sql` file by name, so renaming would break it.
+  // Decision: The bundled `migrations.js` imports each `.sql` file by name, so renaming would break it.
   if (existsSync(join(migrationsDir, 'migrations.js'))) {
     log.error(
       `This project uses Drizzle's bundled migration format (${dir}/migrations.js).\n` +
@@ -1675,9 +1666,9 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     return;
   }
 
-  // bwf cannot rename the records in a direct Cloudflare database, and `bwf deploy` decides
-  // what is pending by file name, so a renamed applied migration would run again. `.bwf` is not
-  // checked in, so a fresh checkout shows a direct deploy only through its Cloudflare config.
+  // Decision: bwf can't rename the records in a direct Cloudflare database, and `bwf deploy` decides what's
+  // pending by file name, so a renamed applied migration would run again. `.bwf` isn't checked in, so
+  // a fresh checkout shows a direct deploy only through its Cloudflare config.
   const platform = readDeploymentPlatform(root);
   const config = readProjectConfig(root);
   if (
@@ -1691,7 +1682,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     );
     process.exit(1);
   }
-  // A hosted project renames its deployed records only through its link.
+  // Decision: A hosted project renames its deployed records only through its link.
   if (platform === 'platform' && !config) {
     log.error(
       'This project deploys to bwf but is not linked, so bwf cannot rename the migration records in its deployed database.\n' +
@@ -1700,7 +1691,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     process.exit(1);
   }
 
-  // Renamed files sort just before the earliest existing timestamped migration.
+  // Decision: Renamed files sort just before the earliest existing timestamped migration.
   const timestampFiles = files.filter((f) => /^\d{14}_/.test(f));
 
   let baseTime: Date;
@@ -1734,13 +1725,13 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     ? readFileSync(journalPath)
     : null;
   const journal = readJournal(migrationsDir, paths.sourceRelative);
-  // Drizzle-kit finds a snapshot by the part of the journal tag before the first underscore.
+  // Decision: Drizzle-kit finds a snapshot by the part of the journal tag before the first underscore.
   const snapshotPrefix = (tag: string): string => tag.split('_')[0];
   const snapshotPathFor = (tag: string): string =>
     join(metaDir, `${snapshotPrefix(tag)}_snapshot.json`);
 
-  // Without its snapshot, drizzle-kit cannot find a renamed entry. Check before the remote
-  // rename, so a failure leaves nothing to undo.
+  // Decision: Without its snapshot, drizzle-kit can't find a renamed entry. Check before the remote rename, so
+  // a failure leaves nothing to undo.
   if (journal && journal.entries.length > 0) {
     const missingSnapshots: Array<string> = [];
     for (const { from } of renames) {
@@ -1764,7 +1755,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     }
   }
 
-  // Update remote tracking first. If this fails, nothing local has changed yet.
+  // Decision: Update remote tracking first. If this fails, nothing local has changed yet.
   const token = getToken(root);
   let remoteRenamed = false;
   if (config && !token) {
@@ -1794,7 +1785,6 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
   const renamed: Array<{ from: string; to: string }> = [];
   const renamedSnapshots: Array<{ from: string; to: string }> = [];
 
-  // Best-effort undo of every completed step, then exit.
   const rollback = async (message: string, err: unknown): Promise<never> => {
     for (const { from, to } of renamedSnapshots) {
       try {
@@ -1810,9 +1800,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     for (const { from, to } of renamed) {
       try {
         renameSync(join(migrationsDir, to), join(migrationsDir, from));
-      } catch {
-        // Keep reverting the remaining files.
-      }
+      } catch {}
     }
     if (journalRewritten && originalJournalBytes !== null) {
       try {
@@ -1857,7 +1845,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
     await rollback('db: Failed to rename migration files. All changes have been reverted.', err);
   }
 
-  // Rewrite journal tags before the tracking tables, so a tracking failure also restores it.
+  // Decision: Rewrite journal tags before the tracking tables, so a tracking failure also restores it.
   if (journal) {
     try {
       const current = readJournal(migrationsDir, paths.sourceRelative);
@@ -1874,7 +1862,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
         const next = renameMap.get(entry.tag);
         return next ? { ...entry, tag: next } : entry;
       });
-      // Set before writing, so a partial write is still restored.
+      // Decision: Set before writing, so a partial write is still restored.
       journalRewritten = true;
       writeJournal(migrationsDir, {
         version: current.version,
@@ -1935,7 +1923,7 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
           }
           await client.query('COMMIT');
         } catch (err) {
-          // A lost connection also rolls back on the server, so report the first error.
+          // Decision: A lost connection also rolls back on the server, so report the first error.
           await client.query('ROLLBACK').catch(() => {});
           throw err;
         }
@@ -1988,7 +1976,8 @@ async function runRenameMigrations(root: string, dialect: DatabaseDialect): Prom
   printSuccess(`Renamed ${formatCount(renames.length, 'migration')} to timestamp format.`);
 }
 
-// bwf and Cloudflare bookkeeping tables. A full export skips them; app tables starting with `_` stay.
+// Decision: bwf and Cloudflare bookkeeping tables. A full export skips them; app tables starting with `_`
+// stay.
 const INTERNAL_TABLES = new Set([
   '_void_migrations',
   '_void_migration_attempts',
@@ -2109,9 +2098,9 @@ async function runExport(
         }
 
         if (!args.noData) {
-          // Ask PostgreSQL for its lossless text values. Driver Date conversion
-          // loses timestamp microseconds and introduces the client's time zone;
-          // JSON/large numeric values must not pass through JavaScript coercion.
+          // Decision: Ask PostgreSQL for its lossless text values. Driver Date conversion loses timestamp microseconds
+          // and brings in the client's time zone; JSON and large numeric values mustn't pass through
+          // JavaScript coercion.
           const rows = await client.query(
             `SELECT ${names.map((name) => `${name}::text AS ${name}`).join(', ')} FROM ${tableName}`,
           );
@@ -2168,7 +2157,7 @@ async function runExport(
         }
         tables = [args.table];
       } else {
-        // MySQL 8 returns an unaliased information_schema column as `TABLE_NAME`.
+        // Decision: MySQL 8 returns an unaliased information_schema column as `TABLE_NAME`.
         const rows = await client.query<Array<{ table_name: string }>>(
           "SELECT table_name AS table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE' ORDER BY table_name",
         );
@@ -2177,9 +2166,9 @@ async function runExport(
           .filter((name) => !isInternalTable(name, dialect));
       }
 
-      // Tables come out in name order with inline foreign keys, so a child
-      // table can precede its parent; restore with the checks off. TIMESTAMP
-      // text follows the session time zone, so read and restore it in UTC.
+      // Decision: Tables come out in name order with inline foreign keys, so a child table can come before its
+      // parent; restore with the checks off. TIMESTAMP text follows the session time zone, so read and
+      // restore it in UTC.
       await client.query("SET time_zone = '+00:00'");
       parts.push('SET FOREIGN_KEY_CHECKS = 0;', "SET time_zone = '+00:00';");
       for (const table of tables) {
@@ -2286,9 +2275,9 @@ async function runExport(
       parts.push('');
     }
 
-    // SQLite creates sqlite_sequence itself when an AUTOINCREMENT table is
-    // restored. Preserve its high-water marks after all table data, including
-    // deleted IDs, without attempting to CREATE this reserved system table.
+    // Decision: SQLite creates sqlite_sequence itself when an AUTOINCREMENT table is restored. Keep its high-water
+    // marks after all table data, including deleted IDs, without trying to CREATE this reserved system
+    // table.
     if (
       !args.noData &&
       db.prepare("SELECT name FROM sqlite_master WHERE name='sqlite_sequence'").get()
@@ -2334,7 +2323,6 @@ async function runExport(
       writeFileSync(resolve(root, args.output), output);
       printSuccess(`Exported to ${args.output}`);
     } else {
-      // Print raw SQL to stdout for piping — no clack formatting
       process.stdout.write(output);
     }
   } finally {
@@ -2544,7 +2532,7 @@ function collectSchemaModuleFiles(dir: string): Array<string> {
 }
 
 async function importLocalModule(modulePath: string): Promise<Record<string, unknown>> {
-  // Native import() cannot resolve the extensionless re-exports that `bwf gen model` writes.
+  // Decision: Native import() can't resolve the extensionless re-exports that `bwf gen model` writes.
   const jiti = createJiti(import.meta.url, {
     fsCache: false,
     moduleCache: false,

@@ -89,18 +89,18 @@ export function parseDeployArgs(
     throw new Error('deploy: --provision requires --platform cloudflare.');
   }
 
-  // Native Cloudflare email: fail the deploy — before any upload — instead of
-  // continuing without email when the domain is not set up and nobody can press Enter
-  // (CI / non-TTY). Only the Cloudflare backend runs the email step.
+  // Decision: Native Cloudflare email: fail the deploy, before any upload, instead of continuing without email
+  // when the domain isn't set up and nobody can press Enter (CI or non-TTY). Only the Cloudflare
+  // backend runs the email step.
   const requireEmail = parsed.values['require-email'] === true ? true : undefined;
   const atomic = parsed.values.atomic === true ? true : undefined;
   if (requireEmail && platform !== 'cloudflare') {
     throw new Error('deploy: --require-email requires --platform cloudflare.');
   }
 
-  // The Cloudflare backend deploys to the user's OWN account and therefore never
-  // resolves a bwf project. Static flags are target-neutral: both backends honor
-  // `--dir` and `--spa` through their respective static deployment adapters.
+  // Decision: The Cloudflare backend deploys to the user's own account, so it doesn't resolve a bwf project.
+  // Static flags are target-neutral: both backends honor `--dir` and `--spa` through their own static
+  // deployment adapters.
   if (platform === 'cloudflare') {
     if (projectSlug !== undefined) {
       throw new Error(

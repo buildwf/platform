@@ -31,7 +31,7 @@ export function SystemStatusCard({ checkNames }: { checkNames: ReadonlyArray<str
     snapshot.error || snapshot.status === 'missing' ? 'unavailable' : health ? 'ready' : 'loading';
   useEffect(() => {
     const interval = setInterval(() => {
-      // The observer retains cached data and exposes a failed refresh in its snapshot.
+      // Decision: The observer keeps cached data and exposes a failed refresh in its snapshot.
       void observer
         .getSnapshot()
         .refetch()

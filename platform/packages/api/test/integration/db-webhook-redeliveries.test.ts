@@ -14,8 +14,8 @@ afterAll(async () => {
   await teardownEnv();
 });
 
-// The ledger is standalone (no FKs), so a plain delete before the shared
-// clearTables keeps rows from leaking across files under the real-Postgres run.
+// Decision: The ledger has no FKs, so the shared clearTables doesn't reach it. A plain delete keeps rows
+// from leaking across files in the real-Postgres run.
 async function clearLedger(db: Db): Promise<void> {
   await db.delete(githubWebhookRedeliveries);
 }
@@ -38,7 +38,6 @@ describe('github_webhook_redeliveries — replay ledger', () => {
     expect(seen.has('guid-1')).toBe(true);
     expect(seen.size).toBe(1);
 
-    // The row round-trips with a ghwr_ id and the audit columns intact.
     const rows = await env.db.select().from(githubWebhookRedeliveries);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.id.startsWith('ghwr_')).toBe(true);
@@ -56,8 +55,6 @@ describe('github_webhook_redeliveries — replay ledger', () => {
       event: 'push',
       statusCode: 500,
     });
-    // A second record for the SAME guid (a different delivery id / null audit
-    // fields) must be absorbed by the unique index without throwing.
     await recordWebhookRedelivery(env.db, {
       guid: 'guid-dup',
       deliveryId: '222',
@@ -67,7 +64,6 @@ describe('github_webhook_redeliveries — replay ledger', () => {
 
     const rows = await env.db.select().from(githubWebhookRedeliveries);
     expect(rows).toHaveLength(1);
-    // The first insert wins (onConflictDoNothing keeps the existing row).
     expect(rows[0]!.delivery_id).toBe('111');
   });
 

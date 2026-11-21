@@ -31,7 +31,7 @@ describe.each(
     playground = createIsolatedPlayground(repository, 'playground/websockets');
     const root = playground.root;
     for (const directory of ['routes', 'pages', 'middleware']) {
-      // The SPA playground has no pages or middleware directory.
+      // Decision: The SPA playground has no pages or middleware directory.
       rmSync(join(root, directory), { recursive: true, force: true });
     }
     writeFileSync(join(root, 'bwf.config.ts'), 'export default {};');

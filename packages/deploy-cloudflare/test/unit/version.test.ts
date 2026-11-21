@@ -185,7 +185,7 @@ function sdkDraftActivation(
   };
 }
 
-// The bundled uploader rejects locally without an API error code; keep its actual diagnostic.
+// Decision: The bundled uploader rejects locally without an API error code; keep its actual diagnostic.
 const LOCAL_DURABLE_MIGRATION_ERROR =
   'This Worker has a pending Durable Object migration, which cannot be applied by `wrangler versions upload`. Durable Object migrations must be applied with `wrangler deploy`. Run `wrangler deploy` to apply the migration, then retry `wrangler versions upload`.';
 
@@ -322,7 +322,7 @@ const TRIGGER_FAILURE: CloudflareCommandResult = {
   status: 1,
 };
 
-/** Placeholder bwf's secret transport deploys before a Worker exists: no bindings yet. */
+// Decision: Placeholder bwf's secret transport deploys before a Worker exists: no bindings yet.
 function voidZeroBindingPlaceholder(): Record<string, unknown> {
   return {
     ...bwfSecretDraftVersion(),
@@ -336,15 +336,13 @@ function voidZeroBindingPlaceholder(): Record<string, unknown> {
   };
 }
 
-/**
- * Typed fake that tracks production traffic, so recovery tests assert which version is live at
- * the end instead of matching a substring of some versions.deploy call.
- */
+// Decision: Typed fake that tracks production traffic, so recovery tests assert which version is live at
+// the end instead of matching a substring of some versions.deploy call.
 function recoveryActivation(setup: {
   previous: Record<string, unknown>;
   previousSource?: Record<string, unknown>;
   triggers?: Array<CloudflareCommandResult>;
-  /** `applied` moves traffic even though the command result is a failure. */
+  // Decision: `applied` moves traffic even though the command result is a failure.
   deploys?: Array<CloudflareCommandResult & { applied?: true }>;
   statusFailsAfter?: 'first-trigger-failure' | 'restore';
   verifyUploaderAfterRestore?: boolean;
@@ -451,18 +449,15 @@ const PLATFORM_SCHEMA_2_PREVIOUS = {
   },
 };
 
-/** Every versions.deploy request the argv runner received, as version@percentage lists. */
 function deployRequests(runWrangler: ReturnType<typeof runner>): Array<Array<string>> {
   return runWrangler.mock.calls
     .filter(([args]) => args[0] === 'versions' && args[1] === 'deploy')
     .map(([args]) => {
-      // Version targets come right after `versions deploy`, before the first flag.
       const end = args.findIndex((argument, index) => index > 1 && argument.startsWith('-'));
       return args.slice(2, end < 0 ? undefined : end);
     });
 }
 
-/** Production traffic the argv runner holds after the activation finished. */
 async function productionTraffic(runWrangler: ReturnType<typeof runner>): Promise<unknown> {
   const status = await runWrangler({ type: 'deployments.status', workerName: 'my-worker' });
   return (status.data as { versions: unknown }).versions;
@@ -707,8 +702,8 @@ describe('Cloudflare version activation', () => {
     expect(fixture.fetcher).toHaveBeenCalledOnce();
   });
 
-  // A draft Worker from `bwf secret put` has workers.dev disabled, so its first
-  // publish reports a version id without a URL (issue #573).
+  // Decision: A draft Worker from `bwf secret put` has workers.dev turned off, so its first publish reports
+  // a version id without a URL.
   function urlLessDraftPublish(
     fixture: ReturnType<typeof sdkDraftActivation>,
     publishedTriggers: Array<Record<string, unknown>> = [],
@@ -754,8 +749,8 @@ describe('Cloudflare version activation', () => {
     },
   );
 
-  // The CLI marks traffic settings that the config leaves unset as preserved.
-  // Most projects do not set workers_dev, so this is the usual message.
+  // Decision: The CLI marks traffic settings that the config leaves unset as preserved. Most projects don't
+  // set workers_dev, so this is the usual message.
   it.each([true, false])(
     'looks up the account subdomain for the CLI message that preserves unset traffic (atomic=%s)',
     async (atomic) => {
@@ -2237,10 +2232,10 @@ describe('Cloudflare version activation', () => {
     ).not.toHaveProperty('contentHash');
   });
 
-  // The Cloudflare CLI applies its Email Routing plan inside `triggers deploy`, reading the
-  // config's `addresses`. The trigger-only config bwf hands it must therefore carry the
-  // snapshot's addresses verbatim — and carry NOTHING when the snapshot has none, because an
-  // absent key skips the plan while `[]` deletes every rule the Worker owns.
+  // Decision: The Cloudflare CLI applies its Email Routing plan inside `triggers deploy`, reading the
+  // config's `addresses`. So the trigger-only config bwf hands it has to carry the snapshot's
+  // addresses verbatim, and carry nothing when the snapshot has none: an absent key skips the
+  // plan while `[]` deletes each rule the Worker owns.
   it('snapshots explicit observability and restores it without borrowing local settings', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'platform-version-observability-'));
     const configPath = join(directory, 'wrangler.json');
@@ -2279,7 +2274,6 @@ describe('Cloudflare version activation', () => {
       await publish(disabled);
       expect(applied).toMatchObject({ observability: { enabled: false } });
 
-      // Generated defaults must not turn an omitted source setting into an update.
       writeFileSync(sourcePath, JSON.stringify({ name: 'app' }));
       const omitted = readCloudflareTriggerConfig(configPath, sourcePath);
       expect(omitted).not.toHaveProperty('observability');
@@ -2380,24 +2374,19 @@ describe('Cloudflare version activation', () => {
       expect(await applied(withAddresses)).toMatchObject({
         addresses: ['support@mail.acme.com', 'billing@mail.acme.com'],
       });
-      // The annotation round-trips the addresses, so a rollback restores that version's rules.
       expect(
         parseCloudflareVersionMessage(encodeCloudflareVersionMessage([], withAddresses)),
       ).toEqual({ schema: 2, migrations: [], triggerConfig: withAddresses });
 
-      // An explicit empty array is a destructive plan and must survive as `[]`, not vanish.
       writeFileSync(configPath, JSON.stringify({ name: 'app', addresses: [] }));
       const emptied = readCloudflareTriggerConfig(configPath);
       expect(emptied.addresses).toEqual([]);
       expect(await applied(emptied)).toMatchObject({ addresses: [] });
 
-      // No `addresses` at all — the key must not reach Wrangler, or it would plan on it.
       writeFileSync(configPath, JSON.stringify({ name: 'app', account_id: 'account' }));
       const without = readCloudflareTriggerConfig(configPath);
       expect(without).not.toHaveProperty('addresses');
       expect(await applied(without)).not.toHaveProperty('addresses');
-      // A rollback replays the target snapshot only; the version being left never lends its
-      // addresses, so a target without `addresses` skips the plan instead of sending `[]`.
       let rollbackConfig: Record<string, unknown> | undefined;
       await deployCloudflareVersionTriggers({
         runWrangler: operationFixture(async (args) => {
@@ -2410,7 +2399,6 @@ describe('Cloudflare version activation', () => {
         previousTriggerConfig: withAddresses,
       });
       expect(rollbackConfig).not.toHaveProperty('addresses');
-      // A malformed array is not an address list; treat it as absent rather than planning on it.
       writeFileSync(configPath, JSON.stringify({ name: 'app', addresses: [{ bad: true }] }));
       expect(readCloudflareTriggerConfig(configPath)).not.toHaveProperty('addresses');
       expect(
@@ -2590,13 +2578,13 @@ describe('Cloudflare version activation', () => {
   });
 
   it('replays the previous snapshot addresses when managed-queue cleanup rebuilds it', async () => {
-    // `queueConsumerCleanup` is non-empty on EVERY deploy of a project with Platform-managed
-    // consumers (`readWranglerManagedQueueCleanupCandidates` includes the current consumers
-    // for schema-1 upgrades), so the rebuilt previous config is what `stabilize…` replays when
-    // a concurrent rollback returns traffic to the previous version. Wrangler's Email Routing
-    // plan takes no "previous" list — it reconciles to exactly the replayed `addresses`, and
-    // skips the plan when the key is absent — so the copy must keep that version's own value:
-    // absent, `[]`, and a list are three different plans.
+    // Decision: `queueConsumerCleanup` is non-empty on each deploy of a project with Platform-managed
+    // consumers (`readWranglerManagedQueueCleanupCandidates` includes the current consumers for
+    // schema-1 upgrades), so the rebuilt previous config is what `stabilize…` replays when a
+    // concurrent rollback returns traffic to the previous version. Wrangler's Email Routing plan
+    // takes no "previous" list: it reconciles to exactly the replayed `addresses`, and skips the
+    // plan when the key is absent. So the copy has to keep that version's own value: absent, `[]`,
+    // and a list are three different plans.
     const replayed = async (
       previousAddresses: ReadonlyArray<string> | undefined,
     ): Promise<Record<string, unknown>> => {
@@ -2657,7 +2645,7 @@ describe('Cloudflare version activation', () => {
         fetch: async () => Response.json({ ready: true }),
       });
       await activationStarted.promise;
-      // A concurrent rollback to the previous version wins before triggers are published.
+      // Decision: A concurrent rollback to the previous version wins before triggers are published.
       activeVersionId = CURRENT;
       activation.resolve(ok());
 
@@ -3783,7 +3771,6 @@ describe('Cloudflare version activation', () => {
       triggersRestored: 'no',
       restoreSkipped: 'no-trigger-snapshot',
     });
-    // Readiness staging, then activation; no switch back to the opaque version.
     expect(deployRequests(runWrangler)).toEqual([[`${CURRENT}@100`, `${NEXT}@0`], [`${NEXT}@100`]]);
     expect(await productionTraffic(runWrangler)).toEqual([{ version_id: NEXT, percentage: 100 }]);
     expect(runWrangler.mock.calls.filter(([args]) => args[0] === 'triggers')).toHaveLength(1);
@@ -4827,7 +4814,7 @@ describe('Cloudflare version activation', () => {
     },
   ) {
     const base = runner({
-      // Cloudflare's list response has annotations but no resources, unlike versions view.
+      // Decision: Cloudflare's list response has annotations but no resources, unlike versions view.
       versions: ok(
         JSON.stringify([
           { id: CONCURRENT, number: 1, annotations: { 'workers/triggered_by': 'upload' } },
@@ -5100,7 +5087,7 @@ describe('Cloudflare trigger synchronization recovery', () => {
   )(
     'does not offer a rollback to a $kind it could not read (atomic: $atomic)',
     async ({ annotations, atomic }) => {
-      // No previousSource: the fixture's `versions.view` fails.
+      // Decision: No previousSource: the fixture's `versions.view` fails.
       const fixture = recoveryActivation({
         previous: { id: CURRENT, number: 1, annotations },
         triggers: [TRIGGER_FAILURE],

@@ -76,11 +76,9 @@ describe('processCronFiresBatch', () => {
   });
 
   it('acks 401 with AUTH_DRIFT marker (and does not retry — same token would yield same failure)', async () => {
-    // Auth drift between CronScheduler's stored proxyToken and the user
-    // worker's baked __PLATFORM_PROXY_TOKEN: retry sends the same token back
-    // and gets the same 401, so retry can't help. Ack; the next deploy's
-    // /sync resyncs the token. Log with a stable AUTH_DRIFT marker so ops
-    // can alert on the (rare) case this happens in production.
+    // Decision: Auth drift between CronScheduler's stored proxyToken and the worker's __PLATFORM_PROXY_TOKEN:
+    // a retry sends the same token and gets the same 401, so the message is acked and the next
+    // deploy's /sync fixes the token. The AUTH_DRIFT marker is stable so ops can alert on it.
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const fetchSpy = vi.fn(async () => new Response('unauthorized', { status: 401 }));
@@ -96,7 +94,6 @@ describe('processCronFiresBatch', () => {
 
       expect(msg.ack).toHaveBeenCalledOnce();
       expect(msg.retry).not.toHaveBeenCalled();
-      // Stable marker that ops alerts can grep on.
       const errArg = errSpy.mock.calls.find((args) =>
         typeof args[0] === 'string' ? args[0].includes('AUTH_DRIFT') : false,
       );
@@ -111,8 +108,8 @@ describe('processCronFiresBatch', () => {
   it.each([401, 403])(
     'invokes the cron handler once when the worker rejects the token with %i',
     async (status) => {
-      // The Worker's own middleware runs before the cron route checks the
-      // token, so a rejected fire is never sent again with another token.
+      // Decision: The Worker's own middleware runs before the cron route checks the token, so a rejected fire
+      // isn't sent again with another token.
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       try {
         const fetchSpy = vi.fn(async () => Response.json({ error: 'unauthorized' }, { status }));
@@ -139,11 +136,9 @@ describe('processCronFiresBatch', () => {
   );
 
   it('acks 5xx responses and does not retry the user worker', async () => {
-    // A Response (any status) means the user worker received the request.
-    // The user's handler ran or made a routing decision — the queue is not
-    // responsible for retrying application-level failures, since doing so
-    // duplicates side effects (emails, payments, DB writes) for non-idempotent
-    // cron handlers that fail mid-execution.
+    // Decision: Any Response means the user worker got the request and its handler ran or routed it. The queue
+    // doesn't retry application failures: that would repeat side effects (emails, payments, writes) of
+    // non-idempotent cron handlers.
     const fetchSpy = vi.fn(async () => new Response('boom', { status: 500 }));
     const env = makeEnv(fetchSpy);
     const msg = makeMessage({
@@ -160,14 +155,9 @@ describe('processCronFiresBatch', () => {
   });
 
   it('acks unknown dispatch errors (at-most-once for crons)', async () => {
-    // A throw that isn't "Worker not found" can come from the dispatch layer
-    // (transport failure) OR from inside the user worker after it partially
-    // executed (CPU limit, OOM, top-level uncaught). We can't distinguish
-    // these from the error message alone, so we ack to preserve at-most-once
-    // for cron handlers — retrying a partially-executed handler would
-    // duplicate side effects. This deliberately restores the prior
-    // at-most-once contract; we accept transient delivery-failure data loss
-    // to prevent duplicate executions.
+    // Decision: A throw other than "Worker not found" can come from transport or from inside a partly run user
+    // worker (CPU limit, OOM). The message can't tell them apart, so it's acked to keep cron handlers
+    // at-most-once. Losing a transient delivery is accepted to avoid duplicate runs.
     const fetchSpy = vi.fn(async () => {
       throw new Error('connection reset');
     });
@@ -227,8 +217,6 @@ describe('processCronFiresBatch', () => {
 
     await processCronFiresBatch(makeBatch([ok, bad]), env);
 
-    // Both received a Response from the user worker (one 200, one 500). The
-    // queue acks both — application failure is not the queue's problem.
     expect(ok.ack).toHaveBeenCalledOnce();
     expect(ok.retry).not.toHaveBeenCalled();
     expect(bad.ack).toHaveBeenCalledOnce();

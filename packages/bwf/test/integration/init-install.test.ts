@@ -47,7 +47,7 @@ beforeEach(() => {
       devDependencies: { 'vite-plus': '^1.3.0' },
     }),
   );
-  // The host's tools must not mask a missing vp or supply a newer pnpm.
+  // Decision: The host's tools must not mask a missing vp or supply a newer pnpm.
   vi.stubEnv('PATH', bin);
 });
 
@@ -78,7 +78,7 @@ describe('init dependency installation (real subprocesses)', () => {
 
     installProjectDependencies(root, 'pnpm');
 
-    // Assert the received argv: Windows cmd.exe must preserve the semver caret.
+    // Decision: Assert the received argv: Windows cmd.exe must preserve the semver caret.
     expect(calls()).toEqual([
       {
         command: 'npx',

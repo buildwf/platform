@@ -25,8 +25,6 @@ import {
 import type { EmailHandlersScan } from '../../src/router/email.ts';
 import { compileEmailPattern } from '../../src/router/email.ts';
 
-// ── Structured command fakes ───────────────────────────────────────────────────
-
 function whoamiResult(): EmailWranglerRunResult {
   return {
     status: 0,
@@ -111,8 +109,6 @@ function apiFailure(code: number, resource: string): EmailWranglerRunResult {
   return { status: 1, stdout: '', stderr: `Provider failure: ${resource}`, errorCode: code };
 }
 
-// ── Scan builders ────────────────────────────────────────────────────────────────
-
 function scan(files: Array<string>, defaultHandler?: string): EmailHandlersScan {
   return {
     addresses: files.map((filePath) => {
@@ -122,8 +118,6 @@ function scan(files: Array<string>, defaultHandler?: string): EmailHandlersScan 
     defaultHandler,
   };
 }
-
-// ── Fake seams ───────────────────────────────────────────────────────────────────
 
 const ZONE_ID = '5b66f5cb84fd7dcfdd0170515e622181';
 const ACCOUNT = 'f721b8e5f721b8e5f721b8e5f721b8e5';
@@ -217,7 +211,6 @@ function fakeFetch(
       body: typeof init?.body === 'string' ? init.body : undefined,
     };
     calls.push(call);
-    // Key on the API path after the base (`/client/v4`), so the table reads like the docs.
     const key = `${call.method} ${url.slice(url.indexOf('/zones'))}`;
     const hit = table[key];
     if (!hit) {
@@ -250,11 +243,6 @@ function routingGet(supportSubaddress: boolean) {
     });
 }
 
-/**
- * The sample scenario: `email/support+[ticket].ts` + `email/_default.ts`,
- * `email.from = noreply@mail.acme.com`, zone `acme.com` (routing ready on the apex,
- * Google MX there), nothing yet on `mail.acme.com`.
- */
 function transcriptInputs(
   overrides: Partial<EmailCloudflareInputs> & {
     runnerTable?: Record<string, EmailWranglerRunResult | (() => EmailWranglerRunResult)>;
@@ -299,7 +287,6 @@ function transcriptInputs(
   return { inputs, calls, fetchCalls };
 }
 
-/** The "second deploy" account state, with the committed config overridable per case. */
 function readyAccount(
   overrides: Partial<EmailCloudflareInputs> & {
     runnerTable?: Record<string, EmailWranglerRunResult | (() => EmailWranglerRunResult)>;
@@ -343,8 +330,6 @@ function readyAccount(
     ...rest,
   });
 }
-
-// ── Derivation ───────────────────────────────────────────────────────────────────
 
 describe('deriveAddresses', () => {
   it('maps literal and literal+[tag] handlers to <literal>@<domain>', () => {
@@ -415,7 +400,7 @@ describe('emailFromDomain', () => {
   });
 
   it('validates per label: a leading `-` (a yargs flag), an empty label, a trailing `-` are refused', () => {
-    // The host is handed to wrangler as a positional; `--config.evil` would be parsed as an
+    // Decision: The host is handed to wrangler as a positional; `--config.evil` would be parsed as an
     // option and the domain positional would go missing.
     expect(emailFromDomain('a@--config.evil')).toBeNull();
     expect(emailFromDomain('a@-foo.evil')).toBeNull();
@@ -523,8 +508,6 @@ describe('structured email results', () => {
   });
 });
 
-// ── Preflight ────────────────────────────────────────────────────────────────────
-
 describe('preflightEmail', () => {
   it('first deploy on a subdomain: every row pending, no blocker, exact read-only provider operations', async () => {
     const { inputs, calls, fetchCalls } = transcriptInputs();
@@ -595,8 +578,8 @@ describe('preflightEmail', () => {
   });
 
   it('an API-token session (CLOUDFLARE_API_TOKEN) is not gated on `tokenPermissions`: reads run, ready reads ready', async () => {
-    // wrangler fills `tokenPermissions` from the stored login file only, so under an API token
-    // it is absent (or describes a stale login file, never the token). The gate is the reads.
+    // Decision: wrangler fills `tokenPermissions` from the stored login file only, so under an API token
+    // it's absent (or describes a stale login file, not the token). The gate is the reads.
     const calls: Array<Call> = [];
     const fetchCalls: Array<FetchCall> = [];
     const { inputs } = readyAccount({
@@ -661,8 +644,8 @@ describe('preflightEmail', () => {
   });
 
   it('a committed config whose rules wrangler has not created yet still reads ready (rules are `wrangler deploy` work)', async () => {
-    // Right after `bwf email setup`, before the first deploy: the array is committed, the
-    // rule is absent. Apply has nothing to do; the deploy creates the rule.
+    // Decision: Right after `bwf email setup`, before the first deploy: the array is committed and the rule
+    // is absent. Apply has nothing to do; the deploy creates the rule.
     const { inputs } = readyAccount({ rules: emptyRules });
     const pre = await preflightEmail(inputs);
     expect(pre.rules.state).toBe('pending');
@@ -676,7 +659,7 @@ describe('preflightEmail', () => {
   });
 
   it('flags a committed `addresses` array that is not the pruned set as stale, without losing ready', async () => {
-    // A rule bwf created was later re-pointed at a forward: the entry is pruned, and the
+    // Decision: A rule bwf created was later re-pointed at a forward: the entry is pruned, because the
     // committed array still listing it would reach wrangler's plan as a `conflict`.
     const forwarded = routingRules({
       supportDomain: 'mail.acme.com',
@@ -693,7 +676,7 @@ describe('preflightEmail', () => {
     expect(retarget.addresses).toEqual(['support@mail.acme.com']);
     expect(retarget.addressesStale).toBe(true);
 
-    // Worker rename: every rule now belongs to the old name, so nothing is bwf's to list.
+    // Decision: Worker rename: the rules now belong to the old name, so none of them are bwf's to list.
     const renamed = await preflightEmail(
       readyAccount({ workerName: 'acme-mail', existingAddresses: ['support@mail.acme.com'] })
         .inputs,
@@ -703,14 +686,12 @@ describe('preflightEmail', () => {
     expect(renamed.addressesStale).toBe(true);
     expect(renderEmailChecklist(renamed)).toContain('addresses: (removed)');
 
-    // A hand-emptied array with a derived address, and an absent array, are stale too.
     expect(
       (await preflightEmail(readyAccount({ existingAddresses: [] }).inputs)).addressesStale,
     ).toBe(true);
     expect(
       (await preflightEmail(readyAccount({ existingAddresses: undefined }).inputs)).addressesStale,
     ).toBe(true);
-    // Equal to the pruned set (order-insensitive): not stale.
     expect(
       (await preflightEmail(readyAccount({ existingAddresses: ['SUPPORT@mail.acme.com'] }).inputs))
         .addressesStale,
@@ -795,10 +776,10 @@ describe('preflightEmail', () => {
   });
 
   it('every session blocker routes Cloudflare login through bwf, never through wrangler', async () => {
-    // AGENTS.md: user-facing output never asks for a wrangler command. These rows print raw
-    // from `bwf email setup` / `status`, and through `formatCloudflareUserMessage` on the
-    // deploy path, where a `wrangler …` command would render as "the underlying Cloudflare
-    // operation" — no guidance at all.
+    // Decision: AGENTS.md: user-facing output doesn't ask for a wrangler command. These rows print raw from
+    // `bwf email setup` and `status`, and through `formatCloudflareUserMessage` on the deploy path,
+    // where a `wrangler ...` command would render as "the underlying Cloudflare operation", which
+    // gives no guidance.
     const who = structuredClone(whoamiResult().data) as { tokenPermissions: Array<string> };
     who.tokenPermissions = who.tokenPermissions.filter((s) => !s.startsWith('email_'));
     const unreadable = 'could not read the Cloudflare session — run `bwf cloudflare login`';
@@ -830,8 +811,8 @@ describe('preflightEmail', () => {
           data: { loggedIn: true, authType: 'Global API Key' },
           stderr: '',
         },
-        // A Global API Key wins over both an OAuth session and CLOUDFLARE_API_TOKEN in
-        // wrangler's env precedence, so neither alternative works until the key is unset.
+        // Decision: A Global API Key wins over both an OAuth session and CLOUDFLARE_API_TOKEN in wrangler's env
+        // precedence, so neither alternative works until the key is unset.
         message:
           'the Cloudflare session is a Global API Key (CLOUDFLARE_API_KEY), which has no bearer to borrow for the subaddressing calls — unset CLOUDFLARE_API_KEY, then run `bwf cloudflare login` or set CLOUDFLARE_API_TOKEN to a token with Email Routing Edit + Email Sending Edit',
       },
@@ -856,9 +837,7 @@ describe('preflightEmail', () => {
       const message = pre.blockers[0]!.message;
       expect(message).toContain('`bwf cloudflare login`');
       expect(message).not.toMatch(/wrangler/i);
-      // The checklist carries the row verbatim on both printing paths.
       expect(renderEmailChecklist(pre)).toContain(`    ✘ ${message}`);
-      // A session that cannot do the work gets no other read and lends no bearer.
       expect(calls.map((c) => c.args.join(' '))).toEqual(['whoami --json']);
       expect(fetchCalls).toEqual([]);
     }
@@ -960,7 +939,6 @@ describe('preflightEmail', () => {
         ),
       },
     ]);
-    // Routing is still on the table — the sending blocker is not an `all` blocker.
     expect(pre.addresses).toEqual(['support@mail.acme.com']);
   });
 
@@ -989,8 +967,8 @@ describe('preflightEmail', () => {
   });
 
   it('treats a disabled custom rule as absent, like the disabled catch-all', async () => {
-    // A rule to this worker that Cloudflare has switched off routes no mail: the row is
-    // `absent`, so the deploy's `addresses` entry stays and wrangler's plan turns it back on.
+    // Decision: A rule to this worker that Cloudflare has switched off routes no mail: the row is `absent`,
+    // so the deploy's `addresses` entry stays and wrangler's plan turns it back on.
     const disabled = routingRules({ supportDomain: 'mail.acme.com', supportEnabled: false });
     const pre = await preflightEmail(readyAccount({ rules: disabled }).inputs);
     expect(pre.rules.mine).toEqual([]);
@@ -1002,8 +980,8 @@ describe('preflightEmail', () => {
     expect(text).toContain('support@mail.acme.com → acme-support   (absent)');
     expect(text).toContain('+ routing rule (created on deploy)');
 
-    // A disabled rule is skipped, not matched: an enabled sibling on the same address still
-    // decides the row — here a forward that owns the address, so it is pruned (decision 12).
+    // Decision: A disabled rule is skipped, not matched: an enabled sibling on the same address still
+    // decides the row. Here it's a forward that owns the address, so the address is pruned.
     const sibling = routingRules({
       supportDomain: 'mail.acme.com',
       supportEnabled: false,
@@ -1023,9 +1001,9 @@ describe('preflightEmail', () => {
       { address: 'support@mail.acme.com', owner: 'forward:support@gmail.com' },
     ]);
 
-    // A disabled FOREIGN rule is still somebody else's matcher: the row stays `foreign`
-    // and the address is pruned, exactly as when the rule is enabled — bwf does not
-    // take over another owner's rule because it is switched off.
+    // Decision: A disabled foreign rule is still somebody else's matcher: the row stays `foreign` and the
+    // address is pruned, as when the rule is enabled. bwf doesn't take over another owner's rule
+    // because it's switched off.
     const disabledForeign = routingRules({
       supportDomain: 'mail.acme.com',
       supportEnabled: false,
@@ -1096,7 +1074,6 @@ describe('preflightEmail', () => {
       { scope: 'all', message: expect.stringContaining('billing@mail.acme.com') },
     ]);
     expect(pre.blockers[0]?.message).toContain('skipping email setup this deploy');
-    // The exact edit is named, so the developer does not have to guess which entries.
     expect(pre.blockers[0]?.message).toContain(
       'remove "billing@mail.acme.com" from cloudflare.addresses',
     );
@@ -1209,7 +1186,6 @@ describe('preflightEmail', () => {
         mx: { 'acme.com': ['aspmx.l.google.com'], 'mail.acme.com': ['route1.mx.cloudflare.net'] },
         txt: { '_dmarc.mail.acme.com': ['v=DMARC1; p=none'] },
       }),
-      // `_default.ts` stays refused on the subdomain; sending stays blocked by the TXT.
       existingSendEmail: [{ name: 'SEND_EMAIL' }],
       existingAddresses: ['support@mail.acme.com'],
     });
@@ -1220,12 +1196,11 @@ describe('preflightEmail', () => {
   });
 
   it('remembers a refused sending onboarding by the committed binding: pending + binding present reads ready, retry on offer', async () => {
-    // Workers Free after `bwf email setup`: routing + subaddressing on, the binding,
-    // `addresses` and the sender var committed, and `sending settings` still answering
-    // not-found — the same answer a Paid account that never onboarded gives. The binding
-    // is written only by a run that already attempted `sending enable`, so it is the
-    // memory of the refusal: settled, never asked again by the deploy, and the retry is
-    // what `bwf email setup` offers.
+    // Decision: Workers Free after `bwf email setup`: routing and subaddressing on, the binding, `addresses`
+    // and the sender var committed, and `sending settings` still answering not-found, the same
+    // answer a Paid account that never onboarded gives. Only a run that already attempted
+    // `sending enable` writes the binding, so it records the refusal: the deploy doesn't ask
+    // again, and the retry is what `bwf email setup` offers.
     const notOnboarded = {
       'email sending settings mail.acme.com': sendingNotFound('mail.acme.com'),
     };
@@ -1239,11 +1214,9 @@ describe('preflightEmail', () => {
     expect(text).toContain(
       '    sending   mail.acme.com  not onboarded — verified destinations only; after upgrading to Workers Paid run bwf email setup --platform cloudflare',
     );
-    // The onboarding stays listed as the one account change — the retry prompt's row.
     expect(text).toContain('    + onboard mail.acme.com for Email Sending');
     expect(text).not.toContain('Nothing to change');
 
-    // No binding: nothing has attempted the onboarding yet, so the row is plain work.
     const untried = await preflightEmail(
       readyAccount({ runnerTable: notOnboarded, existingSendEmail: undefined }).inputs,
     );
@@ -1252,8 +1225,6 @@ describe('preflightEmail', () => {
     expect(untried.sendingRetryable).toBe(true);
     expect(renderEmailChecklist(untried)).toContain('    sending   mail.acme.com  not onboarded\n');
 
-    // A sending-scoped blocker settles the row on its own and leaves nothing to retry:
-    // the ✘ row carries the reason, the sending row keeps the bare word.
     const conflict = await preflightEmail(
       readyAccount({
         runnerTable: notOnboarded,
@@ -1273,7 +1244,6 @@ describe('preflightEmail', () => {
       '    sending   mail.acme.com  not onboarded\n',
     );
 
-    // Onboarded: nothing to retry.
     const onboarded = await preflightEmail(readyAccount().inputs);
     expect(onboarded.sending.state).toBe('ready');
     expect(onboarded.sendingRetryable).toBe(false);
@@ -1314,10 +1284,8 @@ describe('sending-only Cloudflare email', () => {
   const refused = (code: number) => () =>
     jsonResponse(403, { success: false, errors: [{ code, message: 'Forbidden' }], result: null });
 
-  /**
-   * Email Sending is read and onboarded through the bearer on the zone preflight resolved.
-   * The runner knows no Email operation, so any provider Email call fails the test.
-   */
+  // Decision: Email Sending is read and onboarded through the bearer on the zone preflight resolved.
+  // The runner knows no Email operation, so any provider Email call fails the test.
   function sendingOnly(
     domain = 'mail.acme.com',
     account: { list?: () => Response; enable?: () => Response } = {},
@@ -1484,7 +1452,6 @@ describe('sending-only Cloudflare email', () => {
     const { inputs } = sendingOnly('mail.acme.com', { list: refused(10000) });
     const pre = await preflightEmail(inputs);
     expect(isAwaitingSendingOnboarding(pre)).toBe(false);
-    // Without a saved binding the app was never set up: deploy offers setup as usual.
     const fresh = sendingOnly('mail.acme.com', { list: notListed });
     fresh.inputs.existingSendEmail = undefined;
     expect(isAwaitingSendingOnboarding(await preflightEmail(fresh.inputs))).toBe(false);
@@ -1509,8 +1476,6 @@ describe('sending-only Cloudflare email', () => {
     expect((await applyEmailSetup(pre, inputs)).patch).toEqual({});
   });
 });
-
-// ── Checklist ────────────────────────────────────────────────────────────────────
 
 describe('renderEmailChecklist', () => {
   it('renders the checklist for the first subdomain deploy', async () => {
@@ -1564,8 +1529,6 @@ describe('renderEmailChecklist', () => {
     );
   });
 });
-
-// ── Apply ────────────────────────────────────────────────────────────────────────
 
 const ROUTING_DNS_POST = `POST /zones/${ZONE_ID}/email/routing/dns`;
 const ROUTING_PATCH = `PATCH /zones/${ZONE_ID}/email/routing`;
@@ -1724,10 +1687,10 @@ describe('applyEmailSetup', () => {
   });
 
   it('routing enabled but the subaddressing PATCH refused → routingReady, NOT inboundReady; addresses withheld', async () => {
-    // The one partial state where `routingReady` is true and inbound is still not set up:
-    // the PATCH is a bearer call, so its refusal withholds `addresses` (decision 11) — no
-    // rule is created by the next deploy — and `+tag` mail matches no rule until the flag
-    // is on. Both callers must read `inboundReady`, not `routingReady`.
+    // Decision: The one partial state where `routingReady` is true and inbound still isn't set up: the PATCH
+    // is a bearer call, so its refusal withholds `addresses` and the next deploy creates no rule,
+    // and `+tag` mail matches no rule until the flag is on. Both callers must read `inboundReady`,
+    // not `routingReady`.
     const fetchCalls: Array<FetchCall> = [];
     const { inputs } = transcriptInputs({
       fetchCalls,
@@ -1778,7 +1741,6 @@ describe('applyEmailSetup', () => {
     expect(out.routingReady).toBe(false);
     expect(out.inboundReady).toBe(false);
     expect(out.patch.addresses).toBeNull();
-    // Sending still onboarded → the binding is still written.
     expect(out.sendingReady).toBe(true);
     expect(out.patch.sendEmail).toEqual({ name: 'SEND_EMAIL' });
     expect(out.lines).toContain(
@@ -1832,9 +1794,9 @@ describe('applyEmailSetup', () => {
   });
 
   it('never posts the subdomain routing call against an apex whose Email Routing is off', async () => {
-    // What `POST …/routing/dns { name }` does on a zone that does not route is unmeasured;
-    // the one outcome that matters — enabling the zone and locking MX over the apex's live
-    // mail — is what the apex refusal exists to prevent. No call; addresses withheld.
+    // Decision: What `POST .../routing/dns { name }` does on a zone that doesn't route is unmeasured. The
+    // outcome that matters, enabling the zone and locking MX over the apex's live mail, is what
+    // the apex refusal exists to prevent. No call; addresses withheld.
     const calls: Array<Call> = [];
     const fetchCalls: Array<FetchCall> = [];
     const { inputs } = transcriptInputs({
@@ -1923,9 +1885,6 @@ describe('applyEmailSetup', () => {
       addresses: ['support@mail.acme.com'],
     });
 
-    // Round trip: the patch that refused run writes, fed back into the next preflight against
-    // the account it left behind (routing + subaddressing on, sending still not-found), reads
-    // ready — the binding is the memory of the refusal — with the retry on offer for `setup`.
     const next = await preflightEmail(
       transcriptInputs({
         runnerTable: {
@@ -2016,8 +1975,6 @@ describe('applyEmailSetup', () => {
   });
 
   it('never surfaces the bearer in a printed line, a thrown error, or the returned object', async () => {
-    // Every transport outcome that could carry the token: a fetch that throws with it in
-    // the message, a non-2xx whose error message echoes it, and a happy path.
     const leaky = (call: FetchCall): Response => {
       throw new Error(`boom ${call.headers.Authorization}`);
     };
@@ -2049,7 +2006,7 @@ describe('applyEmailSetup', () => {
       }
       expect(thrown).toBeUndefined();
       const serialised = JSON.stringify(out);
-      // The fakes echo the header back on purpose; `fetchWithSessionBearer` scrubs it.
+      // Decision: The fakes echo the header back on purpose; `fetchWithSessionBearer` scrubs it.
       for (const line of (out as { lines: Array<string> }).lines) {
         expect(line).not.toContain(BEARER);
       }
@@ -2129,8 +2086,6 @@ describe('fetchWithSessionBearer', () => {
     expect(fetchCalls[0]?.url).toBe('https://api.example.test/v4/zones?name=acme.com');
   });
 });
-
-// ── Address map ──────────────────────────────────────────────────────────────────
 
 describe('renderAddressMap', () => {
   it('renders the post-deploy block', () => {

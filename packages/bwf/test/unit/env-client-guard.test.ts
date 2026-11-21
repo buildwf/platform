@@ -76,15 +76,12 @@ async function runTransform(
   }
 }
 
-// Reset registered schema between tests.
 function resetSchema() {
   defineEnv({});
 }
 
-// Force `_hasRegisteredSchema()` to return false by reaching into the
-// module's internals — simulates "no env.ts in project". The defineEnv
-// flag is one-way (can't be unset), so we mock the module instead for
-// the no-schema test.
+// Decision: Force `_hasRegisteredSchema()` to return false to simulate "no env.ts in project". The
+// defineEnv flag is one-way (it can't be unset), so the no-schema test mocks the module.
 async function withNoSchema(fn: () => Promise<void>): Promise<void> {
   const mod = await import('../../src/runtime/env-public.ts');
   vi.spyOn(mod, '_hasRegisteredSchema').mockReturnValue(false);
@@ -224,8 +221,6 @@ describe('envClientGuardPlugin', () => {
   it('takes a fast path when the source has no `@builtbyfriends/bwf/env` import', async () => {
     defineEnv({ STRIPE_KEY: string() });
     const ctx = makeContext('client');
-    // env.STRIPE_KEY here is just an arbitrary identifier — there's no
-    // bwf/env import to bind it to, so the guard should not trigger.
     const result = await runTransform(
       ctx,
       `const env = { STRIPE_KEY: "x" };\nconsole.log(env.STRIPE_KEY);\n`,

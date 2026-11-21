@@ -292,8 +292,8 @@ export async function sendOperatorInvitations(
     });
   }
 
-  // Capture each committed result. A DB or KV failure must never hide which
-  // invitations exist already, and an ambiguous failure must not be retried.
+  // Decision: Capture each committed result. A DB or KV failure must not hide which invitations already exist,
+  // and an ambiguous failure must not be retried.
   const created: Array<Invitation> = [];
   try {
     for (const email of emails) {
@@ -391,8 +391,8 @@ export async function revokeOperatorInvitation(
       removesSignupEntries: entries.length - filtered.length,
     });
   }
-  // Remove access before updating the invitation row, keeping a failed revoke
-  // retryable without leaving a stale exact-email allowlist grant.
+  // Decision: Remove access before updating the invitation row, so a failed revoke stays retryable without
+  // leaving a stale exact-email allowlist grant.
   let allowlistUpdated = false;
   try {
     if (filtered.length !== entries.length) {

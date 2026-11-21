@@ -51,7 +51,7 @@ async function rejectedUpgrade(url: URL): Promise<{ status: number | undefined; 
       response.once('end', () => resolve({ status: response.statusCode, body }));
     });
   });
-  // Miniflare's dispatchFetch rejection path does not own/close its WebSocket
+  // Decision: Miniflare's dispatchFetch rejection path does not own/close its WebSocket
   // ClientRequest. Own this real upgrade request and wait for its TCP teardown.
   const completed = Promise.all([response, socket]);
   upgrade.end();
@@ -256,7 +256,7 @@ export default { __kind: "socket", messages: { client: schema, server: schema } 
     });
     socket.accept();
     socket.close(1000, 'test complete');
-    // Finish the close handshake before disposing workerd. Killing it while
+    // Decision: Finish the close handshake before disposing workerd. Killing it while
     // the upgrade transport is open can emit an unhandled Windows ECONNRESET.
     const closeEvent = await closed;
     expect(closeEvent.code).toBe(1000);

@@ -53,9 +53,8 @@ function platformSender(
   if (from) {
     return from;
   }
-  // The display name goes in its own field, so the binding encodes it and a
-  // name such as `Acme <Ops>` cannot change the address. Control characters
-  // could still split the From header.
+  // Decision: The display name goes in its own field, so the binding encodes it and a name such as
+  // `Acme <Ops>` can't change the address. Control characters could still split the From header.
   if (/\p{Cc}/u.test(name + domain)) {
     throw new Error(
       'PLATFORM_DISPLAY_NAME and EMAIL_SENDER_DOMAIN must not contain control characters.',

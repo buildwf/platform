@@ -39,7 +39,6 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
-/** Count jsonc-parser parse errors — used to assert CR-only edits stay valid. */
 function parseErrors(text: string): number {
   const errs: Array<ParseError> = [];
   parseJsoncRaw(text, errs, { allowTrailingComma: true });
@@ -283,9 +282,8 @@ describe('ensureWranglerCompat', () => {
     expect(readConfig(tmpDir)).toEqual({
       worker: { compatibility_date: LATEST_KNOWN_COMPAT_DATE },
     });
-    // The generated Cloudflare config that bwf.config.ts implies stays out of Git.
+    // Decision: The generated Cloudflare config that bwf.config.ts implies stays out of Git.
     expect(readRaw('.gitignore')).toBe('.bwf-wrangler.jsonc\n');
-    // The date is now read from bwf.config.ts, so nothing is written again.
     const written = readRaw('bwf.config.ts');
     expect(ensureWranglerCompat(tmpDir)).toEqual({ compatibilityDate: LATEST_KNOWN_COMPAT_DATE });
     expect(readRaw('bwf.config.ts')).toBe(written);
@@ -311,7 +309,6 @@ describe('ensureWranglerCompat', () => {
     expect(JSON.parse(readRaw('bwf.json'))).toEqual({
       worker: { compatibility_date: LATEST_KNOWN_COMPAT_DATE },
     });
-    // The next run reads the date from bwf.json and still adds no bwf.config.ts.
     expect(ensureWranglerCompat(tmpDir)).toEqual({ compatibilityDate: LATEST_KNOWN_COMPAT_DATE });
     expect(existsSync(join(tmpDir, 'bwf.config.ts'))).toBe(false);
   });
@@ -1023,7 +1020,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('fails closed on a malformed config — throws without writing', () => {
-    const malformed = '{ "name": "x" "d1_databases": [] }'; // missing comma
+    const malformed = '{ "name": "x" "d1_databases": [] }';
     setup('wrangler.jsonc', malformed);
     expect(() => writeProvisionedWranglerConfig(tmpDir, { accountId: 'acc-x', name: 'y' })).toThrow(
       /not valid JSON/,
@@ -1032,7 +1029,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('fails closed on a queue consumer with a duplicated property — throws without writing', () => {
-    // Wrangler reads the last duplicate member, but jsonc-parser's modify() edits the first.
+    // Decision: Wrangler reads the last duplicate member, but jsonc-parser's modify() edits the first.
     const dup = `{
   "queues": {
     "consumers": [
@@ -1193,7 +1190,7 @@ describe('writeProvisionedWranglerConfig', () => {
       producers: [{ binding: 'QUEUE_JOBS', queue: 'app-jobs' }],
       consumers: [{ queue: 'app-jobs' }],
     });
-    // The old consumer is detached on the next activation.
+    // Decision: The old consumer is detached on the next activation.
     expect(readWranglerManagedQueueCleanupCandidates(join(tmpDir, 'wrangler.jsonc'))).toEqual([
       'app-jobs',
       'jobs',
@@ -1309,8 +1306,8 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('patches a matching queue entry field by field, keeping user fields and comments, and is idempotent', () => {
-    // Replacing the whole entry would drop user-tuned fields such as
-    // delivery_delay and dead_letter_queue, and their comments.
+    // Decision: Replacing the whole entry would drop user-tuned fields such as delivery_delay and
+    // dead_letter_queue, and their comments.
     setup(
       'wrangler.jsonc',
       `{
@@ -1370,7 +1367,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('matches producers by binding, so QUEUE_JOBS beside a user producer on the same queue is a no-op', () => {
-    // Wrangler allows several producers per queue but rejects duplicate binding names.
+    // Decision: Wrangler allows several producers per queue but rejects duplicate binding names.
     setup(
       'wrangler.jsonc',
       `{
@@ -1449,7 +1446,7 @@ describe('writeProvisionedWranglerConfig', () => {
     expect(readRaw('wrangler.jsonc')).toBe(before);
   });
 
-  // Wrangler requires every binding name to be unique across the whole Worker.
+  // Decision: Wrangler requires each binding name to be unique across the whole Worker.
   it.each([
     {
       owner: 'a D1 binding',
@@ -1505,7 +1502,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('fails closed on an array-shaped queues field when adopting a D1 binding — throws without writing', () => {
-    // Wrangler requires `queues` to be an object; reading the array would hide the DB producer.
+    // Decision: Wrangler requires `queues` to be an object; reading the array would hide the DB producer.
     setup(
       'wrangler.jsonc',
       `{
@@ -1548,7 +1545,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('fails closed on an explicit different migrations_dir — names both paths, throws without writing', () => {
-    // Rewriting a user's migrations_dir would strand their migration files.
+    // Decision: Rewriting a user's migrations_dir would strand their migration files.
     setup(
       'wrangler.jsonc',
       `{
@@ -1614,7 +1611,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('refuses to fill migrations_dir when migrations_pattern is outside it — throws without writing', () => {
-    // Wrangler requires migrations_pattern to start with `<migrations_dir>/`.
+    // Decision: Wrangler requires migrations_pattern to start with `<migrations_dir>/`.
     setup(
       'wrangler.jsonc',
       `{
@@ -1697,7 +1694,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('keeps a trailing comment on its property when inserting migrations_dir', () => {
-    // A plain modify() reflows the region and moves the comment onto the new member.
+    // Decision: A plain modify() reflows the region and moves the comment onto the new member.
     setup(
       'wrangler.jsonc',
       `{
@@ -1904,8 +1901,8 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('keeps the text of a multi-line trailing block comment when appending a producer', () => {
-    // A multi-line block comment cannot move onto one line, so modify() may attach it
-    // to the appended entry. Only its text is guaranteed to survive.
+    // Decision: A multi-line block comment can't move onto one line, so modify() may attach it to the
+    // appended entry. Only its text is guaranteed to survive.
     setup(
       'wrangler.jsonc',
       `{
@@ -1942,7 +1939,8 @@ describe('writeProvisionedWranglerConfig', () => {
   const CR = '\r';
 
   it('CR-only line endings: inserting migrations_dir stays valid, keeps the trailing comment, byte-identical on re-run', () => {
-    // A comment scan that stops only at `\n` would swallow the CR and the closing brace.
+    // Decision: A comment scan that stops only at `
+    // ` would swallow the CR and the closing brace.
     const fixture =
       `{${CR}` +
       `  "d1_databases": [${CR}` +
@@ -2085,8 +2083,8 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('fails closed when a composite account_id value drops an inner comment — throws without writing', () => {
-    // modify() replaces a composite value whole, dropping comments inside it, and still
-    // reports success. The final comment check refuses that write.
+    // Decision: modify() replaces a composite value whole, dropping comments inside it, and still reports
+    // success. The final comment check refuses that write.
     const fixture = `{
   "account_id": { "x": 1 /* keep this note */ },
   "name": "app"
@@ -2199,7 +2197,7 @@ describe('writeProvisionedWranglerConfig', () => {
   );
 
   it('d1 adopt composes with d1MigrationsDir on the same binding', () => {
-    // Adopt runs first, so migrations_dir lands on the D1 entry adopt just created.
+    // Decision: Adopt runs first, so migrations_dir lands on the D1 entry adopt just created.
     setup('wrangler.jsonc', '{ "name": "app" }');
     const patch = {
       d1: { binding: 'DB', databaseName: 'myapp-db', databaseId: 'real-uuid-123' },
@@ -2288,7 +2286,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('honors an explicit configPath option over discovery', () => {
-    // With both files present, discovery would pick wrangler.jsonc.
+    // Decision: With both files present, discovery would pick wrangler.jsonc.
     setup('wrangler.jsonc', '{ "name": "jsonc" }');
     writeFileSync(join(tmpDir, 'wrangler.json'), '{ "name": "json" }');
     const jsonPath = join(tmpDir, 'wrangler.json');
@@ -2303,7 +2301,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('adopt fails closed when the binding collides with an existing queue producer binding — no write', () => {
-    // The base collector leaves out producers, so the adopt guard adds them back.
+    // Decision: The base collector leaves out producers, so the adopt guard adds them back.
     setup(
       'wrangler.jsonc',
       `{
@@ -2403,7 +2401,7 @@ describe('writeProvisionedWranglerConfig', () => {
   });
 
   it('adopt fails closed on a malformed member in its target array — no write', () => {
-    // The owner collector skips the target field, so the adopt path checks it separately.
+    // Decision: The owner collector skips the target field, so the adopt path checks it separately.
     setup(
       'wrangler.jsonc',
       JSON.stringify({ kv_namespaces: [null, { binding: 'KV', id: 'kv-id' }] }),
@@ -2474,7 +2472,6 @@ describe('writeProvisionedWranglerConfig', () => {
 });
 
 describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars', () => {
-  // Comments and trailing commas at every level, like a hand-edited file.
   const emailFixture = `{
   // bwf manages this file — every comment below must survive.
   "name": "acme-support", // worker name
@@ -2620,7 +2617,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
   });
 
   it('addresses: a different array cannot be written over comments nested inside the old one — throws without writing', () => {
-    // bwf owns the array, but the writer never drops a comment.
+    // Decision: bwf owns the array, but the writer doesn't drop a comment.
     setup('wrangler.jsonc', emailFixture);
     const before = readRaw('wrangler.jsonc');
     expect(() =>
@@ -2650,7 +2647,6 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
   ],
 }`);
     expect(parseRaw('wrangler.jsonc')).not.toHaveProperty('addresses');
-    // Deleting an absent key is a no-op.
     expect(writeProvisionedWranglerConfig(tmpDir, { addresses: null }).modified).toBe(false);
     expect(readRaw('wrangler.jsonc')).toBe(raw);
   });
@@ -2797,7 +2793,7 @@ describe('writeProvisionedWranglerConfig — email: sendEmail / addresses / vars
     expect(writeProvisionedWranglerConfig(tmpDir, patch).modified).toBe(false);
     expect(readRaw('wrangler.jsonc')).toBe(raw);
 
-    // A later preflight finding routing off withdraws `addresses` only.
+    // Decision: A later preflight finding routing off withdraws only `addresses`.
     expect(writeProvisionedWranglerConfig(tmpDir, { addresses: null }).modified).toBe(true);
     const withdrawn = readRaw('wrangler.jsonc');
     for (const comment of [
@@ -3097,7 +3093,7 @@ describe('bindingEntriesForField', () => {
     ]);
     expect(bindingEntriesForField('services', [])).toEqual([]);
     expect(bindingEntriesForField('logfwdr', { bindings: [] })).toEqual([]);
-    // `addresses` is a string array, not bindings; the deploy check compares it whole.
+    // Decision: `addresses` is a string array, not bindings; the deploy check compares it whole.
     const addresses = ['support@mail.acme.com', '*@acme.com'];
     expect(bindingEntriesForField('addresses', addresses)).toEqual([]);
     expect(bindingNamesForField('addresses', addresses)).toEqual([]);

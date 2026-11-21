@@ -84,7 +84,7 @@ export function createWorkerEnvironmentSanitizerPlugin(
       for (const name of names) {
         const resolve = config.environments[name]?.resolve;
         if (resolve && 'external' in resolve) {
-          // Test runners may seed Node externals into every Vite environment.
+          // Decision: Test runners may seed Node externals into every Vite environment.
           // Cloudflare Worker environments cannot externalize dependencies, but
           // Cloudflare's validator expects the normalized array shape to remain.
           resolve.external = [];
@@ -137,7 +137,7 @@ export function createWranglerCompatPersistPlugin(
   };
 }
 
-// bwf/db leaves its driver import to drizzle, so these nested prebundles serve it.
+// Decision: bwf/db leaves its driver import to drizzle, so these nested prebundles serve it.
 const DATABASE_DRIVER_DEPS: Record<DatabaseDialect, Array<string>> = {
   sqlite: [],
   postgresql: ['@builtbyfriends/bwf > pg'],
@@ -184,7 +184,7 @@ export function createServerRuntimeOptimizerPlugin(
       if (name === 'client') {
         return;
       }
-      // The Cloudflare plugin gives every environment it runs in workerd these conditions from
+      // Decision: The Cloudflare plugin gives every environment it runs in workerd these conditions from
       // its config hook, which runs before any configEnvironment hook. That covers bwf's own
       // worker. Node runtimes load CommonJS themselves, and an include there turns on SSR
       // prebundling nobody asked for.
@@ -193,12 +193,12 @@ export function createServerRuntimeOptimizerPlugin(
       }
       return {
         optimizeDeps: {
-          // `better-auth` keeps OAuth request state on a module-local ref. Prebundling an app
+          // Decision: `better-auth` keeps OAuth request state on a module-local ref. Prebundling an app
           // import of `better-auth/api` while this excluded package loads `better-auth` from
           // source gives the dev worker two copies, so `getOAuthState()` misses the state the
           // runtime set. A production build already bundles one copy.
           exclude: ['@builtbyfriends/bwf', 'better-auth'],
-          // Excluding void also skips converting its CommonJS dependencies, which workerd cannot
+          // Decision: Excluding bwf also skips converting its CommonJS dependencies, which workerd cannot
           // evaluate: an installed bwf/email fails with "exports is not defined".
           //
           // bwf's routing runtime imports Hono for itself and for the generated routes. Naming
@@ -212,14 +212,14 @@ export function createServerRuntimeOptimizerPlugin(
         },
       };
     },
-    // A build bundles bwf/db's driver, which is CommonJS. The Cloudflare plugin turns its requires
+    // Decision: A build bundles bwf/db's driver, which is CommonJS. The Cloudflare plugin turns its requires
     // of Node built-ins that workerd provides into imports with rolldown's esmExternalRequirePlugin,
     // but rolldown skips that plugin unless the Vite copy running the build made it. pnpm installs
     // Vite once per set of peers, so the app's Vite can differ from the one the Cloudflare plugin
     // imports, and each require then throws in workerd. Serve those built-ins from an import here.
     // A require of any other built-in stays as it is and throws only if it runs.
     resolveId: {
-      // Before Vite's resolver, which makes a required built-in external.
+      // Decision: Before Vite's resolver, which makes a required built-in external.
       order: 'pre',
       filter: { id: NODE_BUILTIN },
       async handler(id, _importer, options) {
@@ -243,7 +243,7 @@ export function createServerRuntimeOptimizerPlugin(
       // oxlint-disable-next-line no-control-regex -- \0 prefix is Vite's virtual module convention
       filter: { id: /^\0platform:node-require:/ },
       handler(id) {
-        // A built-in's default export is its CommonJS exports, and `require` returns an ES
+        // Decision: A built-in's default export is its CommonJS exports, and `require` returns an ES
         // module's "module.exports" export.
         const name = id.slice(NODE_BUILTIN_REQUIRE_PREFIX.length);
         return `import builtin from "node:${name}";\nexport { builtin as "module.exports" };\n`;

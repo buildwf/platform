@@ -90,8 +90,8 @@ export async function zeroTrustStatus(
       );
       const healthHostname = platformHealthHostname(readPlatformApplication(env));
       if (healthHostname) {
-        // A missing health exception sends platform health probes to Access;
-        // one that covers more than `/health` leaves project paths outside it.
+        // Decision: A missing health exception sends platform health probes to Access; one that covers more than
+        // `/health` leaves project paths outside it.
         const health = configuration.healthApplication
           ? await client.inspectHealthApplication(
               configuration.healthApplication,

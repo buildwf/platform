@@ -65,7 +65,7 @@ export function mountProcedures(
   }) => rpc(c.req.raw, c.env, { waitUntil: (p) => c.executionCtx.waitUntil(p) });
   app.all(RPC_BASE_PATH, handle);
   app.all(`${RPC_BASE_PATH}/*`, handle);
-  // Every procedure that chose `.mcp()` is a tool. The MCP server loads on the first request,
+  // Decision: Every procedure that chose `.mcp()` is a tool. The MCP server loads on the first request,
   // so apps that never use it pay no startup cost.
   const mcp = (async () => {
     const { mcpHandler } = await import('@builtbyfriends/realtime-mcp');

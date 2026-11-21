@@ -139,8 +139,8 @@ function streamingR2(contentType: string | undefined = 'text/html; charset=utf-8
   return { get, arrayBuffer };
 }
 async function serveAsset(project: { slug: string }, entry: Asset) {
-  // The dispatch Worker has its own compiler globals. Exercise its actual
-  // runtime without merging them into the API's typechecking context.
+  // Decision: The dispatch Worker has its own compiler globals. Run its real code without merging them into
+  // the API's typechecking context.
   const { default: dispatch } = (await import(
     new URL('../../../dispatch/src/index.ts', import.meta.url).href
   )) as {
@@ -275,8 +275,8 @@ async function assertMigrated(id: string, projectId: string, entries: Array<Asse
     });
     expect(serving[entry.path]).toBe(`!${entry.hash}`);
     const object = await env.STATIC_ASSETS_R2.get(`assets/${projectId}/${entry.hash}`);
-    // Compare every byte without Vitest walking millions of typed-array keys
-    // in the historical 2 MiB boundary case on a shared CI runner.
+    // Decision: Compare the bytes with Buffer.compare, so Vitest doesn't walk millions of typed-array keys in
+    // the 2 MiB boundary case on a shared CI runner.
     expect(Buffer.compare(Buffer.from(await object!.arrayBuffer()), Buffer.from(entry.bytes))).toBe(
       0,
     );
@@ -537,8 +537,8 @@ describe('operator deployment asset migration', () => {
     expect(first.status, await first.clone().text()).toBe(200);
     const result = (await first.json()) as Result;
     expect(result.complete).toBe(false);
-    // Model a second operator request seeing a stale KV replica after the
-    // first page committed its verified scoped placement in PostgreSQL.
+    // Decision: Model a second operator request that sees a stale KV replica after the first page committed
+    // its verified scoped placement in PostgreSQL.
     await env.ROUTING.put(`manifest:${deployment.id}`, previousServing!);
     const second = await apply(deployment.id, result.nextCursor!);
     expect(second.status, await second.clone().text()).toBe(200);

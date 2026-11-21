@@ -26,7 +26,7 @@ export const envContext: AsyncLocalStorage<RuntimeEnv> = shared[ENV_CONTEXT_SYMB
 
 let cloudflareEnv: RuntimeEnv | undefined;
 
-// Synchronous detection: navigator.userAgent is "Cloudflare-Workers" in workerd
+// Decision: Synchronous detection: navigator.userAgent is "Cloudflare-Workers" in workerd
 // (default since compat date 2022-03-21). Only attempt the dynamic import when
 // we know we're in workerd — avoids silent .catch() on Node/Bun/Deno.
 // Built-in module imports resolve before the runtime dispatches its first request,

@@ -42,7 +42,7 @@ export interface TerminalDemo {
   context: string;
 }
 
-/** Replaying from time zero makes scrubbing and replay independent of frame rate. */
+// Decision: Replaying from time zero makes scrubbing and replay independent of frame rate.
 export function terminalFrame(demo: TerminalDemo, elapsed: number): Array<TerminalLine> {
   const lines = new Map<string, TerminalLine>();
   const time = Math.max(0, Math.min(demo.duration, elapsed));
@@ -73,7 +73,6 @@ export function terminalFrame(demo: TerminalDemo, elapsed: number): Array<Termin
   return [...lines.values()];
 }
 
-/** An anchored clock preserves position when pausing or changing playback speed. */
 export class PlaybackClock {
   private position = 0;
   private anchor = 0;

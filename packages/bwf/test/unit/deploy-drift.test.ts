@@ -22,8 +22,8 @@ const packageRoot = fileURLToPath(new URL('../..', import.meta.url));
 const drizzleKitBin = join(fileURLToPath(import.meta.resolve('drizzle-kit')), '..', 'bin.cjs');
 const tempDirs: Array<string> = [];
 
-// These cases run real Drizzle processes (up to three per test). Windows CI can take
-// over five seconds even when every operation succeeds; keep that budget local to this suite.
+// Decision: These cases run real Drizzle processes (up to three per test). Windows CI can take over
+// five seconds even when each operation succeeds; keep that budget local to this suite.
 const driftTestTimeout = process.platform === 'win32' ? 30_000 : 10_000;
 describe('hasDeploySchemaDrift', { timeout: driftTestTimeout }, () => {
   afterEach(() => {
@@ -106,9 +106,9 @@ describe('hasDeploySchemaDrift', { timeout: driftTestTimeout }, () => {
   it('spawns drizzle-kit without any wrangler auth credential (it loads user schema code)', () => {
     const root = createTempApp();
     const leakFile = join(root, 'leaked-env.json');
-    // drizzle-kit imports the user's schema module, so this side effect runs inside the
-    // child and records exactly what it can read. Generating migrations authenticates
-    // against nothing, so none of these may be visible.
+    // Decision: drizzle-kit imports the user's schema module, so this side effect runs inside the child and
+    // records what it can read. Generating migrations authenticates against nothing, so none of
+    // these may be visible.
     writeFileSync(
       join(root, 'db', 'schema.ts'),
       [

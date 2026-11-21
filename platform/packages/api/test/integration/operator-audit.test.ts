@@ -322,7 +322,7 @@ test('records the effective worker environment for implicit and explicit rollbac
   );
   expect(await explicitWorker.json()).toMatchObject({ environment: 'production' });
 
-  // Read in target order to exercise results returned in a different order from the requests.
+  // Decision: Read in target order, so results come back in a different order from the requests.
   const events = await env.db.select().from(operatorEvents).orderBy(operatorEvents.target);
   expect(
     Object.fromEntries(events.map((event) => [event.id, JSON.parse(event.target).environment])),

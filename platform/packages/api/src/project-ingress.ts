@@ -27,7 +27,7 @@ export async function ensureProjectIngress(
   const name = platformProjectIngressName(project, application.workersDev);
   const hostname = platformProjectWorkersDevHostname(project, application.workersDev);
   if (application.zoneName && !(await env.ROUTING.get(platformWorkersDevAliasKey(hostname)))) {
-    // After domain activation, only maintain aliases already issued during testing.
+    // Decision: After domain activation, only maintain aliases already issued during testing.
     return;
   }
   const url = `${CF_API_BASE}/${env.CF_ACCOUNT_ID}/workers/scripts/${name}`;

@@ -272,7 +272,6 @@ describe('init question order', () => {
     ['an existing app', 'Existing project detected. Configuring bwf.', true],
   ])('says what it does in %s before asking about Git', async (_name, message, existing) => {
     const root = mkdtempSync(join(tmpdir(), 'void-init-order-git-'));
-    // Outside CI, init asks whether to initialize Git.
     delete process.env.CI;
     try {
       if (existing) {
@@ -319,7 +318,7 @@ describe('GitHub Actions deployment workflows', () => {
   });
 
   it('sets up a supported Node before bunx runs the CLI in Bun workflows', () => {
-    // bunx runs the CLI with the `node` on PATH, which is the runner's default Node.
+    // Decision: bunx runs the CLI with the `node` on PATH, which is the runner's default Node.
     const yaml = getWorkflowYaml('/project', 'bun', null, 'cloudflare');
     expect(yaml).toContain(
       '      - uses: oven-sh/setup-bun@v2\n' +
@@ -525,7 +524,6 @@ function listMigrationSqlFiles(root: string): Array<string> {
     .sort();
 }
 
-/** The cwd of a mocked `drizzle-kit generate` spawn, or undefined for any other spawn. */
 function drizzleGenerateCwd(command: unknown, args: unknown, options: unknown): string | undefined {
   if (command !== process.execPath || !Array.isArray(args) || args[1] !== 'generate') {
     return undefined;
@@ -534,7 +532,6 @@ function drizzleGenerateCwd(command: unknown, args: unknown, options: unknown): 
   return typeof cwd === 'string' ? cwd : undefined;
 }
 
-/** Every spawn succeeds; drizzle-kit writes a migration and `yarn install` runs `onYarnInstall`. */
 function mockSpawnSuccess(onYarnInstall?: (cwd: string) => void): void {
   mockSpawnSync.mockImplementation((command, args, options) => {
     const cwd = (options as { cwd?: unknown } | null | undefined)?.cwd;
@@ -555,8 +552,8 @@ function mockSpawnSuccess(onYarnInstall?: (cwd: string) => void): void {
   });
 }
 
-// With vite-plus resolvable from the project, init runs its bin through node, so the install
-// is `node <vp> install ...`; otherwise it is `vp install ...` or `<pm> install`.
+// Decision: With vite-plus resolvable from the project, init runs its bin through node, so the install is
+// `node <vp> install ...`; otherwise it's `vp install ...` or `<pm> install`.
 function installCalls() {
   return mockSpawnSync.mock.calls.filter(
     (call) => Array.isArray(call[1]) && call[1].slice(0, 2).includes('install'),
@@ -592,7 +589,6 @@ function writeInstalledBwf(dir: string): void {
   );
 }
 
-/** An existing Vite app, so init offers the demo instead of the starter. */
 function writeExistingViteApp(
   root: string,
   options: { bwf?: string; packageManager?: string } = {},
@@ -618,7 +614,6 @@ function writeExistingViteApp(
   );
 }
 
-/** Full init flow with no database, the demo accepted and GitHub Actions declined. */
 async function runInitWithDemo(root: string): Promise<void> {
   mockSelect.mockResolvedValueOnce('none');
   mockConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
@@ -688,8 +683,8 @@ function cloudflareOperationType(args: unknown): string | undefined {
   }
 }
 
-// Prompts are mocked, so give init a terminal to prompt in. CI stays set, as
-// in CI runs, so Git and AGENTS.md setup keep skipping their prompts.
+// Decision: Prompts are mocked, so give init a terminal to prompt in. CI stays set, as in CI runs, so Git
+// and AGENTS.md setup keep skipping their prompts.
 const stdinTtyDescriptor = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
 let previousCI: string | undefined;
 
@@ -939,7 +934,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  // Before `yarn install`, a committed `.pnp.cjs` points at archives that are not fetched yet.
+  // Decision: Before `yarn install`, a committed `.pnp.cjs` points at archives that aren't fetched yet.
   it('returns false when .pnp.cjs exists but .yarn/install-state.gz is missing', () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-fresh-'));
     try {
@@ -950,7 +945,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  // Zero-install repos commit `.yarn/cache` and often have no install-state.gz.
+  // Decision: Zero-install repos commit `.yarn/cache` and often have no install-state.gz.
   it('returns true when .pnp.cjs exists with a populated .yarn/cache (zero-install)', () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-zero-'));
     try {
@@ -1019,7 +1014,8 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  // Installed PnP data can be stale (for example after `platform` was removed on another branch).
+  // Decision: Installed PnP data can be stale (for example after the package was removed on another
+  // branch).
   it('returns false when the PnP probe for `require.resolve("@builtbyfriends/bwf")` fails (stale .pnp.cjs)', () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-stale-'));
     try {
@@ -1050,7 +1046,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  // A loader-only runtime gets no `--require`, so a CJS probe cannot see it.
+  // Decision: A loader-only runtime gets no `--require`, so a CJS probe can't see it.
   it('uses an ESM probe when only `.pnp.loader.mjs` is present (loader-only PnP)', () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-pnp-loader-only-'));
     try {
@@ -1115,7 +1111,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  // A nested project with its own lockfile must not inherit an outer PnP graph.
+  // Decision: A nested project with its own lockfile must not inherit an outer PnP graph.
   it('does not walk past a leaf-managed lockfile into an ancestor Yarn PnP monorepo', () => {
     const outer = mkdtempSync(join(tmpdir(), 'platform-init-pnp-leaf-lock-'));
     try {
@@ -1135,7 +1131,7 @@ describe('isBwfResolvableFrom', () => {
     }
   });
 
-  // Yarn workspace members may carry their own Corepack pin and still use the root `.pnp.cjs`.
+  // Decision: Yarn workspace members may carry their own Corepack pin and still use the root `.pnp.cjs`.
   it('still walks to an ancestor `.pnp.cjs` when a subpackage has only a `packageManager` pin (no lockfile)', () => {
     const outer = mkdtempSync(join(tmpdir(), 'platform-init-pnp-pkgmgr-ws-'));
     try {
@@ -1158,7 +1154,8 @@ describe('isBwfResolvableFrom', () => {
   });
 });
 
-// An outer `.pnp.cjs` in NODE_OPTIONS would resolve a leaf project's deps through the wrong graph.
+// Decision: An outer `.pnp.cjs` in NODE_OPTIONS would resolve a leaf project's deps through the wrong
+// graph.
 describe('buildDrizzleKitSpawnEnv leaf-managed gate', () => {
   it('does not inject NODE_OPTIONS for a leaf project with a local lockfile inside a Yarn PnP monorepo', () => {
     const outer = mkdtempSync(join(tmpdir(), 'platform-init-env-leaf-lock-'));
@@ -1540,7 +1537,6 @@ describe('isScaffoldableEmptyProject', () => {
       expect(tsconfig.include).toContain('db');
 
       expect(mockLogInfo).toHaveBeenCalledWith('Empty project detected. Creating a React starter.');
-      // The starter prompt already showed the database, and the starter has its own routes.
       expect(mockLogInfo).not.toHaveBeenCalledWith('Using default D1 (SQLite) configuration');
       expect(mockLogInfo).not.toHaveBeenCalledWith(expect.stringContaining('skipping demo'));
     } finally {
@@ -1717,7 +1713,6 @@ describe('isScaffoldableEmptyProject', () => {
 
   it('offers to scaffold in a subfolder from a non-project parent directory', async () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
-    // The user's shell stays in the parent directory.
     const cwd = vi.spyOn(process, 'cwd').mockReturnValue(root);
     try {
       mkdirSync(join(root, 'existing-project'));
@@ -1892,7 +1887,7 @@ describe('isScaffoldableEmptyProject', () => {
   });
 
   it('bakes the slug into bwf-deploy.yml when a project is linked during the same interactive init', async () => {
-    // The workflow is written before the project link, so the slug is patched in afterwards.
+    // Decision: The workflow is written before the project link, so the slug is patched in afterwards.
     const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(
@@ -1918,12 +1913,10 @@ describe('isScaffoldableEmptyProject', () => {
           custom_domain: null,
         },
       ]);
-      // Selects: database, deployment platform, project.
       mockSelect
         .mockResolvedValueOnce('none')
         .mockResolvedValueOnce('platform')
         .mockResolvedValueOnce('proj_789');
-      // Confirms: demo code (declined), workflow, link, overwrite.
       mockConfirm
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true)
@@ -2311,7 +2304,7 @@ export default config;
     it.each([false, true])(
       'writes AGENTS.md and preserves CLAUDE.md when Claude is detected (existing AGENTS.md: %s)',
       async (hasAgentsFile) => {
-        // Resolve macOS's /var alias so relative skill symlinks use the fixture's real path.
+        // Decision: Resolve macOS's /var alias so relative skill symlinks use the fixture's real path.
         const root = realpathSync(mkdtempSync(join(tmpdir(), 'platform-init-')));
         try {
           const claudeInstructions = '# Claude instructions\n\nKeep these instructions.\n';
@@ -3064,7 +3057,7 @@ export default config;
   it('skips install after demo scaffold when node_modules/@builtbyfriends/bwf is already populated (workspace subpackage)', async () => {
     const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
-      // Without a lockfile init falls back to npm, which rejects `workspace:` specs.
+      // Decision: Without a lockfile init falls back to npm, which rejects `workspace:` specs.
       writeExistingViteApp(root, { bwf: 'workspace:../packages/bwf' });
       writeInstalledBwf(root);
 
@@ -3092,8 +3085,8 @@ export default config;
   });
 
   it('runs install after demo scaffold when void resolves from an ancestor but the child package.json was mutated', async () => {
-    // The parent is not a workspace root, so the child's own lockfile must
-    // pick up the `platform` dependency that init adds.
+    // Decision: The parent isn't a workspace root, so the child's own lockfile has to pick up the dependency
+    // that init adds.
     const parentRoot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeInstalledBwf(parentRoot);
@@ -3112,8 +3105,8 @@ export default config;
   });
 
   it('skips install and starter migration in a fresh workspace subpackage', async () => {
-    // Before the first workspace install, a leaf install rejects `workspace:`
-    // specs and drizzle-kit cannot resolve `@builtbyfriends/bwf/schema-d1`.
+    // Decision: Before the first workspace install, a leaf install rejects `workspace:` specs and drizzle-kit
+    // can't resolve `@builtbyfriends/bwf/schema-d1`.
     const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
@@ -3180,7 +3173,7 @@ export default config;
   );
 
   it('emits a lockfile-sync note when init adds void to a workspace subpackage with void hoisted', async () => {
-    // The workspace lockfile must pick up the new `platform` entry before the next frozen install.
+    // Decision: The workspace lockfile has to pick up the new entry before the next frozen install.
     const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
@@ -3341,7 +3334,7 @@ export default config;
   });
 
   it('runs starter migration in a Yarn 4 project with `.yarnrc.yml` but `nodeLinker: node-modules`', async () => {
-    // `.yarnrc.yml` is not a PnP marker; only `.pnp.cjs` and `.pnp.loader.mjs` are.
+    // Decision: `.yarnrc.yml` isn't a PnP marker; only `.pnp.cjs` and `.pnp.loader.mjs` are.
     const root = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeExistingViteApp(root, { bwf: '^0.0.1', packageManager: 'yarn@4.5.3' });
@@ -3420,8 +3413,8 @@ export default config;
     }
   });
 
-  // GitHub reads workflows only from the repository root, even when a member
-  // manages its own install.
+  // Decision: GitHub reads workflows only from the repository root, even when a member manages its own
+  // install.
   it.each(['member', 'local-lockfile', 'local-corepack-pin'] as const)(
     'skips GitHub Actions setup for `bwf init --github` in a workspace subpackage (%s)',
     async (shape) => {
@@ -3555,8 +3548,8 @@ export default config;
   });
 
   it('keeps the pnpm build policy and Corepack pin at the root of a pnpm workspace', async () => {
-    // The member has no lockfile or pin, so `detectProjectState` reports npm;
-    // pnpm still installs it from the workspace root.
+    // Decision: The member has no lockfile or pin, so `detectProjectState` reports npm; pnpm still installs
+    // it from the workspace root.
     const wsroot = mkdtempSync(join(tmpdir(), 'platform-init-'));
     try {
       writeFileSync(join(wsroot, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
@@ -3846,7 +3839,8 @@ export default config;
 });
 
 describe('detectProjectState', () => {
-  // Without a lockfile, an npm fallback would reject `workspace:` specs or write the wrong lockfile.
+  // Decision: Without a lockfile, an npm fallback would reject `workspace:` specs or write the wrong
+  // lockfile.
   it('prefers package.json#packageManager when no lockfile is present (pnpm)', () => {
     withTempDir((root) => {
       writeFileSync(
@@ -3956,7 +3950,7 @@ describe('detectProjectState', () => {
 });
 
 describe('generateStarterMigration', () => {
-  // Partial drizzle-kit output would make the next journal coherence check refuse.
+  // Decision: Partial drizzle-kit output would make the next journal coherence check refuse.
   function seedStarterSchema(root: string): void {
     mkdirSync(join(root, 'db'), { recursive: true });
     writeFileSync(
@@ -4059,7 +4053,9 @@ describe('generateStarterMigration', () => {
     });
   });
 
-  // cmd.exe would split `C:\Program Files\nodejs\node.exe` and paths with spaces.
+  // Decision: cmd.exe would split `C:\Program Files
+  // odejs
+  // ode.exe` and paths with spaces.
   it('runs drizzle-kit and the Yarn PnP probe without a shell on Windows', () => {
     const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
     Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' });
