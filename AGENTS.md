@@ -113,6 +113,10 @@ targets and the shared browser fixtures.
 
 `playground-local/` is gitignored and used for ad-hoc local testing apps that are not part of the codebase.
 
+## Upstream sync
+
+This repository is a fork of [Void](https://github.com/voidzero-dev/void). `UPSTREAM` records the last upstream commit we have reviewed. To bring in newer upstream commits, follow [the upstream-sync skill](./.agents/skills/upstream-sync/SKILL.md): `vp run upstream:sync status` lists them, and `vp run upstream:sync apply <sha>` merges one, renamed to our names.
+
 ## Pitfalls / Things That Broke
 
 - **`import.meta.resolve()`** is the right way to resolve subpath exports from ESM plugin code. `createRequire().resolve()` fails for ESM-only exports (no `require` condition).

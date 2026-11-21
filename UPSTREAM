@@ -1,0 +1,4 @@
+# Last upstream Void commit this fork has reviewed. scripts/upstream-sync.ts reads it.
+upstream https://github.com/voidzero-dev/void main
+commit 67901c65307e7857e0957d4376b7f62061c65ace
+subject test: translate all codemod reference cases in one process
